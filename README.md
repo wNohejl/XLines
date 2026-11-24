@@ -80,6 +80,8 @@ notices when a feed silently breaks at 3am and produces a written RCA afterwards
 Clone, run setup, start Docker, enter your free key in the desk: fixtures and prices appear.
 About ten minutes, most of it the first image build. The default runs on The Odds API alone
 (ADR 0026); ESPN is an optional extra you can turn on for box scores and player stats.
+[docs/getting-started.md](docs/getting-started.md) is the same as a short checklist, with the
+owner's steps for carrying the data and journal to a second machine.
 
 **You need**
 
@@ -668,6 +670,7 @@ data/personal/            Gitignored: the owner's private clone (journal, snapsh
 .claude/skills/           Agent skills: setup, and the Desk's design rules
 docs/
   README.md               Which document answers which question, and which are only the record
+  getting-started.md      A new machine, step by step, and moving data between two machines
   DESIGN.md               Why it is built this way
   INFRASTRUCTURE.md       What runs, where, and on what
   adr/                    Architecture decision records (0031: the name, the repository, hosting)

@@ -1,7 +1,7 @@
 # The documents, and which ones are true now
 
-XLines is the product; XLines is the platform and the name in every path
-([ADR 0031](adr/0031-xlines-the-name-its-own-repository-and-where-1-0-runs.md)). This page says
+XLines was called LineOps until 1.0
+([ADR 0031](adr/0031-xlines-the-name-its-own-repository-and-where-1-0-runs.md), amended). This page says
 which document answers which question, and which are kept only as the record of how something
 was decided. As of 2026-11-23.
 
@@ -9,7 +9,7 @@ was decided. As of 2026-11-23.
 
 | Question | Read |
 |---|---|
-| What is it, and how do I run it? | [README](../README.md); for an agent, [`xlines-setup`](../.claude/skills/xlines-setup/SKILL.md) |
+| What is it, and how do I run it? | [README](../README.md); the checklist for a new machine, and moving data to your other one, [getting-started.md](getting-started.md); for an agent, [`xlines-setup`](../.claude/skills/xlines-setup/SKILL.md) |
 | What runs, where, and on what? | [INFRASTRUCTURE.md](INFRASTRUCTURE.md) |
 | Why is it built this way, and what changed during the build? | [DESIGN.md](DESIGN.md) (§11 for the divergences) |
 | An alert fired. What now? | [runbook.md](runbook.md) |
