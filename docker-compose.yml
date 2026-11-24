@@ -1,0 +1,158 @@
+# Full stack over HTTPS: `docker compose up -d`, then https://localhost:9443
+#
+# Security posture, and why:
+#
+#   * Every published port binds to 127.0.0.1, never 0.0.0.0. A bare "9443:9443" would
+#     publish the app to every machine on the LAN — and Docker writes its own iptables
+#     rules, so the host firewall does not necessarily save you.
+#   * Postgres is not published at all by default. The app reaches it over the compose
+#     network, so the database needs no host-facing port. Use compose/dev.yml when you
+#     want it reachable for psql or host-side `dotnet run`.
+#   * HTTPS only. There is no HTTP listener to downgrade to or forget about.
+#   * Secrets come from .env (gitignored), never from this file.
+#   * Containers run non-root, with a read-only root filesystem, all capabilities dropped,
+#     and no-new-privileges — so a compromise inside the app has very little to work with.
+# The odds and stats providers, as web and worker both see them. Everything comes from .env:
+# appsettings.Local.json, where a host run keeps its key, is never in the image (.dockerignore),
+# and the image's appsettings.json has every provider off. A key does nothing without its
+# *_ENABLED=true beside it.
+# The project name stays "lineops" whatever the checkout folder is called (ADR 0031, as
+# amended): the volumes are lineops_lineops-pgdata and lineops_lineops-keys on every machine
+# that ran this before the rename, and a project named after an "XLines" folder would start
+# both empty.
+name: lineops
+
+x-providers: &providers
+  Ingestion__OddsApiIo__ApiKey: ${ODDS_API_IO_KEY:-}
+  Ingestion__OddsApiIo__Enabled: ${ODDS_API_IO_ENABLED:-false}
+  Ingestion__TheOddsApi__ApiKey: ${THE_ODDS_API_KEY:-}
+  Ingestion__TheOddsApi__Enabled: ${THE_ODDS_API_ENABLED:-false}
+  # Credits are billed per market on every scan, so totals cost a third of each one. Moneyline
+  # and spread always; THE_ODDS_API_TOTALS= (blank) in .env drops totals, as a host run's
+  # appsettings.Local.json "Markets" list does. A blank entry is ignored by the options binder.
+  Ingestion__TheOddsApi__Markets__0: moneyline
+  Ingestion__TheOddsApi__Markets__1: spread
+  Ingestion__TheOddsApi__Markets__2: ${THE_ODDS_API_TOTALS-total}
+  Ingestion__BallDontLie__ApiKey: ${BALLDONTLIE_KEY:-}
+  Ingestion__BallDontLie__Enabled: ${BALLDONTLIE_ENABLED:-false}
+  # The stats source, off until the person running the stack opts in (ESPN_ENABLED=true in .env;
+  # .env.example says why). ESPN's terms license personal, non-commercial use and prohibit
+  # automated access, so a clone calls nothing until someone has read that and decided. The MLB
+  # Stats API follows this switch: it only annotates games ESPN has written.
+  Ingestion__Espn__Enabled: ${ESPN_ENABLED:-false}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: xlines-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lineops
+      POSTGRES_USER: lineops
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # Require SCRAM rather than trust/md5 for any connection, including over the
+      # compose network — defence in depth if that network is ever shared.
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    volumes:
+      - lineops-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lineops -d lineops"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # Postgres needs CHOWN/SETUID/SETGID/DAC_OVERRIDE to drop to the postgres user at init.
+    cap_add: [CHOWN, SETUID, SETGID, DAC_OVERRIDE, FOWNER]
+    tmpfs:
+      - /tmp
+      - /run
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  web:
+    build:
+      # Root context: the Dockerfile needs Directory.Packages.props and every referenced project.
+      context: .
+      dockerfile: src/XLines.Web/Dockerfile
+    container_name: xlines-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        # Wait for readiness, not just start: the app migrates on boot and would otherwise
+        # race an unready server.
+        condition: service_healthy
+    environment:
+      # Service name and internal port — container-to-container, not localhost.
+      # SSL Mode=Prefer negotiates TLS if the server offers it and still works if not.
+      ConnectionStrings__LineOps: "Host=postgres;Port=5432;Database=lineops;Username=lineops;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env};SSL Mode=Prefer;Trust Server Certificate=true"
+      ASPNETCORE_ENVIRONMENT: Production
+
+      # HTTPS only — no HTTP endpoint exists to be redirected from or accidentally used.
+      ASPNETCORE_URLS: "https://+:9443"
+      # Kestrel reads the PFX from the read-only mount below. The certificate is never
+      # baked into the image: that would break dev/prod parity and risk disclosing it.
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /https/LineOps.Web.pfx
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ${CERT_PASSWORD:?set CERT_PASSWORD in .env}
+
+      # Keys persist on a volume so replacing the container does not invalidate live
+      # Blazor circuits and antiforgery tokens.
+      DataProtection__KeyPath: /keys
+
+      # Populate the dashboard on first boot instead of waiting for the 09:00 slate job.
+      Ingestion__RunOnStartup: "true"
+
+      <<: *providers
+    ports:
+      # 127.0.0.1 prefix is the important part — loopback only, not the LAN.
+      - "127.0.0.1:${HTTPS_PORT:-9443}:9443"
+    volumes:
+      - ${CERT_PATH:?set CERT_PATH in .env}:/https:ro
+      - lineops-keys:/keys
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    # The app writes only to /keys (a volume) and /tmp (tmpfs below), so the image
+    # filesystem itself can be immutable.
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # Only starts with `--profile worker`. Use it to run ingestion as its own process;
+  # set Ingestion__HostScheduler=false and Reliability__HostEvaluator=false on `web` at the same
+  # time so they don't both poll and both evaluate the alert rules.
+  worker:
+    build:
+      context: .
+      dockerfile: src/XLines.Worker/Dockerfile
+    container_name: xlines-worker
+    restart: unless-stopped
+    profiles: ["worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__LineOps: "Host=postgres;Port=5432;Database=lineops;Username=lineops;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env};SSL Mode=Prefer;Trust Server Certificate=true"
+      DOTNET_ENVIRONMENT: Production
+      <<: *providers
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+volumes:
+  lineops-pgdata:
+  lineops-keys:

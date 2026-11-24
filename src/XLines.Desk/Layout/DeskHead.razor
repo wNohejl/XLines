@@ -1,0 +1,42 @@
+@*
+    The Desk's half of <head>: the theme boot script and the stylesheets, in the one order that
+    works. A consumer puts <DeskHead /> in its App.razor head and its own sheets after it.
+
+    Order is load-bearing. The stored theme is stamped on <html> first, before any stylesheet
+    paints — ThemeService cannot until the circuit opens. A classic script, not a module, so it
+    blocks for that one job. Then MudBlazor, so it can be overridden; desk.css next, because it
+    defines the tokens; controls.css straight after the file whose tokens it spends; themes.css
+    after those, because its token blocks tie with :root on specificity and win on source order;
+    mud-bridge.css after that, because it spends the tokens on MudBlazor's variables and
+    out-specifies what MudBlazor hard-codes. The application's own stylesheet comes after this
+    component: it holds its windows, spends the Desk's tokens, and wins a tie with any Desk rule
+    on source order.
+*@
+@*  The browser's own chrome in the desk's ground. Declared here, empty, so it is in the head from
+    the first byte and a host's App.razor needs nothing of its own; theme-boot.js fills it from the
+    showing block's --surface-0 once the sheets below have arrived, and theme.js keeps it there on
+    every change. No colour is written here: the palette is the stylesheet's. *@
+<meta name="theme-color" content="" />
+@*  The boot script's tables — every family's slug, the accents with a block, every look's key and
+    values — written from the C# catalogue (DeskBoot) rather than copied into the script, and ahead
+    of it, so the script finds them as it runs. A data block is never executed, so the page's
+    script policy does not reach it; the JSON is escaped so nothing in it can close the element.
+    DeskHead renders statically in the head, so the tables are in the first response. *@
+<script type="application/json" id="@DeskBoot.ElementId">@((MarkupString)DeskBoot.Json)</script>
+<script src="@Assets[DeskAssets.Js("theme-boot.js")]"></script>
+@*  The regular face is on every page, and desk.css names it only once the sheet has arrived and
+    parsed, so without this the font is the last request the head makes and the first paint is in
+    the fallback. The italic is set in two places and loads when one of them draws.
+
+    The one link here not through @Assets, on purpose. A preload is only used if it is the
+    request the @font-face makes, and desk.css asks for the plain path — a stylesheet's url() is
+    not fingerprinted — so a fingerprinted preload would be a second download of the same file.
+    crossorigin because a font is always fetched in CORS mode; without it the preload is a
+    different request again. *@
+<link rel="preload" href="@(DeskAssets.Root + "/fonts/InterVariable.woff2")" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("desk.css")]" />
+@* The newer primitives (menus, popovers) — straight after the file whose tokens they spend. *@
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("controls.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("themes.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("mud-bridge.css")]" />
