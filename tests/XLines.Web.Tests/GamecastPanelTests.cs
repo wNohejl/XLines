@@ -876,7 +876,7 @@ public class GamecastPanelTests : DeskTestContext
         Assert.NotEmpty(flow.Children[3].QuerySelectorAll("[role='tab']"));
 
         Assert.Equal(new[] { "Field", "Score by quarter", "Team comparison" },
-            cut.FindAll(".gc__flow .wgroup__title").Select(t => t.TextContent.Trim()).ToArray());
+            cut.FindAll(".gc__flow > section > .wgroup > .wgroup__bar .wgroup__title").Select(t => t.TextContent.Trim()).ToArray());
     }
 
     [Fact]

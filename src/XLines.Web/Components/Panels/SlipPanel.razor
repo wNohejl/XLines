@@ -87,7 +87,7 @@
                         <div class="slip-card__top">
                             <div>
                                 <div class="slip-card__sel"><TeamMark Sport="@item.SportKey" Abbrev="@item.OutcomeAbbrev" />@item.Selection</div>
-                                <div class="slip-card__meta">@item.Matchup · @Day(item.StartsAt) · @item.Book@(item.ManualPrice ? " · your price" : "")</div>
+                                <div class="slip-card__meta">@item.Matchup · @Day(item.StartsAt) · @item.BookName@(item.ManualPrice ? " · your price" : "")</div>
                             </div>
 
                             @if (Slip.Mode == SlipMode.Straight)
@@ -249,12 +249,13 @@
         </div>
 
         @* The keys read as every window's do (KeyRow, HIG 3): Start over, then what Log waits
-           for, then Log — the one Filled key last. Log used to lead with its reason trailing it.
-           The row starts at the groups' leading edge, as the groups above it do. *@
+           for, then Log — the one Filled key last. Trailing, as the Wager tab beside this one
+           and the Board's take set theirs: started at the leading edge, the Filled key changed
+           sides as the window changed tabs. Start over empties the slip, so it is red. *@
         <div class="waction">
-            <KeyRow Justify="DeskJustify.Start" Reason="@Waiting">
+            <KeyRow Reason="@Waiting">
                 <Secondary>
-                    <DeskButton OnClick="StartOverAsync">Start over</DeskButton>
+                    <DeskButton Role="DeskRole.Destructive" OnClick="StartOverAsync">Start over</DeskButton>
                 </Secondary>
                 <Primary Context="why">
                     <WagerKey Kind="WagerKind.Log" Label="@LogLabel"
@@ -512,8 +513,8 @@
             var steps = Slip.Items.Select(i => !ids.Contains(i.Id)
                     ? $"Left on the slip: {i.Selection} — {(i.IsClosing ? "closing line" : parlay ? $"another leg is on this game's {MarketWord(i.Market)}" : "a parlay leg with no stake")}."
                     : parlay
-                        ? $"Leg: {i.Selection} ({i.Book})."
-                        : $"Logged {OddsMath.Money(i.Stake)} on {i.Selection} ({i.Book}).")
+                        ? $"Leg: {i.Selection} ({i.BookName})."
+                        : $"Logged {OddsMath.Money(i.Stake)} on {i.Selection} ({i.BookName}).")
                 .ToList();
 
             if (parlay)

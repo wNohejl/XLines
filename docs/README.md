@@ -26,7 +26,7 @@ in its header. By subject:
 | Subject | ADRs |
 |---|---|
 | Data model and odds storage | 0001, 0002, 0003, 0010 |
-| Sources, budget and jobs | 0005, 0009, 0011, 0012, 0014, 0017, 0021, 0026 |
+| Sources, budget and jobs | 0005, 0009, 0011, 0012, 0014, 0017, 0021, 0026, 0033 |
 | Reliability and telemetry | 0015 |
 | The desk and its design system | 0004, 0007, 0008, 0013, 0016, 0020, 0027, 0028, 0029, 0030, 0032 |
 | Security, access and who may see what | 0006, 0018, 0024 |

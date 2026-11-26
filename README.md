@@ -180,6 +180,15 @@ NFL in season, at 2 markets: scores about 4 credits a day (120 a month), leaving
 about one two-league scan every 10 hours. On request only, pricing and scoring one league once a
 day is 4 credits a day, 120 a month; three leagues so is 360. Ops shows the month's own numbers.
 
+**Which books.** Ten, named: Pinnacle, DraftKings, FanDuel, BetMGM, BetRivers, theScore Bet,
+Hard Rock Bet, Bovada, BetOnline.ag and Bally Bet. Ten is what one region unit holds, so the list
+costs what one region costs. Caesars and Fanatics are sold only on The Odds API's paid plans, and
+Ops says so if you add one. Past ten books, the named list is dropped for `regions=us`, which loses
+Pinnacle and the us2 books; Ops says that too. **Caesars for free** comes from an optional second
+source, SportsGameOdds, on your own free key: `SPORTSGAMEODDS_API_KEY=` in `.env`. Its pulls are on
+request only and priced in objects, one per game, from a 2,500-a-month allowance of its own. It is
+unverified against the live service. See [ADR 0033](docs/adr/0033-more-books-at-zero-cost.md).
+
 Skip this step and the desk starts with nothing on it; add the key later in the desk, or in
 `.env` and run step 4's command again.
 

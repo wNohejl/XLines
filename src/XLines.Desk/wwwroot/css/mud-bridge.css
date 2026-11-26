@@ -113,6 +113,13 @@
        pointed at the desk's scale so a stray one could not land under the chrome. */
     --mud-zindex-snackbar: var(--z-toast);
     --mud-zindex-tooltip: var(--z-toast);
+
+    /* The tooltip's fill, ink and arrow. Mud colours them at two classes
+       (.mud-tooltip.mud-tooltip-default, and its arrow at three) from these two, so the
+       one-class .mud-tooltip rule below lost them all and the tooltip painted GrayDarker —
+       the window body's own tier. Re-pointed here, the fill, the ink and the arrow agree. */
+    --mud-palette-gray-darker: var(--surface-3);
+    --mud-palette-dark-text: var(--text-primary);
 }
 
 /* -------------------------------------------------- 2. the Material tells --- */
@@ -132,24 +139,33 @@
     box-shadow: var(--shadow-3);
 }
 
+/* A Mud list is a menu by another name: a menu row's size, inset and highlight (controls.css). */
 .mud-list-item {
-    font-size: calc(13px * var(--text-scale));
-    padding-top: 6px;
-    padding-bottom: 6px;
+    min-height: var(--control-h);
+    font-size: var(--text-body);
+    padding: var(--space-1) var(--space-3);
 }
 
-.mud-list-item:hover { background-color: var(--surface-2); }
+.mud-list-item:hover { background-color: var(--accent-wash); }
 
 /* Inputs are fields, and a field is cut into the panel — see .field in
    desk.css. Material draws the opposite: a floating label over a filled well
    with an animated underline. Recess it and drop the underline. */
+/* As .field: the resting fill and no stroke; the stroke is focus's alone. The fill is on the
+   input's own box, not on the outline's fieldset, which Mud lays over the text. */
+.mud-input.mud-input-outlined {
+    border-radius: var(--radius);
+    background-color: var(--control-fill);
+    transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.mud-input.mud-input-outlined:hover { background-color: var(--control-fill-hover); }
+
 .mud-input.mud-input-outlined > .mud-input-outlined-border {
-    border-color: var(--separator);
+    border-color: transparent;
     border-radius: var(--radius);
     transition: border-color var(--dur-fast) var(--ease-standard);
 }
-
-.mud-input.mud-input-outlined:hover > .mud-input-outlined-border { border-color: var(--surface-3); }
 
 .mud-input.mud-input-outlined.mud-focused > .mud-input-outlined-border {
     border-width: 1px;
@@ -640,7 +656,9 @@
 .mud-dialog {
     background-color: var(--surface-1);
     border: 1px solid var(--separator);
-    border-radius: var(--radius);
+    /* The sheet's corner, not a control's: DeskAlert draws inside this surface and a sheet's own
+       corner is --radius-sheet, so the two modal surfaces round alike. */
+    border-radius: var(--radius-sheet);
     box-shadow: var(--shadow-sheet);
 }
 
@@ -702,6 +720,14 @@
     text-align: left;
 }
 
+/* The tooltip is itself a .mud-popover, and the open-popover rule above (two classes, earlier)
+   gave it the menu's --surface-1 body and an edge. Two classes again, later, so the tooltip
+   keeps its own fill and no border. */
+.mud-popover.mud-tooltip {
+    background-color: var(--surface-3);
+    border: 0;
+}
+
 /* Chips carry state words, which the desk already spells with .tag — so a chip is
    a capsule, and it is the same capsule.
 
@@ -722,10 +748,12 @@
    Only the base chip is restated. Mud's own colour variants resolve through the
    theme palette, which DeskTheme.cs already points at the desk's colours, so they
    are left alone rather than re-declared here. */
+/* .tag's own box too, so a chip and a tag beside it stand the same 18px. */
 .mud-chip {
-    height: 20px;
-    margin: 2px;
-    padding: 0 var(--space-2);
+    height: auto;
+    margin: 0;
+    padding: 2px var(--space-2);
+    line-height: 14px;
     border: 0;
     border-radius: 999px;
     background-color: var(--surface-3);

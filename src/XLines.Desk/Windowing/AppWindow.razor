@@ -106,17 +106,32 @@
                count; the windows behind it are listed in its menu, not drawn along the bar. *@
             <WindowTabs Column="column!" />
         }
+        else if (Window.Minimised)
+        {
+            @* Collapsed, the stub is one key: the bar's press restores it, and this makes that press
+               reachable from the keyboard — a subject window has no key in the header to restore it
+               by. No window-control mark, so the stub still drags like any bar; the click it ends in
+               reaches the bar and restores, as it always has. The title is drawn for the stacked
+               layout, where a collapsed window is a full-width row (desk.css hides it in the stub). *@
+            <button class="win__restore" type="button" aria-label="Restore @RegionLabel(column)">
+                <span class="win__icon" aria-hidden="true">
+                    <Glyph Icon="@Window.Definition.Icon" />
+                </span>
+
+                @if (grouped)
+                {
+                    @* A group is still more than one window: the count says so under its icon. *@
+                    <span class="win__tabcount num" aria-hidden="true">@column!.Tabs.Count</span>
+                }
+
+                <span class="win__title win__title--stub" aria-hidden="true">@Window.Title</span>
+            </button>
+        }
         else
         {
             <span class="win__icon">
                 <Glyph Icon="@Window.Definition.Icon" />
             </span>
-
-            @if (grouped)
-            {
-                @* Collapsed, a group is still more than one window: the count says so under its icon. *@
-                <span class="win__tabcount num" aria-hidden="true">@column!.Tabs.Count</span>
-            }
         }
 
         @if (!Window.Minimised)

@@ -119,7 +119,10 @@ public static class SourceLicences
         // MLBAM: "individual, non-commercial, non-bulk use" only.
         ["mlb-statsapi"] = SourceLicence.PersonalUse,
         // The free tier is for evaluation; a paid plan's terms have not been read.
-        ["odds-api-io"] = SourceLicence.PersonalUse
+        ["odds-api-io"] = SourceLicence.PersonalUse,
+        // Its terms bar redistribution, data dumps and bulk exports, and its free plan is offered
+        // "so that you can evaluate the Service" (sportsgameodds.com/terms, ADR 0033).
+        [SourceAccounts.SportsGameOdds] = SourceLicence.PersonalUse
     };
 
     public static SourceLicence For(string sourceKey)
@@ -142,6 +145,12 @@ public static class SourceAccounts
 
     /// <summary>The Odds API's events (free) and scores (metered): the default stats source.</summary>
     public const string TheOddsApiSchedule = "the-odds-api-schedule";
+
+    /// <summary>
+    /// SportsGameOdds' prices (ADR 0033): a second provider on its own key, alone on its account —
+    /// its objects are never counted against The Odds API's credits, nor theirs against its objects.
+    /// </summary>
+    public const string SportsGameOdds = "sportsgameodds";
 
     private static readonly string[][] Accounts = [[TheOddsApi, TheOddsApiSchedule]];
 

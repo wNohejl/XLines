@@ -74,7 +74,7 @@ button.gc__toggle {
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-    min-height: 28px;
+    min-height: var(--control-h);
     margin: 0 0 0 calc(-1 * var(--space-1));
     padding: 0 var(--space-2) 0 var(--space-1);
     border: 0;
@@ -97,7 +97,7 @@ button.gc__toggle:hover {
     align-items: center;
     gap: var(--space-2);
     min-width: 0;
-    min-height: 28px;
+    min-height: var(--control-h);
 }
 
 /* The side with the ball, its crest before its abbreviation (TeamMark's own rules, from
@@ -148,15 +148,33 @@ button.gc__toggle:hover {
 }
 
 /* An open drive's plays read as its row's continuation: no hairline between them, indented to
-   the side's leading edge as a disclosure's content is. */
+   the side's leading edge as a disclosure's content is — the row's inset, the triangle's 12px
+   box and its gap. A narrow card's rows give their inset back, and the indent follows them. */
 .gc__plays {
     display: block;
     padding-top: 0;
-    padding-left: calc(var(--space-3) + 12px + var(--space-2));
+    padding-left: calc(var(--space-4) + 12px + var(--space-2));
+}
+
+@container (max-width: 480px) {
+    .gc__plays {
+        padding-left: calc(var(--space-3) + 12px + var(--space-2));
+    }
 }
 
 .gc__plays::before {
     display: none;
+}
+
+/* A game the feed wrote no drives for: its plays as the card's one body, at the rows' inset. */
+.gc__flat {
+    padding: 0 var(--space-4);
+}
+
+@container (max-width: 480px) {
+    .gc__flat {
+        padding: 0 var(--space-3);
+    }
 }
 
 /* A scoring row is stamped as a play is (PlayLog.razor.css holds the play rows' own rules). */
@@ -182,6 +200,21 @@ button.gc__toggle:hover {
 .gc__tally--quiet {
     font-weight: var(--weight-regular);
     color: var(--text-secondary);
+}
+
+/* A narrow card keeps the play's words: the side, the play and the score it left stack in one
+   column beside the time, rather than the play wrapping a word a line between them. */
+@container (max-width: 460px) {
+    .gc__score {
+        grid-template-columns: 7ch minmax(0, 1fr);
+        row-gap: var(--space-1);
+    }
+
+    .gc__score > .gc__team,
+    .gc__score > .gc__text,
+    .gc__score > .gc__tally {
+        grid-column: 2;
+    }
 }
 
 /* The probability chart spans the section at a reading width and keeps its own proportions.

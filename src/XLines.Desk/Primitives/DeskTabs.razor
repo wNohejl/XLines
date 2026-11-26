@@ -32,6 +32,8 @@
 
 @if (Available.Count > 1)
 {
+    @* The bar carries the rule across the content's width; the tablist inside stays capped. *@
+    <div class="tabs__bar">
     <div class="marble-row tabs @Class"
          role="tablist"
          aria-label="@Label"
@@ -58,13 +60,15 @@
                     title="@(tab.Enabled ? tab.Label : $"{tab.Label}: nothing here yet")"
                     @ref="_refs[index]"
                     @onclick="() => SelectAsync(index)">
-                @tab.Label
+                @* The name ellipsizes on its own, so a narrow bar cuts the word and keeps the count. *@
+                <span class="tabs__label">@tab.Label</span>
                 @if (tab.Count is { } count)
                 {
                     <DeskBadge Count="count" Label="items" One="item" Class="tabs__badge" />
                 }
             </button>
         }
+    </div>
     </div>
 
     <div class="tabs__panel"

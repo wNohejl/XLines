@@ -1,10 +1,17 @@
 /* The History window's card flow (the Desk's grouping contract, Nov 22): the sources beside the
-   walk's form, then the seasons and the recent days each across the row. The cards, and a table
-   inside one, are the Desk's (desk.css, "What a card holds that is not a row"). */
+   walk's form, then the seasons across two tracks (.wsection--pair) with the recent days in the
+   track beside them once three fit. The cards, and a table inside one, are the Desk's (desk.css,
+   "What a card holds that is not a row"). */
 
 /* The flow stands under the tiles and their footnote by the air a section takes. The Run card's
-   label column holds "Past days" and "Held days" with their keys in line. */
+   label column is the operations windows' setting width (xlines.css, --ops-label-field), so
+   "Past days" and "Held days" line their keys up with Ops' and Performance's. */
 .histflow {
     margin-top: var(--space-4);
-    --hist-run-label: 112px;
 }
+
+/* The recent days are one track wide. Their sport column takes the slack, as a sentence column
+   does, but holds a league's name, not a sentence, so it gives up the sentence's 16ch floor
+   (xlines.css, .ops-col--grow): with it, the five columns came to about 450px and a 420px track
+   scrolled sideways for a word that was never going to be cut. */
+.histflow ::deep .hist-recent .ops-col--grow { min-width: 0; }

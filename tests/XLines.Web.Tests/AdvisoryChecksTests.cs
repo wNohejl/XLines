@@ -133,7 +133,7 @@ public class AdvisoryChecksTests
         var duplicate = Checks.Duplicate(true, prior, Actions);
 
         Assert.Equal(DeskState.Warning, duplicate.State);
-        Assert.StartsWith($"Already in the journal: {50m:C0} on ML · Chiefs at -130 (draftkings), ", duplicate.Text);
+        Assert.StartsWith($"Already in the journal: {50m:C0} on ML · Chiefs at -130 (DraftKings), ", duplicate.Text);
         Assert.EndsWith(". Logging again records a second bet.", duplicate.Text);
         Assert.Equal(Checks.OpenJournal, duplicate.Remedy);
     }

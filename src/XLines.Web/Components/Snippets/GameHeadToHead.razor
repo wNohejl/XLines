@@ -58,9 +58,13 @@
                 @if (_rows.Count > 0 && OnOpenWindow.HasDelegate)
                 {
                     <div class="gameh2h__more">
-                        <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.CompareArrows"
+                        @* Named for the window it opens, Tinted as every such key on the desk is;
+                           no ellipsis, since nothing more is asked before it opens. *@
+                        <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
+                                    Icon="@Icons.Material.Filled.CompareArrows"
+                                    Title="Every meeting on record, in the Head to head window"
                                     OnClick="() => OnOpenWindow.InvokeAsync()">
-                            Every meeting…
+                            Head to head
                         </DeskButton>
                     </div>
                 }

@@ -17,7 +17,10 @@
 
     <div class="shell__body">
         @* tabindex="-1": focus with nowhere else to go lands here (toasts.js), not on <body>. *@
-        <main class="desk" data-desk aria-label="Desk" tabindex="-1">
+        @* Until the browser has said how wide the desk is, the row is laid out against a guess
+           (1280px), and a restored layout was drawn at that guess and then slid to the real width.
+           The windows wait unseen for the first measurement, one round trip, instead. *@
+        <main class="desk @(Manager.ViewportMeasured ? null : "desk--unmeasured")" data-desk aria-label="Desk" tabindex="-1">
             @* A declared resolution gets a real surface of that size and the desk scrolls to
                it, rather than layout pretending the screen is bigger than it is. *@
             <div class="desk__surface"
@@ -161,6 +164,8 @@
                            current through a drag, before the server hears of it. *@
                         <div class="divider"
                              @key="key"
+                             data-left="@left.Id"
+                             data-right="@right.Id"
                              style="left:@Px(left.X + left.Width)"
                              role="separator"
                              aria-orientation="vertical"
@@ -172,8 +177,7 @@
                              aria-valuetext="@($"{left.Title} {range.Now} pixels wide, {right.Title} {range.Total - range.Now}")"
                              aria-keyshortcuts="ArrowLeft ArrowRight Shift+ArrowLeft Shift+ArrowRight Home End"
                              tabindex="0"
-                             @onkeydown="e => OnDividerKey(e, left, right)"
-                             @ref="_dividerHandles[key]">
+                             @onkeydown="e => OnDividerKey(e, left, right)">
                             <span class="divider__grip"></span>
                             <span class="divider__readout num" aria-hidden="true">
                                 <span class="divider__width" data-split-left data-width="@range.Now"></span>
@@ -201,7 +205,6 @@
 @code {
     private IJSObjectReference? _module;
     private DotNetObjectReference<Desk>? _self;
-    private readonly Dictionary<string, ElementReference> _dividerHandles = [];
     private string _wiredDividers = string.Empty;
     private string _wiredTabs = string.Empty;
     private long _historyVersion;
@@ -211,6 +214,13 @@
         Manager.Columns.Select(c => c.Showing).ToList();
 
     private bool Maximised => Manager.MaximisedColumn is not null;
+
+    /// <summary>
+    /// Everything that decides which dividers are drawn: the row's order, which columns are
+    /// collapsed, and whether one holds the row. Each change of it can draw a divider afresh.
+    /// </summary>
+    private string DividerSignature()
+        => string.Join(",", Row.Select(w => w.Minimised ? $"{w.Id}-" : w.Id)) + "|" + Manager.MaximisedColumn?.Id;
 
     private bool Fixed => Manager.Settings.ResolutionMode == ResolutionMode.Fixed;
 
@@ -280,18 +290,15 @@
             await _module.InvokeVoidAsync("pushHistory", Manager.HistoryDepth);
         }
 
-        // Rebind dividers only when the set of adjacent pairs actually changes — a drag
-        // causes renders, and rewiring mid-gesture would drop it.
-        var dividerSignature = string.Join(",", _dividerHandles.Keys);
+        // Dividers are wired by element, not by pair: a pair that comes back (restored from
+        // maximised, a column expanded) is a new element under the same key. The script skips
+        // every divider already wired, so a drag's own renders never rewire it mid-gesture. Asked
+        // only when what could have drawn a divider changed, not for a status line.
+        var dividerSignature = DividerSignature();
         if (dividerSignature != _wiredDividers)
         {
             _wiredDividers = dividerSignature;
-
-            foreach (var (key, handle) in _dividerHandles)
-            {
-                var ids = key.Split('|');
-                await _module.InvokeVoidAsync("attachDivider", handle, ids[0], ids[1]);
-            }
+            await _module.InvokeVoidAsync("attachAllDividers", "[data-desk]");
         }
 
         // Tab-drag wiring only needs the id, not neighbours, so it only needs rebinding

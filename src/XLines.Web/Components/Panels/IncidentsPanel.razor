@@ -6,6 +6,11 @@
 
 @if (_selected is null)
 {
+    @* The list is tiles over one or two tables, so it stands at a table's reading width, centred
+       in a wider window (.wmeasure): maximised, an incident's number and severity sat at one edge
+       and its opened time and RCA a screen away. An incident opened below is a flow of cards and
+       takes the window's width. *@
+    <div class="wmeasure incidents">
     @if (Failed)
     {
         <PanelLoadFailure Message="@LoadError" OnRetry="RetryAsync" />
@@ -24,7 +29,8 @@
         <Metric Label="Open"
                 Value='@_open.ToString("N0")'
                 State="@(_open > 0 ? DeskState.Negative : DeskState.Positive)" />
-        <Metric Label="Resolved" Value='@_resolved.ToString("N0")' State="DeskState.Positive" />
+        @* Neutral at zero: nothing resolved yet is not a good sign in green. *@
+        <Metric Label="Resolved" Value='@_resolved.ToString("N0")' State="@(_resolved > 0 ? DeskState.Positive : DeskState.Neutral)" />
         <Metric Label="Median resolve" Value="@_mttr" />
     </MetricRow>
 
@@ -158,13 +164,29 @@
         </div>
     }
     }
+    </div>
 }
 else
 {
     @* The incident is the window's subject, so its name is the window's title — not a section
        rule, which names a part of the window rather than the thing the window is about.
        Severity and state are tags on its baseline, said once: the meta line used to repeat the
-       severity the toolbar's tag already showed, and the toolbar is for keys. *@
+       severity the toolbar's tag already showed, and the toolbar is for keys.
+
+       The way back leads, above the title it leaves, as a back key does (HIG, Navigation); it
+       sat under the title, after the thing it returns from. *@
+    <PanelToolbar>
+        <DeskButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="BackToList">
+            All incidents
+        </DeskButton>
+    </PanelToolbar>
+
+    @* A refresh that failed while an incident is open says so here too; the list's line is not drawn. *@
+    @if (Failed)
+    {
+        <PanelLoadFailure Message="@LoadError" OnRetry="RetryAsync" />
+    }
+
     <PanelTitle>
         <ChildContent>@_selected.Title</ChildContent>
         <Tags>
@@ -173,12 +195,6 @@ else
         </Tags>
         <Detail>Incident <span class="num">#@_selected.Id</span>, opened @Starts(_selected.OpenedAt)</Detail>
     </PanelTitle>
-
-    <PanelToolbar>
-        <DeskButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="() => _selected = null">
-            All incidents
-        </DeskButton>
-    </PanelToolbar>
 
     @* The procedure before the workspace: an incident is opened to be worked, and the first thing
        the person working it needs is the triage steps for the rule that raised it. Each runbook
@@ -208,7 +224,8 @@ else
         <ChildContent>
         @if (_timeline.Count == 0 && !Manager.Access.CanOperate)
         {
-            <EmptyState Kind="EmptyStateKind.New">Nothing on the timeline yet.</EmptyState>
+            @* The card's sentence at the rows' inset and leading, as every card's lone sentence is. *@
+            <EmptyState>Nothing on the timeline yet.</EmptyState>
         }
         else
         {
@@ -231,7 +248,9 @@ else
                                        aria-label="New timeline note"
                                        placeholder="What was seen, or what was tried" @bind-Value="_newNote" />
                             @* The Add key waits for text, and says so on the row: a disabled key's
-                               title never shows. *@
+                               title never shows. The reason trails the key (xlines.css, .opsrow >
+                               .keyrow): before it, it pushed Add along at rest and Add jumped left
+                               on the first keystroke. *@
                             <KeyRow Justify="DeskJustify.Start"
                                     Reason="@(string.IsNullOrWhiteSpace(_newNote) ? "Type the note first." : null)">
                                 <Primary Context="why">
@@ -383,7 +402,6 @@ else
             : "Both the cause and the corrective action are needed.";
 
     private int? _aimedAt;
-
     protected override async Task OnInitializedAsync()
     {
         _aimedAt = IncidentId;
@@ -438,27 +456,78 @@ else
         _mttr = durations.Count == 0 ? "—" : Duration(durations[durations.Count / 2]);
     }
 
+    /// <summary>
+    /// Opens an incident. Caught here: it runs from a row's click and a link's, and an exception
+    /// out of an event handler ends the circuit, the whole desk with it.
+    /// </summary>
     private async Task SelectAsync(int id)
     {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        var service = scope.ServiceProvider.GetRequiredService<IncidentService>();
-
-        _selected = await service.GetAsync(id);
-        _error = null;
-        _noteError = null;
-
-        if (_selected is not null)
+        try
         {
-            _timeline = IncidentService.Deserialise(_selected.Timeline);
-            _rootCause = _selected.RootCause ?? string.Empty;
-            _corrective = _selected.CorrectiveActions ?? string.Empty;
+            await using var scope = ScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IncidentService>();
 
-            _rules = _selected.Alerts
-                .Select(a => a.RuleKey)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(k => k, StringComparer.Ordinal)
-                .ToList();
+            var shown = _selected?.Id;
+            _selected = await service.GetAsync(id);
+            _error = null;
+            _noteError = null;
+
+            // A note half-typed on one incident is not carried to the next, where Add would post it.
+            if (shown != id)
+                _newNote = string.Empty;
+
+            if (_selected is not null)
+            {
+                _timeline = IncidentService.Deserialise(_selected.Timeline);
+                _rootCause = _selected.RootCause ?? string.Empty;
+                _corrective = _selected.CorrectiveActions ?? string.Empty;
+
+                _rules = _selected.Alerts
+                    .Select(a => a.RuleKey)
+                    .Distinct(StringComparer.Ordinal)
+                    .OrderBy(k => k, StringComparer.Ordinal)
+                    .ToList();
+            }
+
+            Remember(_selected?.Id);
         }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Incident #{Id} did not open", id);
+            _selected = null;
+            Remember(null);
+            Toasts.Fail("The incident did not open. Try again.");
+        }
+    }
+
+    private void BackToList()
+    {
+        _selected = null;
+        Remember(null);
+    }
+
+    /// <summary>
+    /// Writes what the window shows into its own parameters, as the Odds window does. The desk
+    /// re-aims a singleton only when it is asked for something its parameters do not already say:
+    /// left holding the incident after All incidents, following that same incident again from Ops
+    /// matched, changed nothing, and the window stayed on the list.
+    /// </summary>
+    private void Remember(int? id)
+    {
+        _aimedAt = id;
+
+        if (WindowId is null || Manager.Find(WindowId) is not { } window)
+            return;
+
+        if ((window.Parameters.GetValueOrDefault(nameof(IncidentId)) as int?) == id)
+            return;
+
+        WindowManager.Aim(window.Parameters, id is { } aimed
+            ? new Dictionary<string, object> { [nameof(IncidentId)] = aimed }
+            : new Dictionary<string, object>());
+
+        // A title naming the incident it was opened on would name the wrong one now.
+        window.TitleOverride = null;
     }
 
     private async Task AddNoteAsync()

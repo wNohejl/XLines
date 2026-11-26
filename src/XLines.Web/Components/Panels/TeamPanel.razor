@@ -38,12 +38,17 @@
     {
         @* The title row and the first rows of the game log, in the places they will land — a
            sentence saying the team is loading is a placeholder shaped like nothing. *@
+        @* In the card it will land in, so the first paint does not jump from a framed list to a card. *@
         <DeskSkeleton Width="40%" />
-        <div class="loglist">
-            @for (var i = 0; i < 3; i++)
-            {
-                <div class="logrow"><div class="logrow__head logrow__head--placeholder"><DeskSkeleton Width="100%" /></div></div>
-            }
+        <div class="wflow team-flow">
+            <FormGroup GroupClass="team-card">
+                <div class="loglist">
+                    @for (var i = 0; i < 3; i++)
+                    {
+                        <div class="logrow"><div class="logrow__head logrow__head--placeholder"><DeskSkeleton Width="100%" /></div></div>
+                    }
+                </div>
+            </FormGroup>
         </div>
     }
 }
@@ -52,7 +57,7 @@ else
     <PanelTitle>
         @* The club's hero crest heads its own window; a fighter has none (TeamMark draws nothing). *@
         <ChildContent><TeamMark Sport="@_team.Sport?.Key" Abbrev="@_team.Abbrev" Size="TeamMarkSize.Hero" />@_team.Name</ChildContent>
-        @* The season on screen is said once, by the detail line ("5-2 in the 2026 season"),
+        @* The season on screen is said once, by the detail line ("7 games in the 2026 season"),
            even when there is only one and the gate has nothing to offer — a record without its
            season is a number without a unit. It was also an Info tag on the name's row, which
            said it twice and floated beside the title rather than qualifying the record. *@
@@ -60,8 +65,9 @@ else
             <Tag>@_team.Sport?.Name</Tag>
         </Tags>
         <Detail>
-            @GameLogSplits.FormatRecord(_visible) @SeasonPhrase
-            (@_visible.Count @(_visible.Count == 1 ? "game" : "games")@(_split == GameLogSplits.Split.All && _opponent is null ? "" : ", filtered"))
+            @* The record itself trails the log card's title (RecordKeys); said here too, it was
+               read twice in one glance. *@
+            @_visible.Count @(_visible.Count == 1 ? "game" : "games") @SeasonPhrase@(_split == GameLogSplits.Split.All && _opponent is null ? "" : ", filtered")
         </Detail>
         @* The season gate. One position per season this team has played in, newest first;
            it hides itself when there is only one, because one season is not a choice. Past five
@@ -86,19 +92,19 @@ else
         </Keys>
     </PanelTitle>
 
-    @if (IsFight)
-    {
-        @* The fighter's profile draws its own groups (FighterView), so it is not wrapped in a
-           card: a card around them would be a box around boxes. *@
-        <PanelSection Title="Fighter">
-            <FighterView TeamId="TeamId" />
-        </PanelSection>
-    }
-
     @* Section cards in a .wflow (the Desk's grouping contract): the log and the roster are two
        cards, each named in the bar at its top, side by side in a window wide enough for two and
        stacked in a narrow one. The lists inside draw no second frame (TeamPanel.razor.css). *@
     <div class="wflow team-flow">
+    @if (IsFight)
+    {
+        @* The fighter's profile is section cards of its own (FighterView), leading the row above
+           the bouts: never wrapped in a card, which would be a box around boxes. *@
+        <div class="wsection wsection--span">
+            <FighterView TeamId="TeamId" />
+        </div>
+    }
+
     @* The record for what is on screen trails the title, so a split states its own result
        rather than leaving the operator to count tags; what it was read against (ATS, totals,
        how many games had a closing line) is the footer under the card. The keys and the footer
@@ -118,7 +124,7 @@ else
             <div class="wgroup__row wgroup__split team-splits">
                 <div class="wgroup__cell">
                     <span class="wgroup__label" aria-hidden="true">Games</span>
-                    <DeskSwitch Options="_splitOptions" Label="Game log split" Size="DeskKeySize.Small"
+                    <DeskSwitch Options="_splitOptions" Label="Game log split"
                                 Value="@(_opponent is null ? _split : null)"
                                 ValueChanged="@((GameLogSplits.Split? split) => SelectSplit(split!.Value))" />
                 </div>
@@ -197,17 +203,19 @@ else
                             <DeskStack Gap="DeskSpace.Space3" Class="logrow__body" id="@($"game-{row.GameId}")">
                                 <GameResultSnippet Row="row" />
 
+                                @* Keys that open a window are Tinted and named for the window, as
+                                   the Game window's and the Gamecast's are. *@
                                 <DeskRow>
-                                    <DeskButton Size="DeskKeySize.Small"
+                                    <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
                                                 Icon="@Icons.Material.Filled.SportsScore"
                                                 OnClick="() => OpenGameAsync(row.GameId)">
-                                        Open game
+                                        Game
                                     </DeskButton>
 
-                                    <DeskButton Size="DeskKeySize.Small"
+                                    <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
                                                 Icon="@Icons.Material.Filled.ShowChart"
                                                 OnClick="() => LaunchMovement(row)">
-                                        Movement
+                                        Line movement
                                     </DeskButton>
                                 </DeskRow>
                             </DeskStack>
@@ -249,10 +257,11 @@ else
                             <PlayerRecentSnippet PlayerId="player.PlayerId" />
 
                             <DeskRow>
-                                <DeskButton Size="DeskKeySize.Small"
+                                <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
                                             Icon="@Icons.Material.Filled.Person"
+                                            Title="Open the player's full game log in the Player window"
                                             OnClick="() => LaunchPlayer(player)">
-                                    Full game log
+                                    Player
                                 </DeskButton>
                             </DeskRow>
                         </DeskStack>

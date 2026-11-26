@@ -23,6 +23,11 @@
 @* The failure line sits above whatever the window already holds, as the Board's does. The
    window refreshes on every game signal, and one refresh that failed used to replace a loaded
    game log with the sentence. *@
+@* The window is a title over a strip of readings and a table, so all of it stands at a table's
+   reading width, centred in a wider window (.wmeasure): maximised, the game log's date and
+   opponent sat at one edge and a dozen stat columns were spread 130px apart across the rest, and
+   the season switch hung at the far end of the title row. *@
+<div class="wmeasure">
 @if (Failed)
 {
     <PanelLoadFailure Message="@LoadError" OnRetry="RetryAsync" />
@@ -128,8 +133,9 @@ else
         @* The log is the one view on the desk where sorting is the point rather than a
            convenience: "which were the big games" and "how did the away nights go" are both
            questions about this table, and neither can be asked of a fixed date order. *@
+        @* The grid is the card's own child, so the Desk's rule starts its text where the bar's
+           title does; it scrolls sideways on its own, so no wrapper is needed for that. *@
         <FormGroup Title="Game log" Span="DeskCardSpan.Row" GroupClass="player-log">
-        <div class="gridwrap">
             <DeskGrid T="PlayerGameRow" Items="_rows"
                       EmptyText="No appearances on record for this player.">
                 <PropertyColumn T="PlayerGameRow" TProperty="DateTimeOffset" Property="r => r.StartsAt"
@@ -189,11 +195,11 @@ else
                     </TemplateColumn>
                 }
             </DeskGrid>
-        </div>
         </FormGroup>
         </div>
     }
 }
+</div>
 
 @code {
     protected override string LoadSubject => "The player";

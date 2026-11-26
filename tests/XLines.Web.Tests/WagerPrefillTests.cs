@@ -172,7 +172,7 @@ public class WagerPrefillTests : WagerTestContext
 
         Change(cut, "Bet");
         Assert.Equal("-120", cut.Find("input[placeholder='-110']").GetAttribute("value"));
-        Assert.Equal("caesars", cut.Find("input[placeholder='draftkings']").GetAttribute("value"));
+        Assert.Equal("caesars", cut.Find("input[placeholder='DraftKings']").GetAttribute("value"));
     }
 
     [Fact]

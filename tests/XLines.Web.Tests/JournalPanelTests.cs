@@ -179,7 +179,9 @@ public class JournalPanelTests : WagerTestContext
         var source = Source();
 
         Assert.Contains("<Detail>@(_editing is { } editing ? $\"Placed {Starts(editing.PlacedAt)}\" : null)</Detail>", source);
-        Assert.Contains("<p class=\"wgroup__foot journal-manual-note\">", source);
+        // The typed price is the Bet card's footer (FormGroup draws it as .wgroup__foot).
+        Assert.Contains("<FormGroup Title=\"Bet\" GroupClass=\"jform\" Footer=\"@(_entry.ManualPrice ? ManualPriceNote : null)\">", source);
+        Assert.Contains("<span class=\"journal-manual-note\">", source);
         Assert.DoesNotContain("<Note Class=\"journal-manual-note\">", source);
         Assert.Contains("<p class=\"wfoot journal-foot\">", source);
         Assert.True(source.IndexOf("journal-foot", StringComparison.Ordinal) > source.IndexOf("Title=\"Entries\"", StringComparison.Ordinal),

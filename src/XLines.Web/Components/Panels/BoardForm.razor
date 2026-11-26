@@ -42,6 +42,10 @@ else if (_form is null)
 }
 else if (_form.IsEmpty)
 {
+    @* The lookback stays above the empty state: a longer window is the first fix to try, and
+       with the switch drawn only over rosters, an empty thirty days could not be widened. *@
+    @Lookback(_form)
+
     @* The way to the fix is a key where the gap is stated (HIG 16), as the Line movement
        window's is, not a sentence naming a window somewhere else. *@
     <EmptyState Kind="EmptyStateKind.Filtered">
@@ -60,13 +64,7 @@ else if (_form.IsEmpty)
 }
 else
 {
-    <PanelToolbar>
-        <DeskSwitch Options="GateOptions.LookbackDays" Label="Lookback window" Mono="true"
-                    Value="_windowDays" ValueChanged="@((int days) => SetWindowAsync(days))" />
-        <span class="meta">
-            @_form.LinesRead.ToString("N0") stat @(_form.LinesRead == 1 ? "line" : "lines") read by reference
-        </span>
-    </PanelToolbar>
+    @Lookback(_form)
 
     @RenderSide(_form.Away, Row?.Game.AwayTeam?.Name ?? "Away", Row?.Game.AwayTeam?.Abbrev)
     @RenderSide(_form.Home, Row?.Game.HomeTeam?.Name ?? "Home", Row?.Game.HomeTeam?.Abbrev)
@@ -116,6 +114,15 @@ else
             _form = await lookup.GetAsync(GameId, TimeSpan.FromDays(_windowDays), maxPlayersPerTeam: 8);
         }, settle: () => PulseState.Healthy);
 
+
+    /// <summary>The lookback switch and how much it read: over the rosters, and over an empty window.</summary>
+    private RenderFragment Lookback(MatchupForm form) => @<PanelToolbar>
+        <DeskSwitch Options="GateOptions.LookbackDays" Label="Lookback window" Mono="true"
+                    Value="_windowDays" ValueChanged="@((int days) => SetWindowAsync(days))" />
+        <span class="meta">
+            @form.LinesRead.ToString("N0") stat @(form.LinesRead == 1 ? "line" : "lines") read by reference
+        </span>
+    </PanelToolbar>;
 
     private RenderFragment RenderSide(IReadOnlyList<PlayerForm> side, string teamName, string? abbrev) => @<text>
         @if (side.Count > 0)

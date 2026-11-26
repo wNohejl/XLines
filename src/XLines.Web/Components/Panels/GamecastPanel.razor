@@ -176,7 +176,10 @@ else
         <div class="wsection wsection--span gc__sections">
         @* One reading at a time, as the Game window's sections are and as a league's own game
            page is: the plays, the scoring, the probability, the box score. Twenty drives no
-           longer stand between the title and the chart. *@
+           longer stand between the title and the chart. The tab names what is showing, so no
+           heading under it says it again; the block is read at a table's width, as the Game
+           window's box score is (.gameroster__block), not stretched across a maximised window. *@
+        <div class="gameroster__block gc__block">
         <DeskTabs TValue="View" Tabs="@Views()" Label="Gamecast sections" @bind-Value="_view">
             @if (context == View.Plays)
             {
@@ -186,29 +189,19 @@ else
                 }
                 else
                 {
-                    <PanelSection Title="@(_drives.Count == 0 ? "Plays" : "Drives")">
-                        <Keys>
-                            @if (_drives.Count > 0)
-                            {
-                                <DeskToggle Label="Every play" Checked="_everyPlay" CheckedChanged="@((bool on) => _everyPlay = on)"
-                                            Title="Open every drive, so the whole game reads top to bottom" />
-                            }
-                        </Keys>
-                        <ChildContent>
-                            @RenderDrives()
-                        </ChildContent>
-                    </PanelSection>
+                    @RenderDrives()
                 }
             }
             else if (context == View.Scoring)
             {
-                <PanelSection Title="Scoring">
-                    @RenderScoring()
-                </PanelSection>
+                @RenderScoring()
             }
             else if (context == View.Probability)
             {
-                <PanelSection Title="Win probability">
+                @* The series switches are the card's bar; the chart its body. Height="auto": the plot
+                   spans the card and keeps its own proportions, as the Performance window's does,
+                   rather than shrinking into a fixed box. *@
+                <FormGroup Class="gc__probcard">
                     <Keys>
                         <DeskRow Gap="DeskSpace.Space3">
                             <DeskToggle Label="Spread cover" Checked="_showCover" CheckedChanged="@((bool on) => ShowSeries(cover: on))"
@@ -218,9 +211,7 @@ else
                         </DeskRow>
                     </Keys>
                     <ChildContent>
-                        @* Height="auto": the plot spans the section and keeps its own proportions, as the
-                           Performance window's does, rather than shrinking into a fixed box. *@
-                        <div class="gc__chart">
+                        <div class="gc__cardbody gc__chart">
                         <DeskChart Series="_series" Labels="_labels" Height="auto"
                                    Family="DeskChartFamily.Movement"
                                    Headline="@ChartHeadline()"
@@ -229,25 +220,28 @@ else
                                    Description="@DeskChart.Describe("Win probability by play, in percent", _labels, _series)" />
                         </div>
                     </ChildContent>
-                </PanelSection>
+                </FormGroup>
             }
             else
             {
-                <PanelSection Title="Box score">
-                    @if (_box is { IsEmpty: false } box)
-                    {
+                @if (_box is { IsEmpty: false } box)
+                {
+                    @* Each side a card, as the Game window draws them (.gameroster__cols): away left
+                       and home right once the flow is wide enough, stacked below that. *@
+                    <div class="gameroster__cols">
                         <BoxScoreSide Side="box.Away" Team="@(game.AwayTeam?.Name ?? "Away")" OnPlayer="OpenPlayer"
                                       Sport="@game.Sport?.Key" Abbrev="@game.AwayTeam?.Abbrev" />
                         <BoxScoreSide Side="box.Home" Team="@(game.HomeTeam?.Name ?? "Home")" OnPlayer="OpenPlayer"
                                       Sport="@game.Sport?.Key" Abbrev="@game.HomeTeam?.Abbrev" />
-                    }
-                    else
-                    {
-                        <EmptyState>The box score appears once the first stats are in.</EmptyState>
-                    }
-                </PanelSection>
+                    </div>
+                }
+                else
+                {
+                    <EmptyState>The box score appears once the first stats are in.</EmptyState>
+                }
             }
         </DeskTabs>
+        </div>
         </div>
         </div>
     }
@@ -1075,8 +1069,11 @@ else
         }
         @if (_drives.Count == 0)
         {
+            @* The play log draws no inset of its own, so the card gives it the rows' inset. *@
             <div class="wgroup">
-                @RenderPlays(newestFirst ? _plays.AsEnumerable().Reverse().ToList() : _plays)
+                <div class="gc__flat">
+                    @RenderPlays(newestFirst ? _plays.AsEnumerable().Reverse().ToList() : _plays)
+                </div>
             </div>
         }
         else
@@ -1086,6 +1083,14 @@ else
             var others = byDrive.GetValueOrDefault(OtherPlays);
             var headed = new HashSet<int>();
             <div class="wgroup gc__drives">
+                @* The card's name and its one switch, in its bar (the Desk's section card). *@
+                <div class="wgroup__bar">
+                    <h3 class="wgroup__title">Drives</h3>
+                    <div class="wgroup__keys">
+                        <DeskToggle Label="Every play" Checked="_everyPlay" CheckedChanged="@((bool on) => _everyPlay = on)"
+                                    Title="Open every drive, so the whole game reads top to bottom" />
+                    </div>
+                </div>
                 @foreach (var drive in newestFirst ? _drives.Reverse() : _drives)
                 {
                     var held = byDrive.GetValueOrDefault(drive.Sequence) ?? [];

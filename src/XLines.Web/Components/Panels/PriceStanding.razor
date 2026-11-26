@@ -100,7 +100,8 @@
                 </CellTemplate>
             </TemplateColumn>
         </DeskGrid>
-        <MoreBooks Total="books.Count" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@_booksId" />
+        <MoreBooks Total="books.Count" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@_booksId"
+                   Books="books.Select(b => b.Book)" Polled="Polled" />
         </div>
     }
 
@@ -165,6 +166,9 @@
     [Parameter] public string? PullUnavailable { get; set; }
 
     [Parameter] public EventCallback OnPull { get; set; }
+
+    /// <summary>The books the desk polls (<c>PolledBooks</c>), for the priced-of-polled count under the books; null or empty: unknown.</summary>
+    [Parameter] public IReadOnlyCollection<string>? Polled { get; set; }
 
     /// <summary>The clock ages are read against; the wall clock unless a test sets one.</summary>
     [Parameter] public DateTimeOffset? Now { get; set; }

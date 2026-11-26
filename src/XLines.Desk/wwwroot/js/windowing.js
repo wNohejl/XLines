@@ -128,8 +128,18 @@ export function reportViewport() {
 // no frames, so a resize there is reported on the first frame it is shown, before it is seen.
 // applyScale does not come through here: a scale is one change, and is reported at once.
 let resizePending = false;
+let resizeSettle = 0;
+
+// While the browser is being resized the row is re-laid every frame, and the columns' own slide
+// (.win's left/width transition) left them trailing the window's edge. The slide stands down until
+// the edge has been still for a beat.
+const RESIZE_SETTLE_MS = 200;
 
 function onResize() {
+    document.body.classList.add('viewport-resizing');
+    clearTimeout(resizeSettle);
+    resizeSettle = setTimeout(() => document.body.classList.remove('viewport-resizing'), RESIZE_SETTLE_MS);
+
     if (resizePending) return;
     resizePending = true;
 
@@ -176,6 +186,28 @@ export function saveLayout(key, json) {
 }
 
 // ---------------------------------------------------------------- divider (resize) ----
+
+/**
+ * Wires every divider in the desk that is not wired yet, reading its pair from data-left and
+ * data-right. A divider is drawn afresh whenever its pair comes back — after a restore from
+ * maximised, a column expanded, a reorder undone — under the same key, so wiring by "has the set
+ * of pairs changed" left those new elements deaf to the pointer. Marking the element instead
+ * wires exactly the ones that need it, and is cheap enough to call on every render.
+ */
+export function attachAllDividers(containerSelector) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+
+    container.querySelectorAll('.divider[data-left][data-right]').forEach((handle) => {
+        const leftId = handle.dataset.left;
+        const rightId = handle.dataset.right;
+
+        if (handle.__deskSplit && handle.__deskSplitPair === `${leftId}|${rightId}`) return;
+
+        attachDivider(handle, leftId, rightId);
+        handle.__deskSplitPair = `${leftId}|${rightId}`;
+    });
+}
 
 /** Wires one divider. Safe to call repeatedly — rebinds cleanly on re-render. */
 export function attachDivider(handle, leftId, rightId) {
@@ -302,6 +334,9 @@ function beginSplit(event, handle, leftId, rightId) {
 
 const DRAG_THRESHOLD = 6;
 
+// The width at which desk.css stacks the columns into one scrolling list (its 720px block).
+const STACKED = window.matchMedia('(max-width: 720px)');
+
 /**
  * Wires every window's title bar inside the desk as a reorder handle. Idempotent — each
  * handle is marked once it is wired, so calling this again after a render only picks up
@@ -327,6 +362,12 @@ function beginTabDrag(event, win, handle) {
 
     const desk = document.querySelector('[data-desk]');
     if (!desk) return;
+
+    // Only a row has places to drag between. Stacked on a narrow screen every column shares one
+    // left edge, and a sideways nudge of a bar sent the window to the top or the bottom of the
+    // stack; a maximised column is alone in view, and a drag of it moved its column to the front
+    // of the row it would be restored to.
+    if (STACKED.matches || desk.querySelectorAll('.win:not(.win--behind)').length < 2) return;
 
     const startX = event.clientX;
     const zoom = zoomOf(win);

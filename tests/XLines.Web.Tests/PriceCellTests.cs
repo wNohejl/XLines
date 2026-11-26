@@ -192,6 +192,35 @@ public class PriceCellTests : DeskTestContext
     }
 
     /// <summary>
+    /// A narrow Board drops the rail and the edge under it (xlines.css), so the tooltip says the
+    /// edge too: nothing a wide Board shows about shopping is lost to a narrow one.
+    /// </summary>
+    [Fact]
+    public void The_tooltip_carries_the_edge_the_narrow_board_drops_from_the_cell()
+    {
+        var cut = RenderComponent<PriceCell>(p => p.Add(x => x.Offer,
+            Offer(edgePoints: 1.4, rungs:
+            [
+                Rung("draftkings", -115, 0.535),
+                Rung("fanduel", -105, 0.512)
+            ])));
+
+        var tip = cut.FindComponent<DeskTooltip>().Instance;
+        Assert.Equal("+1.4 pts vs worst", tip.Caption);
+        Assert.Contains("+1.4 pts vs worst", tip.Text);
+    }
+
+    /// <summary>A close is not a shopping opportunity: its tooltip says when it was taken, not what shopping was worth.</summary>
+    [Fact]
+    public void A_closing_tooltip_does_not_carry_the_edge()
+    {
+        var tip = Closing().FindComponent<DeskTooltip>().Instance;
+
+        Assert.DoesNotContain("vs worst", tip.Caption);
+        Assert.DoesNotContain("books agree", tip.Caption);
+    }
+
+    /// <summary>
     /// A differing line outranks the price gap — books quoting -110 on totals of 7, 8 and 9
     /// have a price spread of zero and the largest real difference on the board.
     /// </summary>

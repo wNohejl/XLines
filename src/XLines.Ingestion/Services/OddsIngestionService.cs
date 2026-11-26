@@ -12,6 +12,15 @@ namespace XLines.Ingestion.Services;
 public record IngestionOutcome(long RunId, RunStatus Status, int RowsIngested, string? Error);
 
 /// <summary>
+/// An odds source whose moneyline and spread sides are its own event's team names, which may not be
+/// the desk's spelling of the club (ADR 0033). The board pairs a side with a game by the team's
+/// name (<c>ValuePick.IsFirstSide</c>), so on ingest each side is renamed to the matched game's own
+/// home or away team — the side the source itself said it was. A side that is neither is kept as
+/// sent. Only sources that opt in are renamed: The Odds API's prices are written as they always were.
+/// </summary>
+public interface IBookSidesByEvent;
+
+/// <summary>
 /// Runs one odds source over one sport and persists the result.
 ///
 /// Every execution writes an <see cref="IngestionRun"/> row whether it succeeds or fails —
@@ -81,7 +90,7 @@ public class OddsIngestionService(
 
             run.Charge(result.Cost);
 
-            var rows = await PersistAsync(sourceRow, result, sportKey, run.Id, ct);
+            var rows = await PersistAsync(sourceRow, result, sportKey, run.Id, source is IBookSidesByEvent, ct);
 
             run.RowsIngested = rows;
             run.FinishedAt = DateTimeOffset.UtcNow;
@@ -198,11 +207,31 @@ public class OddsIngestionService(
         };
     }
 
+    /// <summary>
+    /// A book's side as the matched game's own team (<see cref="IBookSidesByEvent"/>): its event's
+    /// home is the game's home, its away the game's away. Anything else is kept as sent.
+    /// </summary>
+    private async Task<Func<string, string?>> EventSidesAsync(CanonicalGame canonical, Game game, CancellationToken ct)
+    {
+        var names = await db.Teams.AsNoTracking()
+            .Where(t => t.Id == game.HomeTeamId || t.Id == game.AwayTeamId)
+            .ToDictionaryAsync(t => t.Id, t => t.Name, ct);
+
+        var home = names.GetValueOrDefault(game.HomeTeamId);
+        var away = names.GetValueOrDefault(game.AwayTeamId);
+
+        return outcome =>
+            outcome == canonical.HomeTeamName && home is not null ? home
+            : outcome == canonical.AwayTeamName && away is not null ? away
+            : outcome;
+    }
+
     private async Task<int> PersistAsync(
         Source sourceRow,
         OddsFetchResult result,
         string sportKey,
         long runId,
+        bool sidesByEvent,
         CancellationToken ct)
     {
         if (result.Odds.Count == 0)
@@ -222,7 +251,12 @@ public class OddsIngestionService(
         {
             if (!fights)
             {
-                gameMap[canonical.SourceGameId] = await resolver.ResolveGameAsync(sport, sourceRow.Key, canonical, ct);
+                var game = await resolver.ResolveGameAsync(sport, sourceRow.Key, canonical, ct);
+                gameMap[canonical.SourceGameId] = game;
+
+                if (sidesByEvent)
+                    sides[canonical.SourceGameId] = await EventSidesAsync(canonical, game, ct);
+
                 continue;
             }
 

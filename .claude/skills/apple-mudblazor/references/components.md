@@ -218,6 +218,15 @@ of card, so a 360px track stacked every row of a settings card and stood it twic
 a 1600px window is three tracks of about 520px with labels beside their controls, and a window of
 about 680px is one column.
 
+**A table reads at a table's width** (design review, 2026-11-26). A card holding a table of
+several columns takes `Class="wsection--pair"` (two tracks from 856px of flow, the row below),
+not `Span="DeskCardSpan.Row"`: across 1560px a name sat at one edge and its figures a screen away.
+A window whose whole content is a table or two, with its toolbar and title, wraps it in
+`div.wmeasure` (centred at `--measure-table`, 1280px; `.wmeasure--narrow` at 800px for a few short
+columns) — the one cap allowed, since it caps rows, never a flow of cards — so the toolbar's keys
+end where the rows do. Inside, size columns as Ops does: one text column grows, the rest fit. A
+`MetricRow` of one to six tiles stops at that many 240px tiles on its own.
+
 **The split row** is spelled by hand, inside a `FormGroup`:
 
 ```razor

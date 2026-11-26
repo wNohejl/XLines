@@ -42,17 +42,21 @@
                     <span class="desk-sheet__sub">@Subtitle</span>
                 }
             </div>
-            <button type="button"
-                    class="desk-sheet__close"
-                    title="Close"
-                    @onclick="Cancel">
-                <Glyph Icon="@Icons.Material.Filled.Close" />
-            </button>
+            @* The desk's plain icon key, not a close of its own: its shape, hover and ring are every
+               icon key's, so the sheet's way out reads like the window's. *@
+            <DeskButton Emphasis="DeskEmphasis.Plain"
+                        Icon="@Icons.Material.Filled.Close"
+                        Title="Close"
+                        aria-label="Close"
+                        Class="desk-sheet__close"
+                        OnClick="Cancel" />
         </div>
     </TitleContent>
 
     <DialogContent>
-        <div class="desk-sheet__body" style="min-width:@Width">
+        @* Never wider than the viewport less a gutter: a floor of 520px in a 444px dialog, or on a
+           narrow screen, scrolled the sheet's body sideways. *@
+        <div class="desk-sheet__body" style="min-width:min(@Width, calc(100vw - 2 * var(--space-6)))">
             @ChildContent
         </div>
     </DialogContent>

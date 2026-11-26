@@ -122,8 +122,10 @@ else if ((!Loaded && !_movesIn) || _turning)
 
         @if (_slate.Moves.Count > 0)
         {
-            <h3 class="panel-h slatewatch__title">Biggest moves today</h3>
-            <div class="slatewatch__list">
+            @* The list is one card with its name in its bar (ADR 0032): the name stood above the box
+               as a grey heading, nearer the prompt than the rows it named. *@
+            <div class="wgroup slatewatch__list">
+                <div class="wgroup__bar"><h3 class="wgroup__title slatewatch__title">Biggest moves today</h3></div>
                 @foreach (var move in _slate.Moves)
                 {
                     var m = move;
@@ -147,8 +149,8 @@ else if ((!Loaded && !_movesIn) || _turning)
 
             @if (_slate.Next.Count > 0)
             {
-                <h3 class="panel-h slatewatch__title">Next games</h3>
-                <div class="slatewatch__list">
+                <div class="wgroup slatewatch__list">
+                    <div class="wgroup__bar"><h3 class="wgroup__title slatewatch__title">Next games</h3></div>
                     @foreach (var game in _slate.Next)
                     {
                         var g = game;
@@ -185,6 +187,12 @@ else
     </div>
 }
 
+@* The market's standing and the clubs' form, each at a table's reading width (.oddswin): one
+   column of 720px, at the leading edge, and side by side once the window holds two. Maximised,
+   the form's tables ran the whole 1600px window — the player at the far left, his numbers a
+   screen away — under a 720px column of prices with the rest of the window empty beside it. *@
+<div class="oddswin">
+<div class="oddswin__cols">
 @if (_rows.Count == 0)
 {
     @* An empty result means "nothing here" only once there has been a result, and only while
@@ -224,7 +232,7 @@ else
                        SideName="@SideName(_side)" OtherName="@SideName(OtherSide)"
                        ShowBooks="@(!AnyMoves)" Expanded="@_expanded.Contains(_market)" ExpandedChanged="@((bool open) => SetExpanded(open))" Closing="@(_board?.PricesAreClosing == true)"
                        Scheduled="@(_scheduled == true)"
-                       PullLabel="@PullLabel" PullUnavailable="@PullUnavailable" OnPull="PullAsync" />
+                       PullLabel="@PullLabel" PullUnavailable="@PullUnavailable" OnPull="PullAsync" Polled="_polled" />
 
         @if (AnyMoves)
         {
@@ -302,7 +310,8 @@ else
                 </CellTemplate>
             </TemplateColumn>
         </DeskGrid>
-        <MoreBooks Total="_rows.Count" Expanded="@_expanded.Contains(_market)" ExpandedChanged="@((bool open) => SetExpanded(open))" Controls="@_booksId" />
+        <MoreBooks Total="_rows.Count" Expanded="@_expanded.Contains(_market)" ExpandedChanged="@((bool open) => SetExpanded(open))" Controls="@_booksId"
+                   Books="_rows.Select(r => r.Book)" Polled="_polled" />
         </div>
         }
     </div>
@@ -335,11 +344,17 @@ else
         </span>
     </DeskRow>
 
-    @RenderSide(form.Away, form.Game.AwayTeam?.Name ?? "Away", form.Game.AwayTeam)
-    @RenderSide(form.Home, form.Game.HomeTeam?.Name ?? "Home", form.Game.HomeTeam)
+    @* Each club's roster a card with its name in the bar, as the Game window's players are
+       (.gameroster's cards): a grey line over a bare table was a name floating above its box. *@
+    <div class="oddsform">
+        @RenderSide(form.Away, form.Game.AwayTeam?.Name ?? "Away", form.Game.AwayTeam)
+        @RenderSide(form.Home, form.Game.HomeTeam?.Name ?? "Home", form.Game.HomeTeam)
+    </div>
 }
 </PanelSection>
 }
+</div>
+</div>
 }
 
 @code {
@@ -412,6 +427,9 @@ else
 
     private IReadOnlyList<DeskSwitchOption<string>> _sideOptions = [];
     private IReadOnlyList<MovementRow> _rows = [];
+
+    /// <summary>The books the desk polls (PolledBooks); empty when unknown, and the tables read as before.</summary>
+    private IReadOnlyList<string> _polled = [];
 
     private string _headline = string.Empty;
     private string _span = string.Empty;
@@ -758,6 +776,10 @@ else
     private async Task ReadAsync()
     {
         var ct = _latest.Next();
+
+        // The books the desk polls, read again with every load: a key typed into Ops makes a
+        // provider live without a restart (PolledBooks).
+        _polled = PolledBooks.Read(ScopeFactory);
 
         if (Overview)
         {

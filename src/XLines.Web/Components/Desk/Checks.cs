@@ -2,6 +2,7 @@ using System.Globalization;
 using XLines.Core.Analytics;
 using XLines.Core.Entities;
 using XLines.Desk.Primitives;
+using XLines.Web.Components.Panels;
 using XLines.Web.Services;
 
 namespace XLines.Web.Components.Desk;
@@ -129,18 +130,18 @@ public static class Checks
 
         return new Check(DeskState.Warning,
             $"Already in the journal: {OddsMath.Money(prior.Stake)} on {what} at "
-            + $"{OddsMath.FormatPrice(prior.PriceTaken)} ({prior.Book}), {DisplayTime.Stamp(prior.PlacedAt)}. "
+            + $"{OddsMath.FormatPrice(prior.PriceTaken)} ({BookNames.Display(prior.Book)}), {DisplayTime.Stamp(prior.PlacedAt)}. "
             + "Logging again records a second bet.",
             actions.OpenJournal is not null ? OpenJournal : null, actions.OpenJournal);
     }
 
     /// <summary>
-    /// An earlier bet named without its side — "$25 at -128 (draftkings), Sep 26 13:18 ET" — for a
+    /// An earlier bet named without its side — "$25 at -128 (DraftKings), Sep 26 13:18 ET" — for a
     /// place that already shows the side, such as a slip card.
     /// </summary>
     public static string Prior(JournalEntry prior)
         => $"{OddsMath.Money(prior.Stake)} at {OddsMath.FormatPrice(prior.PriceTaken)} "
-           + $"({prior.Book}), {DisplayTime.Stamp(prior.PlacedAt)}";
+           + $"({BookNames.Display(prior.Book)}), {DisplayTime.Stamp(prior.PlacedAt)}";
 
     /// <summary>"12 min", "2h 14m" — whole minutes, so a threshold reads the same on screen as in a test.</summary>
     public static string Span(TimeSpan span)

@@ -70,6 +70,7 @@
                             OnClick="ToggleMore"
                             Title="@(FullyFolded ? "More" : null)"
                             aria-label="@(FullyFolded ? "More" : null)"
+                            aria-haspopup="true"
                             aria-expanded="@(_moreOpen ? "true" : "false")"
                             data-popover-return="true">
                     @if (!FullyFolded)

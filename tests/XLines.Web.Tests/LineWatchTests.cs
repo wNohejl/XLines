@@ -830,6 +830,8 @@ public class LineWatchTests : WagerTestContext
 
         Assert.Equal("Press a game or a price on the Board to follow it here.", panel.Find(".slatewatch__prompt").TextContent.Trim());
         Assert.Equal("Biggest moves today", panel.Find(".slatewatch__title").TextContent.Trim());
+        // The list's name is inside its card, in the bar (ADR 0032), not a heading above the box.
+        Assert.NotNull(panel.Find(".slatewatch__list.wgroup > .wgroup__bar > h3.wgroup__title.slatewatch__title"));
         Assert.Contains("+3 -110 → +2.5 -105", Squash(panel.Find(".slatewatch__row").TextContent));
 
         // No game was read as if it were chosen, and none is named as followed.

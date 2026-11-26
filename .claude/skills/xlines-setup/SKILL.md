@@ -45,6 +45,14 @@ league's scores are pulled once a night, never into the 100-credit reserve: in N
 NFL) scores take about 120 a month and lines get the remaining ~280, one two-league scan about
 every 10 hours. On request, pricing and scoring one league daily is about 120 a month.
 
+The ten books priced are Pinnacle, DraftKings, FanDuel, BetMGM, BetRivers, theScore Bet, Hard Rock
+Bet, Bovada, BetOnline.ag and Bally Bet: ten is one region unit, and every one of them is free on
+Starter. Caesars and Fanatics are paid-plan books there, and so is bet365, whose only listing is
+Australian. **Caesars for free** is an optional second source, SportsGameOdds
+(`SPORTSGAMEODDS_API_KEY`, ADR 0033), on the person's own free key. Offer it only if they ask for
+Caesars. It is a separate sign-up, its terms say payment details may be asked for, and it is
+unverified against the live service. Leave it blank otherwise. Never scrape a book's site.
+
 ## Procedure
 
 Work from the repository root. PowerShell on every OS (`pwsh` on macOS and Linux).

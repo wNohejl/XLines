@@ -233,7 +233,7 @@ public class GameWindowCardsTests : DeskTestContext
     }
 
     [Fact]
-    public void The_players_are_a_centred_block_with_a_column_per_side()
+    public void The_players_are_a_capped_block_with_a_column_per_side()
     {
         _data.Detail = GameWindowDetail.Empty with
         {
@@ -256,7 +256,8 @@ public class GameWindowCardsTests : DeskTestContext
         Assert.Empty(cut.FindAll("[role=tab]"));
 
         var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
-        Assert.Matches(@"\.gameroster__block \{[^}]*max-width: 1100px;[^}]*margin-inline: auto;", css);
+        // At the flow's leading edge, as the cards above it are, not centred away from them.
+        Assert.Matches(@"\.gameroster__block \{[^}]*max-width: 1100px;[^}]*margin-inline: 0;", css);
         Assert.Matches(@"@container wflow \(min-width: 1320px\) \{[^}]*\}\s*\.gameroster__cols \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}", css);
     }
 

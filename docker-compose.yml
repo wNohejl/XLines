@@ -33,6 +33,9 @@ x-providers: &providers
   Ingestion__TheOddsApi__Markets__0: moneyline
   Ingestion__TheOddsApi__Markets__1: spread
   Ingestion__TheOddsApi__Markets__2: ${THE_ODDS_API_TOTALS-total}
+  # The second price source, for Caesars (ADR 0033): its key is its switch, and it pulls only on
+  # request (sgo:lines:{league}). Blank registers nothing.
+  Ingestion__SportsGameOdds__ApiKey: ${SPORTSGAMEODDS_API_KEY:-}
   Ingestion__BallDontLie__ApiKey: ${BALLDONTLIE_KEY:-}
   Ingestion__BallDontLie__Enabled: ${BALLDONTLIE_ENABLED:-false}
   # The stats source, off until the person running the stack opts in (ESPN_ENABLED=true in .env;

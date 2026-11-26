@@ -47,6 +47,13 @@ public class IngestionOptions
     public SourceOptions OddsApiIo { get; set; } = new();
     public SourceOptions TheOddsApi { get; set; } = new();
     public SourceOptions BallDontLie { get; set; } = new();
+
+    /// <summary>
+    /// The second, separate price source for books The Odds API's free plan does not carry —
+    /// Caesars (ADR 0033). Its key is its switch; on request only.
+    /// </summary>
+    public SportsGameOddsOptions SportsGameOdds { get; set; } = new();
+
     /// <summary>
     /// The stats source, off until the operator opts in (<see cref="EspnOptIn"/>): its terms
     /// prohibit automated access, so turning it on is a person's decision, never a default.
@@ -479,6 +486,56 @@ public class BackfillOptions
     /// interrupted backfill — never re-fetches a day that already succeeded.
     /// </summary>
     public bool RetryFailedDays { get; set; }
+}
+
+/// <summary>
+/// SportsGameOdds (ADR 0033): a free key's books beside The Odds API's, billed in "objects" — one
+/// per event a response returns — over a rolling 30 days rather than in credits over a calendar
+/// month, so its budget is its own and never shares The Odds API's.
+/// </summary>
+public class SportsGameOddsOptions : SourceOptions
+{
+    /// <summary>
+    /// Whether a key is held. The key is the switch: <see cref="SourceOptions.Enabled"/> is not read,
+    /// so a key supplied in the environment needs nothing beside it, and no key registers nothing.
+    /// </summary>
+    public bool HasKey => !string.IsNullOrWhiteSpace(ApiKey);
+
+    /// <summary>The free Amateur plan's allowance: 2,500 objects in a rolling 30 days (sportsgameodds.com/pricing).</summary>
+    public int MonthlyObjects { get; set; } = 2500;
+
+    /// <summary>The window the provider counts objects over: 30 days from first use, not the calendar month.</summary>
+    public TimeSpan BudgetWindow { get; set; } = TimeSpan.FromDays(30);
+
+    /// <summary>
+    /// Objects never spent by a pull: a run is cut to what is left above this, and refused when
+    /// nothing is. A tenth of the month, so a miscount here or a second machine's pulls cannot run
+    /// the key dry before this desk notices.
+    /// </summary>
+    public int ObjectReserve { get; set; } = 250;
+
+    /// <summary>
+    /// The most events one pull may return, and so the most objects it may cost. A league's
+    /// week ahead is 16 NFL games, about 50 NBA and about 90 MLB; 50 keeps one press under a
+    /// fiftieth of the month and one request (the provider pages at up to 100).
+    /// </summary>
+    public int MaxEventsPerPull { get; set; } = 50;
+
+    /// <summary>How far ahead a pull asks for games. A week: the board's horizon, and the books'.</summary>
+    public TimeSpan LookAhead { get; set; } = TimeSpan.FromDays(7);
+
+    /// <summary>Pause between pages: the free plan allows 10 requests a minute.</summary>
+    public TimeSpan PageDelay { get; set; } = TimeSpan.FromSeconds(6.5);
+
+    /// <summary>
+    /// The provider's bookmaker ids to request, falling back to Caesars — the book this source is
+    /// here for. The others it carries on the free plan (FanDuel, DraftKings, BetMGM, ESPN BET,
+    /// Bovada) already come from The Odds API, and a second copy of a book under another source is
+    /// a second row of the same price.
+    /// </summary>
+    public string[] RequestedBooks => Bookmakers.Length > 0 ? Bookmakers : DefaultRequestedBooks;
+
+    public static readonly string[] DefaultRequestedBooks = ["caesars"];
 }
 
 public class SourceOptions

@@ -262,6 +262,20 @@ public class DatabaseInitializer(XLinesDbContext db, ILogger<DatabaseInitializer
                 MonthlyCreditBudget = 500,
                 Enabled = false
             },
+            // The second price source (ADR 0033): its own key and its own allowance, counted in
+            // objects (one per event returned) and held here as its monthly "credits", a backstop
+            // to the rolling 30-day count its job prices by. Seeded off and left off: it runs only
+            // on request, so it is kept out of the freshness rules, KPIs and alerts a feed is
+            // measured by. Its runs are still recorded against it, as every run is.
+            new Source
+            {
+                Key = SourceAccounts.SportsGameOdds,
+                Name = "SportsGameOdds",
+                Kind = SourceKind.Odds,
+                BaseUrl = "https://api.sportsgameodds.com/v2/",
+                MonthlyCreditBudget = 2500,
+                Enabled = false
+            },
             new Source
             {
                 Key = "balldontlie",

@@ -125,7 +125,7 @@ public class DeskSheetTests : DeskTestContext
             new DialogParameters<DeskSheet> { { x => x.Title, "Add a note" } }, width: "400px"));
 
         provider.WaitForAssertion(() => Assert.Contains("Add a note", provider.Markup));
-        Assert.Contains("min-width:400px", provider.Find(".desk-sheet__body").GetAttribute("style"));
+        Assert.Contains("min-width:min(400px,", provider.Find(".desk-sheet__body").GetAttribute("style"));
 
         await provider.InvokeAsync(() => handle!.Close(DialogResult.Ok("done")));
         var result = await handle!.Result;
@@ -147,7 +147,7 @@ public class DeskSheetTests : DeskTestContext
             new DialogParameters<DeskSheet> { { x => x.Title, "Add a note" }, { x => x.Width, "300px" } }));
 
         provider.WaitForAssertion(() =>
-            Assert.Contains("min-width:300px", provider.Find(".desk-sheet__body").GetAttribute("style")));
+            Assert.Contains("min-width:min(300px,", provider.Find(".desk-sheet__body").GetAttribute("style")));
     }
 
     /// <summary>Closing without a result is the way out: it reads as cancelled.</summary>

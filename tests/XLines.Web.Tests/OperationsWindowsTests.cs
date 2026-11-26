@@ -204,16 +204,23 @@ public class OperationsWindowsTests : DeskTestContext
     {
         var panel = RenderOps(LiveFeed());
 
-        Assert.Equal(["Stats source", "Open alerts", "Source health", "Odds feeds", "Scanning", "On-call drill"],
+        // In the order they read, which is the markup's: no dense packing lifts a card over the
+        // tables, so keyboard focus never jumps back up the window.
+        Assert.Equal(["Stats source", "Scanning", "Open alerts", "On-call drill", "Source health", "Odds feeds"],
             CardTitles(panel));
         Assert.Single(panel.FindAll(".wflow.opsflow"));
         Assert.Empty(panel.FindAll("section.psection, .wgroup__head"));
 
-        // A table spans the row; the all-clear sentence and the forms take one track.
-        Assert.Contains("wsection--span", Card(panel, "Source health").ClassName);
-        Assert.Contains("wsection--span", Card(panel, "Odds feeds").ClassName);
+        // A table takes two tracks, never the whole of a wide row (its figures a screen from its
+        // names); the all-clear sentence and the forms take one track.
+        foreach (var table in new[] { "Source health", "Odds feeds" })
+        {
+            Assert.Contains("wsection--pair", Card(panel, table).ClassName);
+            Assert.DoesNotContain("wsection--span", Card(panel, table).ClassName);
+        }
+        Assert.DoesNotContain("wsection--pair", Card(panel, "Open alerts").ClassName);
         Assert.DoesNotContain("wsection--span", Card(panel, "Open alerts").ClassName);
-        Assert.DoesNotContain("wsection--span", Card(panel, "Scanning").ClassName);
+        Assert.DoesNotContain("wsection--pair", Card(panel, "Scanning").ClassName);
 
         // One edge a section: no card inside a card, and the tiles stay a row of tiles outside them.
         Assert.Empty(panel.FindAll(".wgroup .wgroup"));
@@ -441,6 +448,10 @@ public class OperationsWindowsTests : DeskTestContext
         Assert.Single(panel.FindAll(".wflow.incflow"));
         Assert.All(panel.FindAll(".wflow > section.wsection"), s => Assert.Contains("wsection--span", s.ClassName));
         Assert.Empty(panel.FindAll("section.psection, .wgroup .metrics"));
+
+        // The tiles and both lists stand at a table's reading width, not the window's.
+        Assert.NotNull(panel.Find(".wmeasure.incidents > .metrics"));
+        Assert.NotNull(panel.Find(".wmeasure.incidents > .wflow.incflow"));
 
         Assert.Contains("Incident 1", Section(panel, "Open"));
         Assert.DoesNotContain("Incident 2", Section(panel, "Open"));
@@ -709,8 +720,13 @@ public class OperationsWindowsTests : DeskTestContext
 
         Assert.DoesNotContain("wsection--span", Card(panel, "Sources").ClassName);
         Assert.DoesNotContain("wsection--span", Card(panel, "Run").ClassName);
-        Assert.Contains("wsection--span", Card(panel, "Seasons").ClassName);
-        Assert.Contains("wsection--span", Card(panel, "Recent days").ClassName);
+
+        // The seasons table takes two tracks and the recent days one beside it: in a wide window
+        // the two records read side by side rather than each across 1560px of row.
+        Assert.Contains("wsection--pair", Card(panel, "Seasons").ClassName);
+        Assert.DoesNotContain("wsection--span", Card(panel, "Seasons").ClassName);
+        Assert.DoesNotContain("wsection--span", Card(panel, "Recent days").ClassName);
+        Assert.DoesNotContain("wsection--pair", Card(panel, "Recent days").ClassName);
     }
 
     /// <summary>

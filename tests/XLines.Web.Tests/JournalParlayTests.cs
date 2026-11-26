@@ -279,6 +279,13 @@ public class JournalParlayTests : WagerTestContext
 
         // The disclaimer stays the window's footnote, under the cards.
         Assert.NotEmpty(cut.FindAll(".wflow.journal-lists ~ .journal-foot"));
+
+        // Tabs, toolbar, ledgers and footnote stand at one table measure, so the toolbar's keys end
+        // where the rows' keys do rather than a window's width from the filters.
+        var measure = Assert.Single(cut.FindAll(".wmeasure.journal"));
+        Assert.NotNull(measure.QuerySelector(".ptoolbar"));
+        Assert.NotNull(measure.QuerySelector(".wflow.journal-lists"));
+        Assert.NotNull(measure.QuerySelector(".journal-foot"));
     }
 
     /// <summary>The book the picker shows: its value, or the option marked selected, however the renderer wrote it.</summary>

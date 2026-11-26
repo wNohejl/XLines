@@ -601,6 +601,14 @@ the bar, a cell or a row draws a border or a shadow. Its fill is a `color-mix` o
   does, and its last row's hairline stands down for the card's edge (no second frame, no doubled
   bottom edge); the sentence and the confirm take the rows' inset. A window writes none of this
   in its own sheet.
+- **A table reads at a table's width.** A card whose body is a table of several columns takes
+  `Class="wsection--pair"`: two tracks once two fit (856px of flow), the whole row below that, so
+  in a flow of three a card or a second table takes the third track instead of a gutter opening
+  inside every row. A window whose whole content is a table or two (with their toolbar, title or
+  tabs) wraps it in `div.wmeasure`: `max-width: var(--measure-table)` (1280px), centred, or
+  `.wmeasure--narrow` (`--measure-table-narrow`, 800px) for a list of a few short columns — the
+  one cap allowed, because it caps rows, never a flow of cards. A `MetricRow` of one to six tiles
+  stops at that many `--metric-max` (240px) tiles, at the leading edge.
 - **Narrow is the card's.** The group is a container: form rows stack their labels under 400px of
   card, split cells under 720px, and the bar, rows and cells tighten their inset under 480px.
 - **Spelled by hand**, only where `FormGroup` cannot be used: `section.wsection` (with
@@ -669,6 +677,7 @@ a fresh project that wires the Desk can open it from the strip or the palette.
 | --- | --- | --- |
 | Edges | A control or group has one edge. A form is not boxed around a bordered group, and a group carries its hairline where it is defined. A section card's name is in its header bar, whose full-width hairline divides it from the rows inside the one card; the footer is under the card. | `DeskCssConventionTests` (`A_form_is_not_boxed`, `A_group_carries_its_hairline_where_it_is_defined`) |
 | Sections are cards in a flow | A window's section is one card named in its bar, nothing inside it draws a box, and a window of several puts them in `.wflow`: more width is more columns, never wider cards. | `FormGroupTests` (`The_bar_is_divided_from_the_rows_by_one_full_width_hairline_and_draws_no_edge_of_its_own`, `Nothing_inside_a_card_draws_a_box`, `The_flow_adds_columns_rather_than_widening_cards_and_aligns_them_to_the_start`) |
+| A table reads at a table's width | A table card takes two tracks (`.wsection--pair`), a window of tables stands at the table measure (`.wmeasure`), a row of tiles stops at its tiles' width. | `TableMeasureCssTests` |
 | One Filled key | A context has at most one Filled key, last in its row; everything else is Tinted or Plain. A selected choice in the accent's wash (a column's showing tab, a checked toggle) is selection, not a Filled key. | `PanelToolbarTests.Keeps_every_key_in_one_actions_item_after_the_pickers` (the Filled key last); the count is held in review |
 | Sentence case | Titles, headers, keys and tags read in sentence case. | `PanelHeader` and `PanelSection` set the rule's type; no test reads copy yet |
 | Keys explain themselves | A key that waits says why in text on its row, not in a title a disabled key never shows, and the key is described by that text; secondary keys come first and the Filled key last, and a confirm asks Cancel first. | `KeyRowTests`, `KeyRowAdoptionTests` (in the host's tests), `InlineConfirmTests` |

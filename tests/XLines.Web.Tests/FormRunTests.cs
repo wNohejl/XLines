@@ -47,11 +47,12 @@ public class FormRunTests : DeskTestContext
         Assert.Single(marked);
         Assert.Same(tags[^1], marked[0]);
 
-        // Keyed on the score rather than the date: titles render in Eastern time, so a UTC
-        // midnight fixture names the previous day.
-        Assert.Contains("Yankees", marked[0].GetAttribute("title"));
-        Assert.Contains("(0-1)", marked[0].GetAttribute("title"));
-        Assert.Contains("most recent", marked[0].GetAttribute("title"));
+        // Keyed on the score rather than the date: the run's name renders in Eastern time, so a
+        // UTC midnight fixture names the previous day. The last game named is the marked tag's.
+        var newest = Games(cut)[^1];
+        Assert.Contains("Yankees", newest);
+        Assert.Contains("(0-1)", newest);
+        Assert.Contains("most recent", newest);
     }
 
     /// <summary>
@@ -69,10 +70,15 @@ public class FormRunTests : DeskTestContext
         // Newest three are Aug 28 (L), Aug 26 (L), Aug 25 (W) — shown oldest first.
         Assert.Equal(["W", "L", "L"], Letters(cut));
 
-        var tags = cut.FindAll(".formrun .tag");
-        Assert.Contains("(7-3)", tags[0].GetAttribute("title"));
-        Assert.Contains("(0-1)", tags[^1].GetAttribute("title"));
+        var games = Games(cut);
+        Assert.Equal(3, games.Length);
+        Assert.Contains("(7-3)", games[0]);
+        Assert.Contains("(0-1)", games[^1]);
     }
+
+    /// <summary>The games the run's accessible name lists, oldest first, as its tags read.</summary>
+    private static string[] Games(IRenderedComponent<FormRun> cut)
+        => cut.Find(".formrun").GetAttribute("aria-label")!["Form, oldest first: ".Length..].Split("; ");
 
     /// <summary>
     /// An unfinished game is not a loss. It takes the neutral tone and its own glyph rather
@@ -103,17 +109,22 @@ public class FormRunTests : DeskTestContext
     }
 
     /// <summary>
-    /// The title is the only place the game behind a one-character tag is named, so it carries
-    /// venue, opponent and score.
+    /// The run's name is the only place the games behind its one-character tags are named, so it
+    /// carries venue, opponent and score, oldest first — and it is on the run, which takes focus,
+    /// rather than in a title on each tag that only a pointer could raise.
     /// </summary>
     [Fact]
-    public void Each_tag_names_the_game_it_stands_for()
+    public void The_run_names_the_games_it_stands_for()
     {
         var cut = RenderComponent<FormRun>(p => p.Add(x => x.Log, Log()));
 
-        var oldest = cut.FindAll(".formrun .tag")[0].GetAttribute("title");
+        var run = cut.Find(".formrun");
+        var name = run.GetAttribute("aria-label")!;
 
-        Assert.Contains("vs Giants", oldest);
-        Assert.Contains("(5-4)", oldest);
+        Assert.Equal("0", run.GetAttribute("tabindex"));
+        Assert.StartsWith("Form, oldest first: ", name);
+        Assert.Contains("vs Giants", name.Split("; ")[0]);
+        Assert.Contains("(5-4)", name.Split("; ")[0]);
+        Assert.Null(cut.FindAll(".formrun .tag")[0].GetAttribute("title"));
     }
 }

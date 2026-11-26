@@ -43,7 +43,7 @@
                        Error="@Model.LineError(Market)"
                        Value="Model.Line" ValueChanged="SetLineAsync" />
         }
-        <DeskField TValue="string" Immediate="true" Label="Book" aria-label="Book" placeholder="draftkings"
+        <DeskField TValue="string" Immediate="true" Label="Book" aria-label="Book" placeholder="DraftKings"
                    list="@_booksListId" Class="typed-inline__book"
                    onblur="@Blur(Model.TouchBook)"
                    Error="@Model.BookFieldError"
@@ -58,7 +58,6 @@
         {
             <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Plain" Class="typed-inline__back wager-manual-key"
                         Icon="@Icons.Material.Filled.Undo"
-                        aria-pressed="true"
                         Title="Go back to the price the desk fetched"
                         OnClick="OnUseFetched">
                 @UseFetchedLabel
@@ -88,7 +87,6 @@ else
             {
                 <DeskButton Size="DeskKeySize.Small" Class="wager-manual-key"
                             Icon="@Icons.Material.Filled.Undo"
-                            aria-pressed="true"
                             Title="Go back to the price the desk fetched"
                             OnClick="OnUseFetched">
                     @UseFetchedLabel
@@ -110,7 +108,7 @@ else
 }
 <FormRow Label="Book" Class="wager-typed">
     <div class="wager-typed__cell">
-        <DeskField TValue="string" Immediate="true" Label="Book" aria-label="Book" placeholder="draftkings"
+        <DeskField TValue="string" Immediate="true" Label="Book" aria-label="Book" placeholder="DraftKings"
                    onblur="@Blur(Model.TouchBook)"
                    list="@_booksListId" Class="wfield--short"
                    Error="@Model.BookFieldError"

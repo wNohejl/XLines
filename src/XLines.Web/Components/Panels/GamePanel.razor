@@ -5,6 +5,7 @@
 @using XLines.Desk.Windowing
 @inherits PanelBase
 @inject XLines.Web.Services.IGameWindowData Data
+@inject IServiceScopeFactory ScopeFactory
 
 @*
     The consolidated game view: lines, team data and players, in the order that matters right
@@ -558,6 +559,7 @@ else
     private void HandOver(BoardRow? row, XLines.Web.Services.GameWindowDetail? detail)
     {
         _row = row;
+        _polled = XLines.Web.Services.PolledBooks.Read(ScopeFactory);
 
         if (_row is null || detail is null)
             return;
@@ -683,7 +685,7 @@ else
                                 First="first" Second="second" FirstSide="@firstSide" SecondSide="@secondSide"
                                 Sport="@_row!.Game.Sport?.Key" FirstAbbrev="@(total ? null : firstAbbrev)" SecondAbbrev="@(total ? null : secondAbbrev)"
                                 Closing="@_row!.PricesAreClosing" PricedAt="@_row.PricedAt"
-                                Expanded="@_expandedMarkets.Contains(key)"
+                                Expanded="@_expandedMarkets.Contains(key)" Polled="_polled"
                                 ExpandedChanged="@((bool all) => SetMarketExpanded(key, all))"
                                 OnOpenWindow="() => Manager.OpenMovement(GameId, WindowShortcuts.Describe(_row.Game))" />
             </div>
@@ -876,7 +878,24 @@ else
     private string LinesFoot
         => _row!.PricesAreClosing
             ? "Closing prices: the last number each book showed before the start. Open a market for every book's."
-            : $"The best price on each side across {_row.BookCount:N0} {(_row.BookCount == 1 ? "book" : "books")}. Open a market for every book's, and how each moved.";
+            : $"The best price on each side across {AcrossText(_row, _polled)}. Open a market for every book's, and how each moved.";
+
+    /// <summary>
+    /// "8 of 10 polled books" once the polled list is known (a book outside it that priced the game
+    /// is added: "8 of 10 polled books and 1 more"); "8 books", as before, while it is not.
+    /// </summary>
+    public static string AcrossText(BoardRow row, IReadOnlyCollection<string>? polled)
+    {
+        if (BookCoverage.Of(BookCoverage.Books(row), polled) is not { } coverage)
+            return $"{row.BookCount:N0} {(row.BookCount == 1 ? "book" : "books")}";
+
+        var extra = coverage.Priced - coverage.PolledPriced;
+        return $"{coverage.PolledPriced} of {coverage.Polled} polled {(coverage.Polled == 1 ? "book" : "books")}"
+               + (extra > 0 ? $" and {extra} more" : "");
+    }
+
+    /// <summary>The books the desk polls (PolledBooks), read with each load; empty when unknown.</summary>
+    private IReadOnlyList<string> _polled = [];
 
     /// <summary>"2026 season", or "2025 postseason" for a February game that closes the prior year.</summary>
     private static string SeasonWords(Game game)

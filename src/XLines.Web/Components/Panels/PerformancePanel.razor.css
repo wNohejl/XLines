@@ -1,7 +1,25 @@
-/* The chart's card: the plot and its takeaway inset from the card's edge as a row's text is. */
+/* The chart's card: the plot and its takeaway inset from the card's edge as a row's text is,
+   and a step in under 480px of card, as the Desk's rows, bar and footer step in there. */
 .perf-card__body {
     padding: var(--space-3) var(--space-4);
+}
+@container (max-width: 480px) {
+    .perf-card__body { padding-inline: var(--space-3); }
 }
 
 /* A table inside a card — no second frame, the last row's hairline standing down for the card's
    edge — is the Desk's (desk.css, "What a card holds that is not a row"). */
+
+/* The curve is the one large card beside the bankroll (Span Rest), and it is as tall as the two
+   or three cards that follow: a two-to-one plot over two tracks stood about 560px high beside a
+   one-field card of 120, so the first row was the bankroll over 400px of nothing. It spans rows,
+   so the breakdowns that come next take the track under the bankroll, beside the curve: two rows
+   while it is one track wide, three once it is two (three tracks, 3 × 420px and the gaps). The
+   cards keep their own heights (align-items: start); what the rows cannot share is air under
+   the shorter side, not a stretched box. */
+@container wflow (min-width: 856px) {
+    .perf-flow ::deep .perf-curve { grid-row: span 2; }
+}
+@container wflow (min-width: 1292px) {
+    .perf-flow ::deep .perf-curve { grid-row: span 3; }
+}

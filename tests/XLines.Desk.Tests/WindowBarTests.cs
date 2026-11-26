@@ -29,6 +29,8 @@ public class WindowBarTests : SampleDeskTestContext
     {
         var manager = new WindowManager(new SampleCatalog());
         Services.AddSingleton(manager);
+        // The strip's Delete key closes through the alert that guards unsaved input.
+        Services.AddSingleton<XLines.Desk.Primitives.IDeskAlerts>(new FakeAlerts());
         return manager;
     }
 

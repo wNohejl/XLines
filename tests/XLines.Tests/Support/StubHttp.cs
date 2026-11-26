@@ -30,6 +30,9 @@ public sealed class StubHttp : HttpMessageHandler
     /// <summary>Every address asked, in order.</summary>
     public List<Uri> Asked { get; } = [];
 
+    /// <summary>Each request's headers, in the order asked: how a test proves a key went in a header and not the address.</summary>
+    public List<Dictionary<string, string>> Headers { get; } = [];
+
     /// <summary>The last address asked, or null if nothing was.</summary>
     public Uri? Last => Asked.Count == 0 ? null : Asked[^1];
 
@@ -45,7 +48,10 @@ public sealed class StubHttp : HttpMessageHandler
 
         // A host's jobs may ask from more than one thread; the log must not lose a request.
         lock (Asked)
+        {
             Asked.Add(uri);
+            Headers.Add(request.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value), StringComparer.OrdinalIgnoreCase));
+        }
 
         var (status, body) = respond(uri.ToString());
         var response = new HttpResponseMessage(status) { Content = new StringContent(body) };

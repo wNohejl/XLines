@@ -333,7 +333,10 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
             BookCount: prices.Select(p => p.Book).Distinct().Count(),
             PricedAt: prices.Count == 0 ? null : prices.Max(p => p.CapturedAt),
             PricesAreClosing: isClosing,
-            Unpriced: prices.Count > 0 ? null : ExplainGap(game, lastScanInLeague));
+            Unpriced: prices.Count > 0 ? null : ExplainGap(game, lastScanInLeague))
+        {
+            LastPulled = prices.Count > 0 ? null : lastScanInLeague
+        };
     }
 
     /// <summary>
@@ -587,6 +590,13 @@ public record BoardRow(
     string? Unpriced)
 {
     public bool HasPrices => BookCount > 0;
+
+    /// <summary>
+    /// When this game's league was last priced — its newest scan or its last lines pull, whichever
+    /// is later — for a row with no price to say so. Read only for an unpriced row; null on a priced
+    /// one, and null on an unpriced one whose league has never been pulled.
+    /// </summary>
+    public DateTimeOffset? LastPulled { get; init; }
 
     /// <summary>
     /// The quarterback each NFL club started its last game with (<see cref="Starters"/>), shown

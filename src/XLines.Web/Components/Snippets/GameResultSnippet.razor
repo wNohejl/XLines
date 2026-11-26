@@ -42,11 +42,12 @@
     <div class="fact">
         <div class="fact__label">Against the spread</div>
         <div class="fact__value">
-            @if (Row.AtsResult is { } ats)
+            @* The capsule and the word the log row above it uses, so one fact reads one way. *@
+            @if (Row.AtsResult is { } ats && ResultTag.Of(ats) is { } cover)
             {
-                <Tag State="@TagStates.Result(ats)">
-                    @(ats == EntryResult.Win ? "Covered" : ats == EntryResult.Loss ? "Did not cover" : "Push")
-                </Tag>
+                <ResultTag Result="@cover">
+                    @(ats == EntryResult.Win ? "Covered" : ats == EntryResult.Loss ? "Missed" : "Push")
+                </ResultTag>
             }
             else
             {

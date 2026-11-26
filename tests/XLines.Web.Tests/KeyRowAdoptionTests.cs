@@ -70,7 +70,8 @@ public class KeyRowAdoptionTests
             Assert.DoesNotContain("<p class=\"empty\"", source);
         }
 
-        Assert.Contains("<EmptyState Kind=\"EmptyStateKind.New\">Nothing on the timeline yet.</EmptyState>",
+        // Inside a card, the card's default sentence: leading, at the rows' inset.
+        Assert.Contains("<EmptyState>Nothing on the timeline yet.</EmptyState>",
             Source("IncidentsPanel"));
     }
 

@@ -10,6 +10,11 @@
    an aside: they sit a step under the row at --text-secondary (5.71:1), which passes. A failed
    run's error is .down, --state-negative-ink, which passes too. *@
 
+@* The log is the window's whole content, so the toolbar, the table and its footer stand at a
+   table's reading width, centred in a wider window (.wmeasure): maximised, a run's state and
+   start sat at one edge and its detail, the sentence the row exists to say, a screen away, with
+   Refresh as far again from the pickers it sits beside. *@
+<div class="wmeasure">
 <PanelToolbar>
     <ChildContent>
         <DeskSelect TValue="string" aria-label="Source"
@@ -30,11 +35,8 @@
             }
         </DeskSelect>
     </ChildContent>
-    <Actions>
-        <DeskButton Icon="@Icons.Material.Filled.Refresh" OnClick="LoadAsync">
-            Refresh
-        </DeskButton>
-    </Actions>
+    @* No Refresh key: the window watches the runs topic and re-reads on every run that lands, so
+       a key offering to reload repainted the same rows (History dropped its own for the same reason). *@
 </PanelToolbar>
 
 @* No section rule over the table: the window is called Runs and the table is all it holds, so a
@@ -104,7 +106,7 @@
                     Property="r => r.FinishedAt == null ? null : (r.FinishedAt - r.StartedAt)!.Value.TotalMilliseconds"
                     Title="Took" Align="Align.Right" HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
         <CellTemplate>
-            <span class="quiet">@(context.Item.Duration is { } d ? $"{d.TotalMilliseconds:N0}ms" : "—")</span>
+            <span class="quiet">@(context.Item.Duration is { } d ? Took(d) : "—")</span>
         </CellTemplate>
     </PropertyColumn>
 
@@ -162,6 +164,7 @@
     </p>
 }
 }
+</div>
 
 @code {
     protected override IReadOnlySet<string> Watches { get; } = new HashSet<string> { DataTopics.Runs };
@@ -213,8 +216,40 @@
     private async Task OnSourceChanged(string value)
     {
         _sourceFilter = value ?? string.Empty;
+        Remember(int.TryParse(_sourceFilter, out var id) ? id : null);
         await LoadAsync();
     }
+
+    /// <summary>
+    /// Writes the source picked here into the window's own parameters, as the Odds window does.
+    /// The desk re-aims a singleton only when asked for something its parameters do not already
+    /// say: still holding the source it was opened on after All sources was picked, following that
+    /// source again from Ops matched, changed nothing, and the picker stayed on All sources.
+    /// </summary>
+    private void Remember(int? sourceId)
+    {
+        _aimedAt = sourceId;
+
+        if (WindowId is null || Manager.Find(WindowId) is not { } window)
+            return;
+
+        WindowManager.Aim(window.Parameters, sourceId is { } id
+            ? new Dictionary<string, object> { [nameof(SourceId)] = id }
+            : new Dictionary<string, object>());
+
+        // "Runs · ESPN" over every source's runs would name the wrong thing.
+        window.TitleOverride = sourceId is { } picked && _sources.FirstOrDefault(s => s.Id == picked) is { } source
+            ? $"Runs · {source.Name}"
+            : null;
+    }
+
+    /// <summary>How long a run took, read at a glance: "840ms", "12.4s", "3m 05s" — not "183,402ms".</summary>
+    private static string Took(TimeSpan d) => d.TotalSeconds switch
+    {
+        < 1 => $"{d.TotalMilliseconds:N0}ms",
+        < 60 => $"{d.TotalSeconds:0.0}s",
+        _ => $"{(int)d.TotalMinutes}m {d.Seconds:00}s"
+    };
 
     private async Task OnStatusChanged(string value)
     {

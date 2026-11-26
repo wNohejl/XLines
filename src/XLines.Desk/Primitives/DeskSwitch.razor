@@ -46,7 +46,7 @@
                     role="radio"
                     aria-checked="@(selected ? "true" : "false")"
                     tabindex="@TabStop(index)"
-                    title="@option.Title"
+                    title="@(option.Title ?? option.Label)"
                     @ref="_refs[index]"
                     @onclick="() => PressAsync(index)">
                 @option.Label

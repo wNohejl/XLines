@@ -39,6 +39,8 @@ public class DeskSmokeTests : DeskTestContext
     public void The_strip_has_one_key_per_window_that_opens_on_its_own()
     {
         Services.AddSingleton(Manager());
+        // The strip's Delete key closes through the alert that guards unsaved input.
+        Services.AddSingleton<XLines.Desk.Primitives.IDeskAlerts>(new XLines.Desk.Testing.FakeAlerts());
 
         var bar = RenderComponent<WindowBar>();
 

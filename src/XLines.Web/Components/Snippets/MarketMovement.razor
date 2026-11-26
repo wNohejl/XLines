@@ -89,7 +89,8 @@
             </tbody>
         </table>
 
-        <MoreBooks Total="_rows.Count" Top="MaxBooks" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Id" />
+        <MoreBooks Total="_rows.Count" Top="MaxBooks" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Id"
+                   Books="_rows.Select(r => r.Book)" Polled="Polled" />
 
         <p class="gamemove__foot">
             <span>@OddsPanel.SpanText(_rows)</span>
@@ -147,6 +148,9 @@
 
     /// <summary>Opens the Line movement window on this game, for every book or the market's detail.</summary>
     [Parameter] public EventCallback OnOpenWindow { get; set; }
+
+    /// <summary>The books the desk polls (<c>PolledBooks</c>), for the tables' priced-of-polled count; null or empty: unknown.</summary>
+    [Parameter] public IReadOnlyCollection<string>? Polled { get; set; }
 
     /// <summary>How many books the row shows before "View more" (BookRanking.Top, as every book table).</summary>
     public const int MaxBooks = BookRanking.Top;
@@ -260,14 +264,14 @@
     private RenderFragment RenderEveryBook() => @<text>
         @if (First is null && Second is null)
         {
-            <p class="gamemove__foot"><span>No book priced this market.</span></p>
+            <p class="gamemove__foot"><span>@(BookCoverage.Of([], Polled) is { } none ? $"None of the {none.Polled} polled books priced this market." : "No book priced this market.")</span></p>
         }
         else
         {
             <BookComparison Market="@Market" First="First" Second="Second"
                             FirstSide="@FirstSide" SecondSide="@SecondSide"
                             Sport="@Sport" FirstAbbrev="@FirstAbbrev" SecondAbbrev="@SecondAbbrev"
-                            Top="MaxBooks" Controls="@Id"
+                            Top="MaxBooks" Controls="@Id" Polled="Polled"
                             Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" />
             <p class="gamemove__foot">
                 <span>

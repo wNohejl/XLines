@@ -154,6 +154,15 @@ public static class IngestionServiceCollectionExtensions
         if (!options.Espn.Enabled && options.TheOddsApi.Enabled && !string.IsNullOrWhiteSpace(options.TheOddsApi.ApiKey))
             AddTheOddsApiSchedule(services);
 
+        // The second price source (ADR 0033), only where its own key is held: the key is the
+        // switch. Registered as itself, never as an IOddsSource, so no lines pull, scheduled scan
+        // or pacing sum that spends The Odds API's credits can reach it; its job asks for it by name.
+        if (options.SportsGameOdds.HasKey)
+        {
+            AddProviderClient<SportsGameOddsAdapter>(services, SportsGameOddsAdapter.BaseUrl);
+            services.AddScoped<SportsGameOddsBudget>();
+        }
+
         return services;
     }
 
@@ -320,7 +329,7 @@ public static class IngestionServiceCollectionExtensions
         options.Backfill.Sources = Unique(options.Backfill.Sources);
         options.Gamecast.Sports = Unique(options.Gamecast.Sports);
 
-        foreach (var source in new[] { options.OddsApiIo, options.TheOddsApi, options.BallDontLie, options.Espn })
+        foreach (var source in new[] { options.OddsApiIo, options.TheOddsApi, options.BallDontLie, options.Espn, options.SportsGameOdds })
             source.Bookmakers = Unique(source.Bookmakers);
     }
 

@@ -19,6 +19,10 @@
 @* The sport is the picker that folds and the search the field that follows it, in the slots the
    toolbar folds from: a narrow Players window kept both on the row, which cannot fold content it
    was not told may leave, and pushed Sync stats past the window's edge (HIG audit, 17 November). *@
+@* Five short columns read at a list's width, not the window's: the toolbar and the list stand at
+   the narrow table measure, centred in a wider window (.wmeasure--narrow). Maximised, a name and
+   its games count were 1200px apart and Sync stats sat as far from the search. *@
+<div class="wmeasure wmeasure--narrow">
 <PanelToolbar Actions="@(Manager.Access.CanOperate ? SyncKey : null)">
     <Overflow>
         @* All and the enabled leagues: a fixed set, so a segment, as in the Journal. *@
@@ -123,6 +127,7 @@ else
         <Note>Showing the first @Limit by name. Narrow the search, or pick a sport, to see the rest.</Note>
     }
 }
+</div>
 
 @code {
     /// <summary>

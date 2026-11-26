@@ -397,7 +397,7 @@ public class WagerWindowBooksTests : WagerTestContext
 
         cut.Find("input[aria-label='The bet']").Input("Steelers to win the AFC North");
         cut.Find("input[placeholder='-110']").Input("250");
-        cut.Find("input[placeholder='draftkings']").Input("Caesars");
+        cut.Find("input[placeholder='DraftKings']").Input("Caesars");
         Key(cut, 25m.ToString("C0")).Click();
 
         Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Contains("Add to slip"));

@@ -95,7 +95,7 @@ public sealed class IngestionDeskJobs(IngestionJobs jobs) : IDeskJobs
         => job.Metered && (job.NeedsKey || job.EstimatedCredits <= 0)
             ? NeedsKey
             : job.EstimatedCredits > 0
-            ? $"{job.EstimatedCredits} {(job.EstimatedCredits == 1 ? "credit" : "credits")}"
+            ? $"{job.EstimatedCredits} {(job.EstimatedCredits == 1 ? job.CostUnit : job.CostUnit + "s")}"
               + (job.CreditsLeft is { } left ? $" · {left:N0} left" : "")
             : job.EstimatedRequests == 0 ? "free" : $"free · ~{job.EstimatedRequests} req";
 

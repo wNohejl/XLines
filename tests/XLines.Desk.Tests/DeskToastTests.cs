@@ -714,7 +714,7 @@ public class DeskToastTests : DeskTestContext
         // With nowhere to go back to: the header's first key, else the desk, which can take focus.
         Assert.Contains("document.querySelector('.hdr button:not([disabled])')", js);
         var desk = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "Windowing", "Desk.razor"));
-        Assert.Contains("<main class=\"desk\" data-desk aria-label=\"Desk\" tabindex=\"-1\">", desk);
+        Assert.Matches(@"<main class=""desk[^>]*data-desk aria-label=""Desk"" tabindex=""-1"">", desk);
     }
 
     [Fact]

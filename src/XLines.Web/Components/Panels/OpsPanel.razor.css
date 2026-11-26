@@ -3,15 +3,17 @@
    that is not a row"); what is here is the Ops window's own. */
 
 /* The flow stands under the tiles and the key that recomputes them by the air a section takes
-   (it collapses with the tiles' own margin). The drill's rows lead with a source's name
-   ("ESPN (unofficial)"), wider than a setting's. Packed dense: Stats source leads, and the
-   alerts, health and feeds tables after it each take the whole row, so without it the first row
-   held one card and two tracks of nothing; dense lifts the key and Scanning up beside it, which
-   is where they belong anyway — the source, its key and how it is scanned, in one row. */
+   (it collapses with the tiles' own margin). Not packed dense: the cards come in the markup's
+   order, the source, its key and Scanning first, so focus moves through them as they read. Dense
+   lifted cards over the tables and focus jumped back up after them.
+
+   Two label columns, named once: a setting's ("Key", "Mode") and a source's, which the drill's
+   rows lead with ("ESPN (unofficial)"). The setting's was spent as --ops-label and defined
+   nowhere, so the key and Scanning fell back to the Desk's 88px. */
 .opsflow {
-    grid-auto-flow: row dense;
     margin-top: var(--space-4);
-    --ops-source-label: 168px;
+    --ops-label: var(--ops-label-field);
+    --ops-source-label: var(--ops-label-name);
 }
 
 /* The stats source's statement is the card's content, so it is set as content: body size, the

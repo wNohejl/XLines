@@ -13,10 +13,21 @@ namespace XLines.Ingestion.Services;
 /// one. The registry is scoped, so a key supplied while the host runs is seen by the next job.
 /// </para>
 /// </summary>
-public class SourceRegistry(IEnumerable<IOddsSource> oddsSources, IEnumerable<IStatsSource> statsSources)
+public class SourceRegistry(
+    IEnumerable<IOddsSource> oddsSources,
+    IEnumerable<IStatsSource> statsSources,
+    Adapters.SportsGameOddsAdapter? sportsGameOdds = null)
 {
     public IReadOnlyList<IOddsSource> OddsSources { get; } = oddsSources.Where(s => s.IsConfigured).ToList();
     public IReadOnlyList<IStatsSource> StatsSources { get; } = statsSources.Where(s => s.IsConfigured).ToList();
+
+    /// <summary>
+    /// The second price source (ADR 0033), where its key is held. Deliberately <i>not</i> one of
+    /// <see cref="OddsSources"/>: every reader of that list — a lines pull, the scheduler's scans,
+    /// the pacing planner, the credit allowance — spends The Odds API's month, and this source has
+    /// its own budget and runs only on request, through its own job (<c>sgo:lines:{league}</c>).
+    /// </summary>
+    public Adapters.SportsGameOddsAdapter? SportsGameOdds { get; } = sportsGameOdds is { IsConfigured: true } ? sportsGameOdds : null;
 
     public IOddsSource? FindOdds(string key)
         => OddsSources.FirstOrDefault(s => s.Key == key);

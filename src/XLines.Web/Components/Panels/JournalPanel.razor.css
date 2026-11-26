@@ -6,3 +6,10 @@
 .journal-lists {
     margin-bottom: var(--space-3);
 }
+
+/* The Journal keeps a wider measure than a plain table window: its toolbar holds three filter
+   switches, a book picker and three keys, and at the default 1280px the toolbar folded the
+   period, league and book filters into More on a maximised window that had room for them. */
+.journal {
+    --wmeasure: 1480px;
+}

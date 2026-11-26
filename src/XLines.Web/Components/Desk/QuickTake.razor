@@ -32,7 +32,8 @@
     - Asking: Log turns the key row into the question — "Log $25 on PHI ML at −120 (DK)?" — with
       Cancel and Log wager, an InlineConfirm rather than an alert, because the bet is in plain view
       and easy to void from the Journal.
-    - Logged: the receipt, with Same again (the same side and book, a fresh stake) and Done.
+    - Logged: the receipt, with Same bet again (the same side and book, a fresh stake, worded as
+      the wager window's receipt words it) and Done.
 
     The offer is read from the row on every render, not kept, so a pull that re-prices the board
     re-prices this too; a price that has gone to its close says so instead of logging it.
@@ -60,7 +61,7 @@
                 <span class="qtake__receipt-mark" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.CheckCircle" /></span>
                 <span class="qtake__receipt-text">@receipt</span>
                 <span class="qtake__receipt-keys">
-                    <DeskButton Size="DeskKeySize.Small" OnClick="Again">Same again</DeskButton>
+                    <DeskButton Size="DeskKeySize.Small" OnClick="Again">Same bet again</DeskButton>
                     <DeskButton Size="DeskKeySize.Small" OnClick="CloseAsync">Done</DeskButton>
                 </span>
             </div>

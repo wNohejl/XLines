@@ -25,3 +25,11 @@
 }
 
 .bookmore__count { min-width: 0; }
+
+/* The polled books with no price here: a footnote to the count, on a line of its own inside the
+   same row (no second hairline), in the row's secondary ink, wrapping as a sentence does. */
+.bookmore__absent {
+    flex-basis: 100%;
+    min-width: 0;
+    margin: 0;
+}

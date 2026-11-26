@@ -206,20 +206,9 @@
    detail about it. */
 .price__edge--closing { opacity: 1; }
 
-/* The board's grid and the note that says when part of it is folded away (see .col--wider in
-   mud-bridge.css). Same width as the grid inside it, so both answer the same question. */
+/* The board's grid asks how wide the Board is, not the viewport: the steps it takes to fit are in
+   "The board's column rhythm" below. */
 .board__table { container: board / inline-size; }
-
-.board__folded {
-    display: none;
-    margin-top: var(--space-2);
-    color: var(--text-secondary);
-    font-size: var(--text-footnote);
-}
-
-@container board (max-width: 820px) {
-    .board__folded { display: block; }
-}
 
 /* Why a fixture has no price. A row of dashes is ambiguous between a broken feed,
    a fixture nobody quoted, and a game already under way — only one of which is
@@ -374,18 +363,6 @@
 .score--pending {
     font-size: var(--text-footnote);
     color: var(--text-tertiary);
-}
-
-/* Row actions: revealed by opening a row, so the board stays the working surface
-   and the next thing you do is one press away rather than a navigation. */
-.board__actions {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    flex-wrap: wrap;
-    padding: var(--space-2) var(--space-2) var(--space-3);
-    background: var(--surface-1);
-    border-bottom: 1px solid var(--separator);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -562,6 +539,49 @@
 /* A note under the Board's table sits under it as it would under a grid. */
 .win__body > .board__table + .note { margin-top: var(--space-2); }
 
+/* The Board's notes share a line where both fit: Line watch's one-line disclosure at its own
+   width, the unpriced sentence taking the rest, each still a note's fill at a reading width.
+   Stacked, they were two full-width bands; with the tiles under them the first game started
+   230px down a 960px Board. They wrap as one unit by the Board's width, never squeezed. */
+.board__banners {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-3);
+}
+.board__banners > .note { margin: 0; flex: 1 1 22rem; }
+.board__banners > .note:first-child:not(:only-child) { flex: 0 1 auto; }
+
+/* The Board's figures as one compact row: the figure and its label on one line, the note under
+   them, at title 3 rather than the tile's title 1 (the Board is a table to work from, and its
+   figures qualify the slate rather than lead the window). Four across from about 770px of Board,
+   two by two under it, by the row's own grid; every tile keeps its words and its link. */
+.win__body > .metrics.board__metrics {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 184px), 1fr));
+    margin: 0 0 var(--space-3);
+}
+.board__metrics > .metric {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+}
+.board__metrics .metric__value { grid-column: 1; grid-row: 1; font-size: var(--text-title3); }
+.board__metrics .metric__label { grid-column: 2; grid-row: 1; margin: 0; }
+.board__metrics .metric__go { grid-column: 3; grid-row: 1; float: none; }
+.board__metrics .metric__note { grid-column: 1 / -1; grid-row: 2; }
+
+/* The open row's answer at the drawer's width when it is cards of its own (More bets, a
+   .snippet--panes of section cards in a .wflow): its three market cards sit side by side across
+   a wide Board as the Game window's cards do, rather than one column capped at 720px at the
+   leading edge with the right half of the row empty. One card's answer (Odds, H2H, Form, the
+   take) keeps the Desk's 720px measure, a card's own width. The cap on what is in view stays. */
+.deskgrid--board .rowacts__snippet:has(> .snippet--panes) {
+    max-width: min(100%, calc(100cqw - 2 * var(--deskgrid-inset)));
+}
+
 /* ---- Date range key (RangePullKey) and its popover (RangePullPopover). The key folds to its
    symbol in a narrow toolbar — a Board beside other windows. Measured: More (28), Refresh (28),
    Pull data (120) and Date range with its word (113) need 313px with their gaps, and a 300px
@@ -578,7 +598,7 @@
         clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
     }
     /* The key itself, not the popover's keys: Anchor draws it straight inside the popover root. */
-    .range-key > .desk-btn { padding: 0; width: 28px; }
+    .range-key > .desk-btn { padding: 0; width: var(--control-h); }
 }
 
 /* The popover hangs from the key's trailing edge, wide enough for League's segments and the two
@@ -670,7 +690,7 @@
     font-size: var(--text-footnote);
     background: var(--surface-1);
     padding: 1px var(--space-1);
-    border-radius: 3px;
+    border-radius: var(--radius-xs);
     color: var(--text-primary);
 }
 
@@ -725,6 +745,8 @@
    A ring rather than the underline this used to carry: a tag is a capsule now, and an
    inset bottom band inside a 999px radius reads as a smeared crescent, not a rule. */
 .formrun { display: inline-flex; gap: 3px; align-items: center; }
+/* The run takes focus so its tooltip, the games behind the letters, reaches the keyboard. */
+.formrun:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
 
 .formrun__latest { box-shadow: inset 0 0 0 1px var(--separator-strong); }
 
@@ -809,7 +831,7 @@
 .standing { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-3); }
 .standing > .metrics { margin: 0; }
 .standing__edge { white-space: nowrap; }
-.standing__edge--up { color: var(--state-positive); }
+.standing__edge--up { color: var(--state-positive-ink); }
 .standing__next {
     margin: 0;
     font-size: var(--text-footnote);
@@ -906,16 +928,55 @@
     text-align: right;
 }
 
-/* A narrow board has folded spread and totals away (.board__folded), and still needs the value
-   pick to give up a line rather than hold the row wide: the pick's book drops under its
-   selection. The cells close up, and the prices with them, but the rhythm holds at a smaller
-   step: a pair's two columns stay close and the gap before each market stays the wider one.
-   The pair rules name one class more than the narrow padding below, so they still win it. */
-@container board (max-width: 820px) {
+/* The start: one line, "Nov 26 13:00 ET", in a wide Board (the day and the clock are two spans
+   a space apart); the day over the clock in a narrow one (below). */
+.board__date, .board__clock { white-space: nowrap; }
+
+/* ---- The board at its own width ----------------------------------------------
+   Every price stays on the board at every width. Spread and totals used to fold away under
+   820px of grid, and between that and the ~1220px six full market cells need, the grid
+   scrolled: the default Line watch Board (about 940px) hid its totals behind a scrollbar and
+   cut the second spread mid-price. Now the Board gives width back in steps, by its own width
+   (the board container, .board__table), in the order the reading can spare it:
+
+   1320px  the starters beside each club drop to the matchup's tooltip (MatchupTooltip already
+           names them in full), and the start stacks its day over its clock, the league under.
+           Measured on an NFL slate: the full table is 1216px, the starters cost it 82px and the
+           one-line start 54px; an NBA slate's three-digit totals and a long nickname add ~45px.
+   1180px  each price cell's rail, its "+1.9 pts vs worst" and a value at or under fair drop to
+           the hover — the tooltip names every book, its value, and the edge
+           (PriceCell.TipCaption) — while the book code and a "+2.1% EV" stay; the cells close
+           up (6px inset, 4px inside a price) and the value pick may wrap under its figure. The
+           table measured 938px here; a row stood 86px and is now its price and its start.
+   1000px  each market's two sides stack in one column, away over home as the matchup reads
+           (a fight's red corner first, Over over Under), so a row is seven columns, not ten.
+           The default Line watch Board (about 940px) is here: every price, no scrollbar.
+    680px  the stacked rows hold a floor (the six fixed tracks are 556px, and the matchup keeps
+           124px for a crest and "Timberwolves") and the grid scrolls inside its own container,
+           the start and the matchup pinned at the leading edge so a scrolled price keeps its game.
+
+   No price is ever clipped: every price is one tabular line (.price__top is nowrap), and each
+   stacked track is sized for the widest price it takes (a spread "PHI +12.5 −110 DK", a total
+   "o225.5 −110 DK"); measured with every .price__top inside its cell at every step. */
+
+/* 1 · The starters and the one-line start. */
+@container board (max-width: 1320px) {
+    .deskgrid--board .board__starter { display: none; }
+    .deskgrid--board .board__date,
+    .deskgrid--board .board__clock { display: block; }
+}
+
+/* 2 · The rails and the edge notes; tighter cells. The pair rules name one class more than the
+   narrow padding, so a pair's two columns stay close and the gap before a market stays wider. */
+@container board (max-width: 1180px) {
+    .deskgrid--board .rail,
+    .deskgrid--board .price__edge:not(.price__edge--closing),
+    .deskgrid--board .price__ev:not(.price__ev--plus) { display: none; }
+    .deskgrid--board .price__top { gap: var(--space-1); }
     .deskgrid--board td .value__bet { white-space: normal; text-align: right; }
 
     .deskgrid.deskgrid--board .mud-table-head .mud-table-cell,
-    .deskgrid.deskgrid--board .mud-table-body .mud-table-cell { padding-inline: var(--space-2); }
+    .deskgrid.deskgrid--board .mud-table-body .mud-table-cell { padding-inline: calc(var(--space-1) * 1.5); }
 
     .deskgrid.deskgrid--board .mud-table-head .mud-table-cell.board__pair,
     .deskgrid.deskgrid--board .mud-table-body .mud-table-cell.board__pair { padding-left: var(--space-3); }
@@ -925,7 +986,93 @@
     .deskgrid--board .price,
     .deskgrid--board .price__empty { min-width: 64px; }
     .deskgrid--board .value { min-width: 72px; }
-    .deskgrid--board .rail { width: 56px; }
+}
+
+/* 3 · Each market one column, its two sides stacked. The table's rows become grids of seven
+   fixed tracks (the matchup takes what is left), every row the same tracks so the columns still
+   line up down the board; a pair's home cell and its away cell share a track, away on the first
+   line beside the away club. The open row's child stays one block across the grid. */
+@container board (max-width: 1000px) {
+    .deskgrid--board {
+        --board-when: 68px;
+        --board-score: 68px;
+        --board-value: 84px;
+        --board-ml: 96px;
+        --board-spread: 128px;
+        --board-total: 112px;
+    }
+    .deskgrid--board .mud-table-root,
+    .deskgrid--board .mud-table-root > thead,
+    .deskgrid--board .mud-table-root > tbody,
+    .deskgrid--board .mud-table-root > tfoot { display: block; }
+    .deskgrid--board .mud-table-root > thead > .mud-table-row,
+    .deskgrid--board .mud-table-root > tbody > .mud-table-row {
+        display: grid;
+        grid-template-columns:
+            var(--board-when) minmax(0, 1fr) var(--board-score) var(--board-value)
+            var(--board-ml) var(--board-spread) var(--board-total);
+    }
+    .deskgrid--board .mud-table-root > * > .mud-table-row > .mud-table-cell { width: auto; min-width: 0; }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(-n+4) { grid-row: 1 / span 2; }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(1) { grid-column: 1; }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(2) { grid-column: 2; }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(3) { grid-column: 3; }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(4) { grid-column: 4; }
+    .deskgrid--board .mud-table-row > .board__ml { grid-column: 5; }
+    .deskgrid--board .mud-table-row > .board__spread { grid-column: 6; }
+    .deskgrid--board .mud-table-row > .board__total { grid-column: 7; }
+    /* Away on the first line, beside the away club; a fight bills its red corner (home) first,
+       and a total reads Over over Under, its pair's first cell first. */
+    .deskgrid--board tbody > .mud-table-row > .board__pair-end,
+    .deskgrid--board tbody > .mud-table-row > .board__total.board__pair,
+    .deskgrid--board tbody > .board__row--fight > .board__ml.board__pair { grid-row: 1; }
+    .deskgrid--board tbody > .mud-table-row > .board__pair,
+    .deskgrid--board tbody > .mud-table-row > .board__total.board__pair-end,
+    .deskgrid--board tbody > .board__row--fight > .board__ml.board__pair-end { grid-row: 2; }
+    /* The header is one line: a market's two header cells share its track, the first drawing the
+       market's name over it and the second only its name for a screen reader. */
+    .deskgrid--board thead > .mud-table-row > .mud-table-cell { grid-row: 1; }
+    .deskgrid--board .board__market { position: static; translate: none; }
+    /* The first line's hairline would cut a market's two sides apart; the row's one hairline is
+       under its second line, where the matchup's is. */
+    .deskgrid--board tbody > .mud-table-row > .mud-table-cell { padding-block: var(--space-1); }
+    .deskgrid--board tbody > .mud-table-row > .board__pair-end:not(.board__total),
+    .deskgrid--board tbody > .mud-table-row > .board__total.board__pair,
+    .deskgrid--board tbody > .board__row--fight > .board__ml.board__pair { border-bottom-color: transparent; }
+    .deskgrid--board tbody > .board__row--fight > .board__ml.board__pair-end { border-bottom-color: var(--separator); }
+    /* One inset for every cell: a pair's wide lead and its tight second were for two columns side
+       by side, which this layout does not have. */
+    .deskgrid.deskgrid--board .mud-table-head .mud-table-cell.board__pair,
+    .deskgrid.deskgrid--board .mud-table-body .mud-table-cell.board__pair,
+    .deskgrid.deskgrid--board .mud-table-head .mud-table-cell.board__pair-end,
+    .deskgrid.deskgrid--board .mud-table-body .mud-table-cell.board__pair-end { padding-left: calc(var(--space-1) * 1.5); }
+    /* A score cell may take two lines here (the state over the figures) rather than widen. */
+    .deskgrid--board .scoreline { flex-wrap: wrap; white-space: normal; row-gap: var(--space-1); }
+
+    /* The open row's child (DeskGrid's ChildRow, the one body row that is not a Mud row) is a
+       block across the grid: left a table row inside a block body, it shrank to its contents. */
+    .deskgrid--board .mud-table-root > tbody > tr:not(.mud-table-row),
+    .deskgrid--board .mud-table-root > tbody > tr:not(.mud-table-row) > td { display: block; }
+}
+
+/* 4 · The narrowest: the stacked rows keep a floor and the grid scrolls in its own container
+   (mud-bridge.css), the start and the matchup pinned at the leading edge over the opaque window
+   ground, so a price scrolled into view still has its game beside it. The hover and the open
+   row's wash are laid over that ground rather than replacing it: the wash is translucent, and a
+   pinned cell that let the prices show through it would be a cell in two places at once. */
+@container board (max-width: 680px) {
+    .deskgrid--board .mud-table-root { min-width: 680px; }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(-n+2) {
+        position: sticky;
+        z-index: 1;
+        background: var(--surface-1);
+    }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(1) { left: 0; }
+    .deskgrid--board .mud-table-row > .mud-table-cell:nth-child(2) { left: var(--board-when); }
+    .deskgrid--board .mud-table-body .mud-table-row:hover > .mud-table-cell:nth-child(-n+2) { background: var(--surface-2); }
+    .deskgrid--board.deskgrid--clickable .mud-table-row.board__row--open > .mud-table-cell:nth-child(-n+2) {
+        background: linear-gradient(var(--accent-wash), var(--accent-wash)), var(--surface-1);
+    }
 }
 
 /* ---- The Performance window ------------------------------------------------------
@@ -975,6 +1122,17 @@
 @container perfchart (max-width: 420px) {
     .perf-chart .mud-chart text { font-size: calc(var(--text-footnote) * 1.8); }
 }
+/* And the other way in a wide card. The plot takes the rest of the flow's first row, so a
+   maximised window scaled the 700-wide view box up by half again and more: footnote labels drawn
+   at ~18px and a curve 575px tall. The labels step down as the box scales up, and the plot stops
+   at a height a curve reads at; past it the drawing keeps its proportions, centred in the box. */
+@container perfchart (min-width: 900px) {
+    .perf-chart .mud-chart text { font-size: calc(var(--text-footnote) * .8); }
+}
+@container perfchart (min-width: 1100px) {
+    .perf-chart .mud-chart text { font-size: calc(var(--text-footnote) * .65); }
+}
+.perf-chart .mud-chart svg.mud-chart-line { max-height: 440px; }
 /* The placeholder holds the chart's shape, not a fixed height, so nothing jumps when it lands. */
 .perf-chart__skeleton .skel__block { height: auto; aspect-ratio: 2 / 1; }
 
@@ -1000,6 +1158,10 @@
    groups' text inset, and so does an empty slip's sentence: centred above a left-aligned
    footnote, it was two alignments in two lines. */
 .slip > .wfoot { padding: 0 var(--space-4); }
+/* What Log waits for reads toward the key it is about, as in the wizard's steps. */
+.slip .keyrow__reason { text-align: right; }
+/* The wager window's Slip tab shares the Wager tab's column (.whead, .wcard). */
+.wager-slip { max-width: var(--wizard-max, 760px); margin-inline: auto; }
 .slip > .empty--new { text-align: left; padding: var(--space-2) var(--space-4) 0; }
 
 /* A narrow group stacks each label above its control (desk.css, "The grouped form"). */
@@ -1120,7 +1282,7 @@
     flex-wrap: wrap;
     gap: var(--space-3) var(--space-4);
     /* Two sibling cards, 12px apart, one stroke level (wizards.md, reconciling rule 1). */
-    margin-bottom: var(--space-3);
+    margin: 0 auto var(--space-3);
     max-width: var(--wizard-max, 760px);
     padding: var(--space-4);
     background: var(--surface-2);
@@ -1153,10 +1315,11 @@
 
 /* The steps card (reconciling rules 1 and 3): the header card's fill, stroke and radius, 4px
    above and below, and nothing inside it stroked — each step is a section of the card divided
-   from the next by a full-width hairline quieter than the card's edge. */
+   from the next by the separator hairline. Centred in the window with the header card and the
+   status line: maximised, a 760px column pinned left left two thirds of the window empty. */
 .wcard {
-    --wsep: color-mix(in srgb, var(--text-primary) 9%, transparent);
     max-width: var(--wizard-max, 760px);
+    margin-inline: auto;
     padding: var(--space-1) 0;
     background: var(--surface-2);
     border: 1px solid var(--separator);
@@ -1196,7 +1359,7 @@
     gap: 0 var(--space-2);
     min-width: 0;
     height: auto;
-    min-height: 28px;
+    min-height: var(--control-h);
     padding: var(--space-1) var(--space-2);
     font-size: var(--text-body);
     line-height: 20px;
@@ -1272,6 +1435,29 @@
    the last list and at a reading width. */
 .journal-foot { margin-top: var(--space-6); max-width: 80ch; }
 
+/* The Journal's status switch, which is the one picker its toolbar keeps on the row. Kept there,
+   at ~480px the switch, More and Place wager came to more than the window, nothing was left to
+   fold, and Place wager was cut off at the window's edge. Under 520px of Journal the switch steps
+   off the row and its twin leads More instead; above it the twin is never drawn, so More (folded
+   or not) never holds the switch the row already shows. Asked of the Journal's own width, not
+   the toolbar's: the toolbar's fold is PanelToolbar's alone, and the app sheet does not fold it
+   a second time (DeskConventions, AppSheetKeepsOneToolbarFold). */
+.journal { container: journal / inline-size; }
+.journal-status--row { display: flex; flex: 0 0 auto; align-items: center; }
+.journal-status--more,
+.ptoolbar__more > .journal-status--more { display: none; }
+@container journal (max-width: 520px) {
+    .ptoolbar > .journal-status--row { display: none; }
+    .ptoolbar__more > .journal-status--more { display: flex; }
+}
+
+/* A ledger that folds columns away under 820px says so, as the Board does (.board__folded):
+   the CLV a row was logged for vanished from a narrow Journal with nothing to say it was there. */
+.journal-folded { display: none; }
+@container wflow (max-width: 820px) {
+    .journal-folded { display: block; }
+}
+
 /* The badge rides inside a key, whose --btn-gap already spaces it from the label; a margin of
    its own doubled that to 10px. */
 .slip-badge {
@@ -1317,7 +1503,7 @@
 /* The parlay's legs, one row each above Combined: the selection leading, its price and the
    decimal multiplier it brings trailing in tabular figures, so the column reads down into the
    product. The multiplier is secondary: the price is what the book printed. */
-.slip-leg { gap: var(--space-3); padding: var(--space-1) var(--space-4); min-height: 32px; }
+.slip-leg { gap: var(--space-3); padding: var(--space-1) var(--space-4); min-height: var(--row-h); }
 .slip-leg__sel { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .slip-leg__price { flex: 0 0 auto; font-weight: var(--weight-semibold); }
 .slip-leg__x { flex: 0 0 auto; min-width: 5ch; text-align: right; color: var(--text-secondary); font-size: var(--text-subheadline); }
@@ -1367,8 +1553,8 @@ button.gamelines__cell { align-items: stretch; }
    in the card at the title's edge, divided by the card's quiet hairline, and its footer and
    review sentence align to the same edge. Notes that do not block logging lose their box. */
 .wcard .wgroup { background: none; border: 0; border-radius: 0; }
-.wcard .wgroup__row--form { padding: calc(var(--space-1) * 1.5) 0; min-height: 36px; }
-.wcard .wgroup__row + .wgroup__row::before { left: 0; border-top-color: var(--wsep); }
+.wcard .wgroup__row--form { padding: calc(var(--space-1) * 1.5) 0; min-height: var(--row-h); }
+.wcard .wgroup__row + .wgroup__row::before { left: 0; border-top-color: var(--separator); }
 .wcard .wgroup__foot, .wcard .wreview { padding: 0; }
 .wcard .note:not(.note--warn) { padding: 0; background: none; }
 .wsteps .wgroup { max-width: none; }
@@ -1403,7 +1589,7 @@ button.gamelines__cell { align-items: stretch; }
     box-shadow: var(--shadow-1);
 }
 .selection-gate .gate__opt {
-    min-height: 24px;
+    min-height: var(--control-h-sm);
     padding: 2px var(--space-2);
     border-radius: calc(var(--radius) - 1px);
     font-size: var(--text-subheadline);
@@ -1419,7 +1605,7 @@ button.gamelines__cell { align-items: stretch; }
    the line, the price, the pencil and the book trail to the edge the segment tracks end at.
    The rows above sit inside SelectionChips' display:contents wrapper, so the row-to-row
    hairline (.wgroup__row + .wgroup__row) never reached this row: it draws its own. */
-.wbet > .wbet__price { min-height: 44px; background: color-mix(in srgb, var(--text-primary) 3%, transparent); }
+.wbet > .wbet__price { min-height: calc(var(--row-h) + var(--space-2)); background: color-mix(in srgb, var(--text-primary) 3%, transparent); }
 .wbet > .wbet__price:not(:first-child)::before {
     content: "";
     position: absolute;
@@ -1498,7 +1684,7 @@ button.gamelines__cell { align-items: stretch; }
     align-items: flex-start;
     gap: calc(var(--space-1) * 1.5);
     max-width: var(--wizard-max, 760px);
-    margin: var(--space-2) 0 0;
+    margin: var(--space-2) auto 0;
     padding: 0 var(--space-4) 0 calc(var(--space-8) + var(--space-2));
     font-size: var(--text-subheadline);
     line-height: var(--leading-body);
@@ -1521,7 +1707,7 @@ button.gamelines__cell { align-items: stretch; }
 .stake-row__field { max-width: 130px; }
 /* The quick values stand beside a 28px field, so they are 28px too: a Small key's 24px is
    for a 29px grid row, and here it left the keys sitting short of the field they set. */
-.stake-row .desk-btn--sm { height: 28px; }
+.stake-row .desk-btn--sm { height: var(--control-h); }
 .stake-row .desk-btn--plain[aria-pressed="true"] { --btn-fill: var(--surface-3); --btn-ink: var(--text-primary); }
 .wstake__win { font-variant-numeric: tabular-nums; }
 
@@ -1535,11 +1721,14 @@ button.gamelines__cell { align-items: stretch; }
    state worth looking for wears a tag, so a column of them is not a wall of green. */
 
 /* The groups are section cards in a flow now, whose track is their width: these set only the
-   label column. Source names lead History's sources ("ESPN (unofficial)"). */
-.opsgroup--wide { --form-label: 168px; }
+   label column. Two widths, named once for the four windows, rather than five numbers chosen
+   one window at a time (88, 112, 128, 152, 168): a setting's name ("Key", "Past days",
+   "Starting bankroll") and a source's or a stamp's ("ESPN (unofficial)", "Nov 26 14:03:22 ET"). */
+.opsflow, .histflow, .incflow, .perf { --ops-label-field: 128px; --ops-label-name: 168px; }
+.opsgroup--wide { --form-label: var(--ops-label-name, 168px); }
 /* The incident timeline and RCA read-back: the stamp or the field's name is the label, and a
    note may run to several lines, so a row aligns on its first line rather than its middle. */
-.opsgroup--log { --form-label: 152px; }
+.opsgroup--log { --form-label: var(--ops-label-name, 168px); }
 .opsgroup--log .wgroup__row--form { align-items: baseline; }
 .opsstamp > .wgroup__label { color: var(--text-secondary); font-size: var(--text-subheadline); font-variant-numeric: tabular-nums; }
 
@@ -1549,6 +1738,16 @@ button.gamelines__cell { align-items: stretch; }
 .opsrow > select.field { width: auto; max-width: 100%; }
 .opsrow__text { min-width: 0; overflow-wrap: anywhere; }
 .opsrow__fill { flex: 1 1 180px; min-width: 0; }
+/* A key beside a field is the field's height, as the toolbar's and the stake row's are
+   (desk.css .ptoolbar .desk-btn--sm; .stake-row, below): a 24px key beside a 28px field sat
+   short of it. A key row or a confirm inside the row is the same row. */
+.opsrow > .desk-btn--sm,
+.opsrow > .keyrow > .desk-btn--sm,
+.opsrow .confirm__keys > .desk-btn--sm { height: var(--control-h); }
+/* A field's commit key (Set, Add) keeps its place beside the field: the reason it waits trails
+   it on screen. Before it, the sentence pushed the key along at rest and the key leapt back on
+   the first keystroke. Only the drawing order moves; the key is still described by it. */
+.opsrow > .keyrow > .keyrow__reason { order: 1; }
 
 /* A footnote: under a grid, under a row of tiles, or — inset to the rows' text by
    .wgroup__foot — under a group. */
@@ -1560,6 +1759,9 @@ button.gamelines__cell { align-items: stretch; }
     color: var(--text-secondary);
 }
 .opsfoot + .opsfoot { margin-top: var(--space-1); }
+/* A card's footer keeps the footnote's reading width under a card that spans two tracks or the
+   row: under Odds feeds in a maximised Ops window the scanning prose ran 1500px a line. */
+:is(.opsflow, .histflow, .incflow, .perf-flow, .journal-lists) > :is(.wsection--span, .wsection--pair, .wsection--rest) > .wgroup__foot { max-width: 80ch; }
 .opsfoot strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
 /* Under tiles it is theirs: the air the tiles keep beneath them is halved for it. */
 .metrics + .opsfoot { margin-top: calc(-1 * var(--space-2)); }
@@ -1870,8 +2072,11 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
    away side reads left and the home side right, each a stack of its cards, and the cap widens to
    hold both; below that the sides stack, away above home. It was a card per side per unit
    stretched 1880px, the name at the far left and the numbers 1200px away (user, Nov 22). */
+/* The block starts at the flow's leading edge, where the cards above it do: centred, its edge
+   stood indented from theirs in a window between the two caps. The Gamecast's sections are the
+   same block (.gc__block), so its drives and box score are read at this width too. */
 .gameroster { display: block; }
-.gameroster__block { width: 100%; max-width: 1100px; margin-inline: auto; }
+.gameroster__block { width: 100%; max-width: 1100px; margin-inline: 0; }
 .gameroster__block > .psection__head { padding: 0 var(--space-1); }
 .gameroster__cols {
     display: grid;
@@ -1889,9 +2094,11 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
 /* A side's box score or roster (a PanelSection about one club, with a wide table) is a card of
    its column: its rule becomes the card's bar (the headline style, the half-step fill and the
    one full-width hairline under it, as .wgroup__bar draws them) and the table is its body. The
-   Gamecast draws the same sides as plain sections; only here are they cards. */
+   Gamecast's Box score tab places its sides in the same .gameroster__cols, so they are the same
+   cards there, and Line movement's Recent form (.oddsform) draws each club's roster the same way. */
 .gameroster__cols > .psection,
-.gameroster__side > .psection {
+.gameroster__side > .psection,
+.oddsform > .psection {
     min-width: 0;
     margin: 0;
     background: var(--surface-2);
@@ -1900,7 +2107,8 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
     overflow: hidden;
 }
 .gameroster__cols > .psection > .psection__head,
-.gameroster__side > .psection > .psection__head {
+.gameroster__side > .psection > .psection__head,
+.oddsform > .psection > .psection__head {
     align-items: center;
     min-height: var(--row-h);
     margin: 0;
@@ -1909,13 +2117,15 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
     border-bottom: 1px solid var(--separator);
 }
 .gameroster__cols > .psection > .psection__head .panel-h,
-.gameroster__side > .psection > .psection__head .panel-h {
+.gameroster__side > .psection > .psection__head .panel-h,
+.oddsform > .psection > .psection__head .panel-h {
     font-size: var(--text-headline);
     font-weight: var(--weight-semibold);
     color: var(--text-primary);
 }
 .gameroster__cols > .psection > .psection__body,
-.gameroster__side > .psection > .psection__body { padding: 0 var(--space-2) var(--space-1); }
+.gameroster__side > .psection > .psection__body,
+.oddsform > .psection > .psection__body { padding: 0 var(--space-2) var(--space-1); }
 
 /* A narrow card (a window beside two others) gives its inset back, as the Desk's rows do. */
 @container (max-width: 480px) {
@@ -2102,19 +2312,14 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
 }
 
 /* ---- Line watch's overview and what it follows (OddsPanel, ADR 0029) -------------------------
-   Before anything is pressed: a prompt, then the slate's biggest moves today as one grouped list
-   (one fill, one hairline, inset separators), each row a button that follows its game here.
-   After a press: one status line naming what is followed, with the way back. */
-.slatewatch { display: flex; flex-direction: column; gap: var(--space-2); max-width: 720px; }
+   Before anything is pressed: a prompt, then the slate's biggest moves today as one card (the
+   Desk's .wgroup: one fill, one hairline, its name in the bar, inset separators), each row a
+   button that follows its game here. After a press: one status line naming what is followed,
+   with the way back. Both keep the 720px measure the followed game's figures and books do, so
+   the window reads at a table's width maximised rather than as a list across 1600px. */
+.slatewatch { display: flex; flex-direction: column; gap: var(--space-3); max-width: 720px; }
 .slatewatch__prompt { margin: 0; font-size: var(--text-headline); font-weight: var(--weight-semibold); color: var(--text-primary); }
-.slatewatch__title { margin: var(--space-2) 0 0; padding: 0 var(--space-1); }
 .slatewatch__none { margin: 0; color: var(--text-secondary); font-size: var(--text-subheadline); }
-.slatewatch__list {
-    background: var(--surface-2);
-    border: 1px solid var(--separator-strong);
-    border-radius: var(--radius-panel);
-    overflow: hidden;
-}
 .slatewatch__row {
     position: relative;
     display: flex;
@@ -2123,7 +2328,8 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
     gap: var(--space-3);
     width: 100%;
     min-height: 44px;
-    padding: var(--space-2) var(--space-3);
+    /* The card's one inset, where the bar's title starts. */
+    padding: var(--space-2) var(--space-4);
     border: 0;
     background: transparent;
     color: var(--text-primary);
@@ -2135,12 +2341,13 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
     content: "";
     position: absolute;
     top: 0;
-    left: var(--space-3);
+    left: var(--space-4);
     right: 0;
     border-top: 1px solid var(--separator);
 }
 .slatewatch__row:hover { background: var(--surface-3); }
-.slatewatch__row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* The desk's one focus ring, inset because the list clips what stands outside it. */
+.slatewatch__row:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
 .slatewatch__game, .slatewatch__move { display: flex; flex-direction: column; min-width: 0; }
 /* The move never gives up width: it does not wrap, so a shrunk one would run back over the
    matchup. In a narrow column the matchup wraps instead. */
@@ -2155,10 +2362,31 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
     justify-content: space-between;
     gap: var(--space-2);
     margin: 0 0 var(--space-3);
+    /* As wide as the column under it (.movement, 720px), so Overview stands at that column's
+       trailing edge. It was uncapped, and maximised Overview stood 1546px from its own line. */
     max-width: 720px;
 }
 .slatewatch__following-text { color: var(--text-secondary); }
 .slatewatch__following-text strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
+
+/* The followed game: the market's standing (.movement: the figures, the books, the pull) and the
+   clubs' Recent form, each a 720px column at the window's leading edge; side by side once the
+   window holds two columns and the gap (1456px), the form beside the prices rather than a
+   screen below them. Each column keeps its own height. */
+.oddswin { container: oddswin / inline-size; }
+.oddswin__cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-6) var(--space-4);
+    max-width: 720px;
+}
+.oddswin__cols > .psection { margin: 0; }
+@container oddswin (min-width: 1456px) {
+    .oddswin__cols { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 1456px; }
+}
+/* Recent form's two clubs, a card each (the .gameroster cards above), away over home. */
+.oddsform { display: grid; gap: var(--space-4); margin-top: var(--space-3); }
 
 /* ---- The Board row's Form answer for a team sport (MatchupTapeView) ------------------------
    Two clubs side by side as the fight's tale of the tape sets two fighters: the away club leading,

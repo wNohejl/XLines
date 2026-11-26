@@ -17,27 +17,37 @@
     known without being told.
 
     The newest tag is marked rather than merely positioned, because a run of five is short
-    enough that "which end is now" is a fair question to ask of it. Each tag's title carries the
-    game it stands for, since one character cannot.
+    enough that "which end is now" is a fair question to ask of it. The games behind the tags
+    are named once for the whole run, in a tooltip on the run, which takes focus, and as its
+    accessible name: a title on each one-letter tag reached a pointer only (HIG 12).
 *@
 
-<span class="formrun @Class">
-    @for (var i = 0; i < _run.Count; i++)
-    {
-        var g = _run[i];
+@if (_run.Count == 0)
+{
+    <span class="formrun @Class"></span>
+}
+else
+{
+    <DeskTooltip Text="@Games">
+        <span class="formrun @Class" tabindex="0" role="img" aria-label="@($"Form, oldest first: {Games.Replace("\n", "; ")}")">
+            @for (var i = 0; i < _run.Count; i++)
+            {
+                var g = _run[i];
 
-        var latest = i == _run.Count - 1 ? "formrun__latest" : null;
+                var latest = i == _run.Count - 1 ? "formrun__latest" : null;
 
-        if (ResultTag.Of(g.Won, g.ScoreFor, g.ScoreAgainst) is { } result)
-        {
-            <ResultTag Result="@result" Class="@latest" Title="@Describe(g, latest is not null)" />
-        }
-        else
-        {
-            <Tag State="DeskState.Info" Class="@latest" Title="@Describe(g, latest is not null)">–</Tag>
-        }
-    }
-</span>
+                if (ResultTag.Of(g.Won, g.ScoreFor, g.ScoreAgainst) is { } result)
+                {
+                    <ResultTag Result="@result" Class="@latest" />
+                }
+                else
+                {
+                    <Tag State="DeskState.Info" Class="@latest">–</Tag>
+                }
+            }
+        </span>
+    </DeskTooltip>
+}
 
 @code {
     /// <summary>
@@ -62,6 +72,11 @@
     /// </summary>
     protected override void OnParametersSet()
         => _run = [.. Log.Take(Take).Reverse()];
+
+    /// <summary>Every game in the run, one a line, oldest first as the tags read.</summary>
+    private string Games
+        => string.Join("\n", _run.Select((g, i) =>
+            $"{(ResultTag.Of(g.Won, g.ScoreFor, g.ScoreAgainst) is { } r ? ResultTag.LetterOf(r) : "–")} {Describe(g, i == _run.Count - 1)}"));
 
     /// <summary>
     /// The whole game behind one tag, for its tooltip — venue, opponent, date and score.

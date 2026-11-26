@@ -15,7 +15,13 @@
 @*
     The slip is a tab of the Journal, as it is of the wager window: the bets banked this session
     sit one click from the bets already logged, with the count on the tab, and no third window.
+
+    The whole window — tabs, toolbar, ledgers, footnote — stands at a table's reading width
+    (.wmeasure), centred when the window is wider. Maximised, a ledger row put "Chicago Bears −1.5"
+    at one edge and its price, stake and result 700px away, and the toolbar's keys sat 900px from
+    the filters they act beside; at the measure the keys end where the rows' own keys do.
 *@
+<div class="wmeasure journal">
 <DeskTabs TValue="JournalTab" Tabs="Tabs" Label="Journal sections" Context="tab"
           Value="_tab" ValueChanged="@((JournalTab t) => _tab = t)">
 @if (tab == JournalTab.Slip)
@@ -26,12 +32,24 @@ else
 {
 <PanelToolbar Message="@_message">
     <ChildContent>
-        <DeskSwitch Options="Statuses" Label="Status"
-                    Value="_status" ValueChanged="@((JournalStatus s) => FilterAsync(() => _status = s))" />
+        @* Status stays on the row while it fits. The toolbar folds its pickers and then its keys,
+           but what stays on the row cannot fold, so at ~480px the switch, More and Place wager
+           were wider than the window and Place wager was cut off at its edge. Under that width
+           the switch steps off the row (xlines.css, .journal-status) and its twin below, first
+           in More, takes its place: the key the window is for is never clipped. *@
+        <div class="journal-status journal-status--row">
+            <DeskSwitch Options="Statuses" Label="Status"
+                        Value="_status" ValueChanged="@((JournalStatus s) => FilterAsync(() => _status = s))" />
+        </div>
     </ChildContent>
     @* Period, sport and book are the narrower cuts; a narrow Journal folds them into More and
        keeps status and the keys on the row, then folds the keys before Place wager as well. *@
     <Overflow>
+        <div class="ptoolbar__item journal-status journal-status--more">
+            <span class="ptoolbar__label" aria-hidden="true">Status</span>
+            <DeskSwitch Options="Statuses" Label="Status"
+                        Value="_status" ValueChanged="@((JournalStatus s) => FilterAsync(() => _status = s))" />
+        </div>
         <div class="ptoolbar__item">
             <span class="ptoolbar__label" aria-hidden="true">Placed within</span>
             <DeskSwitch Options="Periods" Label="Placed within"
@@ -100,9 +118,10 @@ else
         @* The wager window's grouped form, row for row (apple-hig-components, forms.md): the
            label leads in one column, the control trails, one inset rule between rows. A typed
            price is said in the group's footer, under the rows it qualifies, rather than in a
-           box of its own above them. *@
-        <section class="wsection" aria-label="Entry">
-            <div class="wgroup jform">
+           box of its own above them. A section card named in its bar, as the parlay form's two
+           are: hand-spelled without one, the two edit forms were two shapes for one job. *@
+        <FormGroup Title="Bet" GroupClass="jform" Footer="@(_entry.ManualPrice ? ManualPriceNote : null)">
+            <ChildContent>
                 @LegFields(_entry)
 
                 <FormRow Label="Stake">
@@ -118,12 +137,8 @@ else
                                placeholder="Optional" Value="_entry.Note"
                                ValueChanged="@((string? n) => Edit("note", () => _entry.Note = n))" />
                 </FormRow>
-            </div>
-            @if (_entry.ManualPrice)
-            {
-                <p class="wgroup__foot journal-manual-note">You typed this price; the desk did not fetch it.</p>
-            }
-        </section>
+            </ChildContent>
+        </FormGroup>
 
     </ChildContent>
     <Footer>
@@ -283,6 +298,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
     @* "Straight bets", the counterpart of Parlays below: under a tab called Entries, a first
        section called Entries named the tab a second time and told the reader nothing new. *@
     <FormGroup Title="Straight bets" Span="DeskCardSpan.Row" GroupClass="journal-list">
+    <ChildContent>
     <DeskGrid T="JournalEntry" Items="_entries" EmptyText="No entries logged yet.">
         @* Ordered by when the bet closes — the game's start, when the line closes and CLV is read —
            newest first, as the service reads it: a bet placed days ahead on
@@ -397,6 +413,14 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     <DeskPullDown Label="Actions" Icon="@Icons.Material.Filled.MoreHoriz" Emphasis="DeskEmphasis.Plain"
                                   Size="DeskKeySize.Small" Align="DeskPopoverAlign.End">
                         <DeskMenuItem Label="Edit" OnClick="() => EditEntry(context.Item)" />
+                        @* A graded row has no Settle menu, so a result picked by mistake had no way
+                           back (HIG, Undo). Pending clears it; settlement grades it again from the
+                           game, or Settle is offered once more for a bet it cannot grade. *@
+                        @if (context.Item.IsGraded)
+                        {
+                            <DeskMenuItem Label="Back to pending" Description="Clears the result to settle it again"
+                                          OnClick="@(() => SetResultAsync(context.Item.Id, EntryResult.Pending))" />
+                        }
                         <DeskMenuItem Label="Duplicate" Description="In a wager window, to log again"
                                       OnClick="() => Duplicate(context.Item)" />
                         <DeskMenuItem Label="Delete…" Destructive="true" OnClick="() => DeleteEntryAsync(context.Item)" />
@@ -405,13 +429,18 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
             </CellTemplate>
         </TemplateColumn>
     </DeskGrid>
+    </ChildContent>
+    <Notice>
+        @* Market, Book and CLV are .col--wider: under 820px of grid they fold away. *@
+        <p class="wgroup__foot journal-folded">Market, book and CLV are hidden at this width. Widen the window to see them.</p>
+    </Notice>
     </FormGroup>
 }
 
 @if (_parlays.Count > 0)
 {
     <FormGroup Title="Parlays" Span="DeskCardSpan.Row" GroupClass="journal-list">
-
+    <ChildContent>
     <DeskGrid T="Parlay" Items="_parlays" EmptyText="No parlays.">
         @* A parlay is ordered by its last leg's game: it is open until that one is. *@
         <TemplateColumn T="Parlay" Title="Closes" Sortable="true" SortBy="@(p => JournalService.LastLegStart(p))"
@@ -515,6 +544,10 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
             </CellTemplate>
         </TemplateColumn>
     </DeskGrid>
+    </ChildContent>
+    <Notice>
+        <p class="wgroup__foot journal-folded">The book is hidden at this width. Widen the window to see it.</p>
+    </Notice>
     </FormGroup>
 }
 </div>
@@ -536,6 +569,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
 </p>
 }
 </DeskTabs>
+</div>
 
 @code {
     private enum JournalTab { Journal, Slip }
@@ -576,6 +610,10 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
             entries.Concat(parlays.SelectMany(p => p.Legs)).Select(e => e.GameId).OfType<int>(), DataTopics.Games);
 
     protected override Task RefreshAsync() => LoadAsync();
+
+    /// <summary>The Bet card's footer while the price is the operator's; no footer otherwise, so no empty line.</summary>
+    private static readonly RenderFragment ManualPriceNote =
+        @<span class="journal-manual-note">You typed this price; the desk did not fetch it.</span>;
 
     private const string FreeText = "__free__";
     private const int Step = 100;
@@ -1174,6 +1212,8 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
         Slip.SetParlay(parlay.Stake, parlay.PriceQuoted, parlay.Book);
 
         _tab = JournalTab.Slip;
+        // A toast, not the toolbar's line every other Journal action reports in: the window turns
+        // to the Slip tab, where that line is not drawn.
         Toasts.Success($"Copied the {parlay.Legs.Count}-leg parlay to the slip");
     }
 
@@ -1309,8 +1349,10 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
             var summary = await scope.ServiceProvider
                 .GetRequiredService<SettlementService>().SettleAsync();
 
-            _message = $"{summary.Graded} graded · {summary.Voided} voided · {summary.ParlaysSettled} parlays · "
-                       + $"{summary.ClvResolved} CLV resolved · {summary.LeftPending} pending";
+            // A sentence, not counts strung on middle dots, which read as a row of tags.
+            _message = $"{summary.Graded} graded, {summary.Voided} voided, {summary.ParlaysSettled} "
+                       + $"{(summary.ParlaysSettled == 1 ? "parlay" : "parlays")} settled, {summary.ClvResolved} CLV resolved, "
+                       + $"{summary.LeftPending} still pending.";
 
             // The reload catches its own failure (WithActivityAsync), so a catch here is the
             // settlement's alone.

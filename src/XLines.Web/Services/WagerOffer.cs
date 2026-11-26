@@ -37,6 +37,12 @@ public sealed record WagerOffer(
 
     public string Label => Described ?? SelectionText.Of(Market, Outcome, Line);
 
+    /// <summary>
+    /// The book as the reader knows it ("DraftKings"). <see cref="Book"/> is the feed's key, which
+    /// is what is logged and matched on; this is what any sentence about the bet says.
+    /// </summary>
+    public string BookName => XLines.Web.Components.Panels.BookNames.Display(Book);
+
     public static WagerOffer Best(string market, BestOffer offer)
         => new(market, offer.Outcome, offer.Line, offer.Book, offer.PriceAmerican, offer.CapturedAt,
             offer.IsClosing, offer.Fair, offer.Ev, offer.Rungs.Count, IsBest: true);

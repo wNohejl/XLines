@@ -1,26 +1,14 @@
-/* One fighter (ADR 0021): grouped lists — label leading, value trailing, inset hairlines. */
-
-.fighter { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-
-.fighter__group { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
-
-.fighter__title {
-    margin: 0 0 0 var(--space-3);
-    font-size: var(--text-footnote);
-    font-weight: 400;
-    color: var(--text-secondary);
-}
-
-.fighter__list { background: var(--surface-2); border-radius: var(--radius); overflow: hidden; }
+/* One fighter (ADR 0021): section cards in a flow (FormGroup, .wflow), each a list of facts —
+   label leading, value trailing, inset hairlines — starting where the card's bar title does. */
 
 .fighter__row {
     position: relative;
     display: flex;
     justify-content: space-between;
     gap: var(--space-3);
-    min-height: 28px;
+    min-height: var(--control-h);
     align-items: center;
-    padding: var(--space-1) var(--space-3);
+    padding: var(--space-1) var(--space-4);
     font-size: var(--text-body);
 }
 
@@ -28,7 +16,7 @@
     content: "";
     position: absolute;
     top: 0;
-    left: var(--space-3);
+    left: var(--space-4);
     right: 0;
     height: 1px;
     background: var(--separator);
@@ -37,7 +25,28 @@
 .fighter__label { color: var(--text-secondary); }
 .fighter__value { color: var(--text-primary); font-variant-numeric: tabular-nums; text-align: right; }
 
-.fighter__footer { margin: 0 var(--space-3); font-size: var(--text-footnote); color: var(--text-secondary); }
+.fighter__footer { margin: 0; font-size: var(--text-footnote); color: var(--text-secondary); }
+
+/* The fights' log list is the card's body: the card is the group, so the list gives up the
+   fill, edge and corner it draws standing alone, and its rows start at the bar title's edge. */
+.fighter__fights > .loglist {
+    background: none;
+    border: 0;
+    border-radius: 0;
+}
+
+.loglist ::deep .logrow__head { padding-left: var(--space-4); padding-right: var(--space-4); }
+.loglist ::deep .logrow + .logrow::before { left: var(--space-4); }
+.loglist ::deep .logrow__body { padding-left: var(--space-4); padding-right: var(--space-4); }
+
+/* A narrow card gives its inset back, as the Desk's rows do. */
+@container (max-width: 480px) {
+    .fighter__row { padding-left: var(--space-3); padding-right: var(--space-3); }
+    .fighter__row + .fighter__row::before { left: var(--space-3); }
+    .loglist ::deep .logrow__head,
+    .loglist ::deep .logrow__body { padding-left: var(--space-3); padding-right: var(--space-3); }
+    .loglist ::deep .logrow + .logrow::before { left: var(--space-3); }
+}
 
 .fighter__sheet {
     display: grid;

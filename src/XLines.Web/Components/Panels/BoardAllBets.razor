@@ -8,6 +8,7 @@
 @inject DeskFollowUps FollowUps
 @inject WagerSlip Slip
 @inject DeskToasts Toasts
+@inject IServiceScopeFactory ScopeFactory
 
 @*
     Every book's number on every market for one game.
@@ -64,7 +65,7 @@ else
             <BookComparison Market="@m.Market" First="first" Second="second"
                             FirstSide="@firstName" SecondSide="@secondName"
                             Sport="@Row!.Game.Sport?.Key" FirstAbbrev="@firstAbbrev" SecondAbbrev="@secondAbbrev"
-                            OnTake="DoorFor(m)" Controls="@region"
+                            OnTake="DoorFor(m)" Controls="@region" Polled="_polled"
                             Expanded="_expanded.Contains(m.Market)"
                             ExpandedChanged="@((bool open) => SetExpanded(m.Market, open))" />
         </ChildContent>
@@ -139,7 +140,16 @@ else
     /// the lifecycle and taking the circuit with it.
     /// </summary>
     private Task LoadAsync()
-        => WithActivityAsync(async () => Row = await Data.RowAsync(GameId), settle: () => PulseState.Healthy);
+        => WithActivityAsync(async () =>
+        {
+            Row = await Data.RowAsync(GameId);
+
+            // The books the desk polls, so each market accounts for every one (PolledBooks).
+            _polled = PolledBooks.Read(ScopeFactory);
+        }, settle: () => PulseState.Healthy);
+
+    /// <summary>The books the desk polls; empty when unknown, and the tables read as before.</summary>
+    private IReadOnlyList<string> _polled = [];
 
     private IEnumerable<MarketPair> Markets()
     {

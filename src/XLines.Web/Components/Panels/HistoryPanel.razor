@@ -42,8 +42,10 @@
                 Note='@($"of {c.TargetDayFetches:N0} wanted")'
                 State="@(c.Completed > 0 ? DeskState.Positive : DeskState.Neutral)"
                 Numeric="true" />
-        <Metric Label="Games" Value='@c.GamesFound.ToString("N0")' State="DeskState.Info" Numeric="true" />
-        <Metric Label="Rows" Value='@c.RowsIngested.ToString("N0")' State="DeskState.Info" Numeric="true" />
+        @* Counts with no state to report are Neutral, as Ops' Rows today is: Info edged two plain
+           figures as though they said something the others did not. *@
+        <Metric Label="Games" Value='@c.GamesFound.ToString("N0")' Numeric="true" />
+        <Metric Label="Rows" Value='@c.RowsIngested.ToString("N0")' Numeric="true" />
         <Metric Label="Days failed"
                 Value='@c.Failed.ToString("N0")'
                 State="@(c.Failed > 0 ? DeskState.Warning : DeskState.Neutral)"
@@ -118,7 +120,7 @@ else if (!Loaded && !Failed)
    A section card spelled by hand: under it come a warning, the footer and what the last walk did,
    in that order, which is more than FormGroup's one Notice and one footer. *@
     <section class="wsection" aria-labelledby="@($"{_uid}-run")">
-        <div class="wgroup" style="--form-label: var(--hist-run-label)">
+        <div class="wgroup" style="--form-label: var(--ops-label-field)">
             <div class="wgroup__bar">
                 <h3 class="wgroup__title" id="@($"{_uid}-run")">Run</h3>
             </div>
@@ -133,7 +135,9 @@ else if (!Loaded && !Failed)
                         <span class="opsrow__text">@WalkingAt</span>
                         @if (Manager.Access.CanOperate)
                         {
-                            <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted" Role="DeskRole.Destructive"
+                            @* One key size in the card: Gather, Re-walk and Backport are the default
+                               size, and a 24px key among them sat short of its row's neighbours. *@
+                            <DeskButton Emphasis="DeskEmphasis.Tinted" Role="DeskRole.Destructive"
                                         Icon="@Icons.Material.Filled.Stop" OnClick="Stop">
                                 Stop
                             </DeskButton>
@@ -219,7 +223,7 @@ else if (!Loaded && !Failed)
                         <span class="opsrow__text quiet">to</span>
                         <DeskField TValue="string" type="date" aria-label="To" Class="wfield--short"
                                    Value="@_rangeTo" ValueChanged="@((string v) => _rangeTo = v)" />
-                        <DeskButton Size="DeskKeySize.Small" OnClick="SeasonToDate"
+                        <DeskButton OnClick="SeasonToDate"
                                     Title="From the earliest chosen sport's season start to today">
                             Season to date
                         </DeskButton>
@@ -310,7 +314,10 @@ else if (!Loaded && !Failed)
    the card, whose name over nothing would read as a table that failed to fill. *@
 @if (Loaded || !Failed)
 {
-<FormGroup Title="Seasons" Span="DeskCardSpan.Row">
+@* Two tracks, never the whole row (.wsection--pair): a 700px table across 1560px of card put the
+   league and the season at one edge and the figures a screen away. In a flow of three the recent
+   days take the track beside it, so the two records read side by side. *@
+<FormGroup Title="Seasons" Class="wsection--pair">
 <DeskGrid T="SeasonCoverage" Items="_seasons" Loading="@(!Loaded)" LoadingLabel="Reading the seasons"
           SkeletonRows="4" EmptyText="No games on record for the leagues in play.">
     @* Every column here is a figure or a short name, so each holds one line; the season takes
@@ -395,7 +402,9 @@ else if (!Loaded && !Failed)
 
 @if (Loaded || !Failed)
 {
-<FormGroup Title="Recent days" Span="DeskCardSpan.Row">
+@* Five short columns: one track, a list's width (HistoryPanel.razor.css lets its sport column
+   give up the sentence floor, so the five fit a 420px track without scrolling). *@
+<FormGroup Title="Recent days" Class="hist-recent">
 <DeskGrid T="BackfillCheckpoint" Items="_recent" Loading="@(!Loaded)" LoadingLabel="Reading recent days"
           EmptyText="Nothing walked yet. Gather history above, and days land here as they complete.">
     <PropertyColumn T="BackfillCheckpoint" TProperty="DateOnly" Property="c => c.Date" Title="Day"

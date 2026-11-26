@@ -18,6 +18,9 @@ public sealed record SlipItem(
     /// <summary>"ML · Chiefs -128".</summary>
     public string Selection => $"{SelectionText.Of(Market, Outcome, Line)} {OddsMath.FormatPrice(PriceAmerican)}";
 
+    /// <summary>The book as the reader knows it ("DraftKings"); <see cref="Book"/> is the feed's key.</summary>
+    public string BookName => XLines.Web.Components.Panels.BookNames.Display(Book);
+
     /// <summary>
     /// What the journal already held on this side when the wager was banked — "$25 at -128
     /// (draftkings), Sep 26 13:18 ET" — or null. Carried from the wager window's duplicate check

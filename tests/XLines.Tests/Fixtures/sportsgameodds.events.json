@@ -1,0 +1,68 @@
+{
+  "success": true,
+  "data": [
+    {
+      "eventID": "YlZBEbhTgV80ZeTIIyqm",
+      "sportID": "FOOTBALL",
+      "leagueID": "NFL",
+      "type": "match",
+      "teams": {
+        "home": { "teamID": "KANSAS_CITY_CHIEFS_NFL", "names": { "long": "Kansas City Chiefs", "medium": "Chiefs", "short": "KC" } },
+        "away": { "teamID": "BUFFALO_BILLS_NFL", "names": { "long": "Buffalo Bills", "medium": "Bills", "short": "BUF" } }
+      },
+      "status": { "startsAt": "2026-11-29T21:25:00.000Z", "started": false, "ended": false, "cancelled": false, "oddsAvailable": true },
+      "odds": {
+        "points-home-game-ml-home": {
+          "oddID": "points-home-game-ml-home", "betTypeID": "ml", "sideID": "home",
+          "fairOdds": "-110", "bookOdds": "-115",
+          "byBookmaker": {
+            "caesars": { "odds": "-120", "available": true, "lastUpdatedAt": "2026-11-26T15:04:00.000Z" },
+            "draftkings": { "odds": "-112", "available": true }
+          }
+        },
+        "points-away-game-ml-away": {
+          "oddID": "points-away-game-ml-away", "betTypeID": "ml", "sideID": "away",
+          "byBookmaker": { "caesars": { "odds": "+100", "available": true } }
+        },
+        "points-home-game-sp-home": {
+          "oddID": "points-home-game-sp-home", "betTypeID": "sp", "sideID": "home",
+          "byBookmaker": { "caesars": { "odds": "-110", "spread": "-1.5", "available": true } }
+        },
+        "points-away-game-sp-away": {
+          "oddID": "points-away-game-sp-away", "betTypeID": "sp", "sideID": "away",
+          "byBookmaker": { "caesars": { "odds": "-110", "spread": "+1.5", "available": false } }
+        },
+        "points-all-game-ou-over": {
+          "oddID": "points-all-game-ou-over", "betTypeID": "ou", "sideID": "over",
+          "byBookmaker": { "caesars": { "odds": "-105", "overUnder": "47.5", "available": true } }
+        },
+        "points-all-game-ou-under": {
+          "oddID": "points-all-game-ou-under", "betTypeID": "ou", "sideID": "under",
+          "byBookmaker": { "caesars": { "odds": "-115", "overUnder": "47.5", "available": true } }
+        },
+        "points-home-1h-ml-home": {
+          "oddID": "points-home-1h-ml-home", "betTypeID": "ml", "sideID": "home",
+          "byBookmaker": { "caesars": { "odds": "-125", "available": true } }
+        }
+      }
+    },
+    {
+      "eventID": "startedAlready000001",
+      "leagueID": "NFL",
+      "teams": {
+        "home": { "names": { "long": "Detroit Lions" } },
+        "away": { "names": { "long": "Green Bay Packers" } }
+      },
+      "status": { "startsAt": "2026-11-26T17:30:00.000Z", "started": true },
+      "odds": {
+        "points-home-game-ml-home": { "byBookmaker": { "caesars": { "odds": "-300", "available": true } } }
+      }
+    },
+    {
+      "eventID": "noTeams0000000000001",
+      "leagueID": "NFL",
+      "status": { "startsAt": "2026-11-30T18:00:00.000Z", "started": false }
+    }
+  ],
+  "nextCursor": "n.1763687700000.4lronEc61vA9pcyqoRIa"
+}

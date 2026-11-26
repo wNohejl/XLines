@@ -29,7 +29,8 @@
     and the line renders as body copy.
 *@
 
-<p class="@Classes" style="@Styles" @attributes="Rest">
+@* A failed load is said aloud as well as drawn: status, so a reader hears it without hunting. *@
+<p class="@Classes" style="@Styles" role="@(Kind == EmptyStateKind.Error ? "status" : null)" @attributes="Rest">
     @ChildContent
     @if (Action is not null)
     {

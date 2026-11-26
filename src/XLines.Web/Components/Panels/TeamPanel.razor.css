@@ -8,6 +8,24 @@
     border-radius: 0;
 }
 
+/* The rows start where the bar's title and the split row's labels do, their hairlines with
+   them; a narrow card gives the inset back, as the Desk's rows do. */
+.team-flow ::deep .team-card .logrow__head,
+.team-flow ::deep .team-card .logrow__body {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+}
+.team-flow ::deep .team-card .logrow + .logrow::before { left: var(--space-4); }
+
+@container (max-width: 480px) {
+    .team-flow ::deep .team-card .logrow__head,
+    .team-flow ::deep .team-card .logrow__body {
+        padding-left: var(--space-3);
+        padding-right: var(--space-3);
+    }
+    .team-flow ::deep .team-card .logrow + .logrow::before { left: var(--space-3); }
+}
+
 /* The splits row and the first game under it are parted as any two rows are: by a hairline
    inset to the text's leading edge, not one the card's whole width. */
 .team-flow ::deep .team-card > .team-splits + .loglist {
@@ -22,9 +40,9 @@
     border-top: 1px solid var(--separator);
 }
 
-/* The opponent picker is as wide as its longest name allows, not the rest of its cell. */
+/* The opponent picker is as wide as its longest name allows, not the rest of its cell, and at
+   the split switch's height and type beside it. */
 .team-splits ::deep .team-splits__pick {
     width: auto;
     max-width: 100%;
-    font-size: var(--text-footnote);
 }

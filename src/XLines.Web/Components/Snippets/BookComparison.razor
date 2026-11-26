@@ -31,7 +31,11 @@
 
 @if (ranked.Count == 0)
 {
-    <EmptyState Kind="EmptyStateKind.New">Not priced by any book yet.</EmptyState>
+    @* With the polled list known, the empty state says how many books were asked, so "no price"
+       is not read as "no book is polled". *@
+    <EmptyState Kind="EmptyStateKind.New">@(BookCoverage.Of([], Polled) is { } none
+        ? $"Not priced by any of the {none.Polled} polled {(none.Polled == 1 ? "book" : "books")} yet."
+        : "Not priced by any book yet.")</EmptyState>
 }
 else
 {
@@ -73,7 +77,8 @@ else
         }
     </DeskGrid>
 
-    <MoreBooks Total="ranked.Count" Top="Top" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Controls" />
+    <MoreBooks Total="ranked.Count" Top="Top" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Controls"
+               Books="ranked" Polled="Polled" />
 }
 
 @code {
@@ -120,6 +125,12 @@ else
 
     /// <summary>The id of the region holding the table, for the key's aria-controls.</summary>
     [Parameter] public string? Controls { get; set; }
+
+    /// <summary>
+    /// The books the desk polls (<c>PolledBooks</c>), so the count under the table is priced of
+    /// polled and the polled books with no price are named. Null or empty: unknown, drawn as before.
+    /// </summary>
+    [Parameter] public IReadOnlyCollection<string>? Polled { get; set; }
 
     private bool _expanded;
 

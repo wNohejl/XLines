@@ -114,7 +114,12 @@
     </Actions>
 </PanelToolbar>
 
-@* Anatomy order (spec 2026-10-24): toolbar, note, metrics. *@
+@* Anatomy order (spec 2026-10-24): toolbar, note, metrics. The two notes share a line where
+   the Board has room for both (.board__banners): stacked, the Line watch line and the gap's
+   sentence were two full-width bands above the tiles, and a short Board showed two games. *@
+@if (Watching || (Visible.Count > 0 && _unpriced > 0))
+{
+<div class="board__banners">
 @if (Watching)
 {
     @* Line watch changes what a press here does (ADR 0029), so the Board says so, in words on the
@@ -142,6 +147,8 @@
         }
     </Note>
 }
+</div>
+}
 
 @*
     The strip the Slate brought with it, minus the figures that were only ever ops trivia.
@@ -156,7 +163,9 @@
 *@
 @if (Loaded)
 {
-<MetricRow>
+@* Compact (.board__metrics): the figure and its label on one line, the note under them, so the
+   four tiles are one short row a Board wraps by its own width rather than four 90px boxes. *@
+<MetricRow Class="board__metrics">
     <Metric Label="Games" Value='@_rows.Count.ToString("N0")' Note="@HorizonNote"
             State="DeskState.Info" Numeric />
 
@@ -275,7 +284,7 @@ else
 {
     <div class="board__table">
     <DeskGrid T="BoardRow" Items="Visible" Class="deskgrid--clickable deskgrid--board"
-              RowClassFunc="@((r, _) => _open?.Game.Id == r.Game.Id ? "board__row--open" : string.Empty)"
+              RowClassFunc="@((r, _) => RowClass(r))"
               OnRowClick="@(e => Toggle(e.Item))"
               ChildRow="@(r => _open?.Game.Id == r.Game.Id ? OpenRow(r) : null)"
               ChildRowIndent="1"
@@ -288,8 +297,11 @@ else
                    by a middot they were one run of grey that wrapped at the dot in a narrow Board,
                    leaving "· NBA" to start the second line. Which league is said only while the
                    board is showing more than one. *@
+                @* The day and the clock are two spans of one reading, a space apart: one line in a
+                   wide Board, the day over the clock in a narrow one (.board__date, xlines.css),
+                   where "Nov 26 13:00 ET" on one line was the widest thing in the column. *@
                 <span class="board__when">
-                    <span class="board__time num">@Starts(context.Item.Game.StartsAt)</span>
+                    <span class="board__time num"><span class="board__date">@DisplayTime.Day(context.Item.Game.StartsAt)</span> <span class="board__clock">@StartClock(context.Item.Game.StartsAt)</span></span>
                     @if (_sport.Length == 0 && context.Item.Game.Sport is { } sport)
                     {
                         <span class="board__league">@sport.Key.ToUpperInvariant()</span>
@@ -377,7 +389,7 @@ else
                         @if (unpriced is { } reason)
                         {
                             <span class="board__gap">
-                                No price@(SharedGap is null && _open?.Game.Id == context.Item.Game.Id ? $" · {reason}" : "")
+                                No price@(PolledWhy(context.Item))@(SharedGap is null && _open?.Game.Id == context.Item.Game.Id ? $" · {reason}" : "")
                             </span>
                         }
                     </div>
@@ -490,14 +502,14 @@ else
            Spread, Over, Under", the row of labels said every market twice and named the total by
            its sides. The first column of a pair (.board__pair) carries the market's name, drawn
            centred over both columns; the second shows nothing, since every cell already names
-           its side (PHI, DAL, O, U). Each header still has a name of its own for a screen
+           its side (PHI, DAL; a total's line, o47.5 and u47.5, which names it). Each header still has a name of its own for a screen
            reader — "Moneyline, home", "Moneyline, away" — so no column is unlabelled. *@
         <TemplateColumn T="BoardRow" Title="Moneyline, home" Align="Align.Right" Sortable="false"
-                        HeaderClass="board__pair" CellClass="board__pair">
+                        HeaderClass="board__ml board__pair" CellClass="board__ml board__pair">
             <HeaderTemplate>@MarketHeader("Moneyline", "home")</HeaderTemplate>
             <CellTemplate>
                 <PriceCell Offer="context.Item.Moneyline.First" Selection="@Side(context.Item, true)"
-                           StartsAt="context.Item.Game.StartsAt"
+                           StartsAt="context.Item.Game.StartsAt" Polled="_polled"
                            Taking="@IsTaking(context.Item, context.Item.Moneyline, context.Item.Moneyline.First)" Banked="@IsBanked(context.Item, context.Item.Moneyline, context.Item.Moneyline.First)"
                            OnTake="() => Take(context.Item, context.Item.Moneyline, context.Item.Moneyline.First)"
                            OnBank="() => Bank(context.Item, context.Item.Moneyline, context.Item.Moneyline.First)" />
@@ -505,11 +517,11 @@ else
         </TemplateColumn>
 
         <TemplateColumn T="BoardRow" Title="Moneyline, away" Align="Align.Right" Sortable="false"
-                        HeaderClass="board__pair-end" CellClass="board__pair-end">
+                        HeaderClass="board__ml board__pair-end" CellClass="board__ml board__pair-end">
             <HeaderTemplate>@SideHeader("Moneyline", "away")</HeaderTemplate>
             <CellTemplate>
                 <PriceCell Offer="context.Item.Moneyline.Second" Selection="@Side(context.Item, false)"
-                           StartsAt="context.Item.Game.StartsAt"
+                           StartsAt="context.Item.Game.StartsAt" Polled="_polled"
                            Taking="@IsTaking(context.Item, context.Item.Moneyline, context.Item.Moneyline.Second)" Banked="@IsBanked(context.Item, context.Item.Moneyline, context.Item.Moneyline.Second)"
                            OnTake="() => Take(context.Item, context.Item.Moneyline, context.Item.Moneyline.Second)"
                            OnBank="() => Bank(context.Item, context.Item.Moneyline, context.Item.Moneyline.Second)" />
@@ -517,22 +529,22 @@ else
         </TemplateColumn>
 
         <TemplateColumn T="BoardRow" Title="Spread, home" Align="Align.Right" Sortable="false"
-                        HeaderClass="col--wider board__pair" CellClass="col--wider board__pair">
+                        HeaderClass="board__spread board__pair" CellClass="board__spread board__pair">
             <HeaderTemplate>@MarketHeader("Spread", "home")</HeaderTemplate>
             <CellTemplate>
                 <PriceCell Offer="context.Item.Spread.First" Selection="@Side(context.Item, true)"
-                           StartsAt="context.Item.Game.StartsAt"
+                           StartsAt="context.Item.Game.StartsAt" Polled="_polled"
                            Taking="@IsTaking(context.Item, context.Item.Spread, context.Item.Spread.First)" Banked="@IsBanked(context.Item, context.Item.Spread, context.Item.Spread.First)"
                            OnTake="() => Take(context.Item, context.Item.Spread, context.Item.Spread.First)"
                            OnBank="() => Bank(context.Item, context.Item.Spread, context.Item.Spread.First)" />
             </CellTemplate>
         </TemplateColumn>
 
-        <TemplateColumn T="BoardRow" Title="Spread, away" Align="Align.Right" Sortable="false" HeaderClass="col--wider board__pair-end" CellClass="col--wider board__pair-end">
+        <TemplateColumn T="BoardRow" Title="Spread, away" Align="Align.Right" Sortable="false" HeaderClass="board__spread board__pair-end" CellClass="board__spread board__pair-end">
             <HeaderTemplate>@SideHeader("Spread", "away")</HeaderTemplate>
             <CellTemplate>
                 <PriceCell Offer="context.Item.Spread.Second" Selection="@Side(context.Item, false)"
-                           StartsAt="context.Item.Game.StartsAt"
+                           StartsAt="context.Item.Game.StartsAt" Polled="_polled"
                            Taking="@IsTaking(context.Item, context.Item.Spread, context.Item.Spread.Second)" Banked="@IsBanked(context.Item, context.Item.Spread, context.Item.Spread.Second)"
                            OnTake="() => Take(context.Item, context.Item.Spread, context.Item.Spread.Second)"
                            OnBank="() => Bank(context.Item, context.Item.Spread, context.Item.Spread.Second)" />
@@ -540,22 +552,22 @@ else
         </TemplateColumn>
 
         <TemplateColumn T="BoardRow" Title="Total, over" Align="Align.Right" Sortable="false"
-                        HeaderClass="col--wider board__pair" CellClass="col--wider board__pair">
+                        HeaderClass="board__total board__pair" CellClass="board__total board__pair">
             <HeaderTemplate>@MarketHeader("Total", "over")</HeaderTemplate>
             <CellTemplate>
-                <PriceCell Offer="context.Item.Total.First" Selection="O"
-                           StartsAt="context.Item.Game.StartsAt"
+                <PriceCell Offer="context.Item.Total.First" Selection="@TotalSide(context.Item.Total.First, "O")"
+                           StartsAt="context.Item.Game.StartsAt" Polled="_polled"
                            Taking="@IsTaking(context.Item, context.Item.Total, context.Item.Total.First)" Banked="@IsBanked(context.Item, context.Item.Total, context.Item.Total.First)"
                            OnTake="() => Take(context.Item, context.Item.Total, context.Item.Total.First)"
                            OnBank="() => Bank(context.Item, context.Item.Total, context.Item.Total.First)" />
             </CellTemplate>
         </TemplateColumn>
 
-        <TemplateColumn T="BoardRow" Title="Total, under" Align="Align.Right" Sortable="false" HeaderClass="col--wider board__pair-end" CellClass="col--wider board__pair-end">
+        <TemplateColumn T="BoardRow" Title="Total, under" Align="Align.Right" Sortable="false" HeaderClass="board__total board__pair-end" CellClass="board__total board__pair-end">
             <HeaderTemplate>@SideHeader("Total", "under")</HeaderTemplate>
             <CellTemplate>
-                <PriceCell Offer="context.Item.Total.Second" Selection="U"
-                           StartsAt="context.Item.Game.StartsAt"
+                <PriceCell Offer="context.Item.Total.Second" Selection="@TotalSide(context.Item.Total.Second, "U")"
+                           StartsAt="context.Item.Game.StartsAt" Polled="_polled"
                            Taking="@IsTaking(context.Item, context.Item.Total, context.Item.Total.Second)" Banked="@IsBanked(context.Item, context.Item.Total, context.Item.Total.Second)"
                            OnTake="() => Take(context.Item, context.Item.Total, context.Item.Total.Second)"
                            OnBank="() => Bank(context.Item, context.Item.Total, context.Item.Total.Second)" />
@@ -564,14 +576,13 @@ else
 
     </DeskGrid>
 
-    @* In a column too narrow for all six market cells, spread and totals fold away (col--wider)
-       rather than pushing the board off the side of its window. Said, so nothing is missing
-       without a word — under the table, as a footnote to it: above it, the sentence was a third
-       thing stacked over the rows with the banner and the figures, and pushed the first game
-       down a line in exactly the narrow window that has the least height to spare. *@
-    <div class="board__folded" role="note">
-        Spread and totals are hidden at this width. Widen the Board to see them.
-    </div>
+    @* No market folds away any more. Spread and totals used to hide under 820px of grid
+       (the Desk's wider-column class) with a sentence under the table saying so, and between that and the width
+       all six cells needed the grid scrolled, so the default Line watch Board (about 940px)
+       hid its totals behind a scrollbar. The table now gives width back in steps by the
+       Board's own width (xlines.css, "The board's column rhythm": the starters, then the
+       start's one line, then the rails), stacks each market's two sides in one column where
+       even that is too wide, and scrolls only at the narrowest, the matchup pinned. *@
     </div>
 
     @if (_closing > 0)
@@ -707,10 +718,35 @@ else
     /// </summary>
     private string CoverageNote
         => _rows.Count == 0 ? "nothing on the board"
-            : _bookCount == 0 ? "no book quoted this window"
+            : _bookCount == 0 ? (_polled.Count > 0 ? $"none of {_polled.Count} polled books quoted" : "no book quoted this window")
             : _closing > 0
-                ? $"best of {BooksPhrase} · {_closing} closed"
-                : $"best of {BooksPhrase}";
+                ? $"best of {BooksPhrase}{PolledPhrase} · {_closing} closed"
+                : $"best of {BooksPhrase}{PolledPhrase}";
+
+    /// <summary>The books the desk polls (PolledBooks); empty when unknown.</summary>
+    private IReadOnlyList<string> _polled = [];
+
+    /// <summary>" · 10 polled" after the tile's book count, once the polled list is known.</summary>
+    private string PolledPhrase => _polled.Count > 0 ? $" · {_polled.Count} polled" : "";
+
+    /// <summary>
+    /// Why a row has no price, from what the desk already holds: how many books are polled and
+    /// when this league's lines were last pulled — " · 10 books polled · NBA lines last pulled
+    /// Nov 14", or "never pulled". Nothing while the polled list is unknown, so the row reads
+    /// "No price" as before.
+    /// </summary>
+    private string PolledWhy(BoardRow row) => UnpricedWhy(row, _polled);
+
+    /// <summary>The words after "No price" on an unpriced row (<see cref="PolledWhy"/>).</summary>
+    public static string UnpricedWhy(BoardRow row, IReadOnlyCollection<string>? polled)
+    {
+        if (polled is not { Count: > 0 })
+            return "";
+
+        var league = row.Game.Sport?.Key is { Length: > 0 } key ? key.ToUpperInvariant() + " lines" : "Lines";
+        var pulled = row.LastPulled is { } at ? $"last pulled {DisplayTime.Day(at)}" : "never pulled";
+        return $" · {polled.Count} {(polled.Count == 1 ? "book" : "books")} polled · {league} {pulled}";
+    }
 
     /// <summary>"10 books", or "3–10 books" when the thinnest priced row has fewer than the fullest.</summary>
     private string BooksPhrase
@@ -800,6 +836,29 @@ else
         => $"{pick.Outcome} at {BookNames.Display(pick.Book.Book)}, {OddsMath.FormatPrice(pick.Book.PriceAmerican)}\n"
            + $"{PriceCell.EvLabel(pick.Book.Ev!.Value)} against the fair price";
 
+    /// <summary>
+    /// The row's classes: open, and a fight. A narrow Board stacks each market's two sides in one
+    /// column level with the matchup's two lines (xlines.css), and a fight bills its red corner
+    /// (home) first where a game reads away first, so the stack's order follows the row's kind.
+    /// </summary>
+    private string RowClass(BoardRow row)
+        => string.Join(' ', new[]
+        {
+            _open?.Game.Id == row.Game.Id ? "board__row--open" : null,
+            row.Bout is not null ? "board__row--fight" : null
+        }.Where(c => c is not null));
+
+    /// <summary>
+    /// The side a total's cell names: nothing when the line already does ("o47.5" says Over), so
+    /// the cell is a letter narrower; the letter when there is no line to say it.
+    /// </summary>
+    public static string? TotalSide(BestOffer? offer, string letter)
+        => offer?.Line is null ? letter : null;
+
+    /// <summary>The start's clock, "13:05 ET": the time half of <see cref="PanelBase.Starts"/>, the day being its own span.</summary>
+    private static string StartClock(DateTimeOffset at)
+        => $"{DisplayTime.Format(at, "HH:mm")} {DisplayTime.Label}";
+
     private static string Side(BoardRow row, bool home)
     {
         var team = home ? row.Game.HomeTeam : row.Game.AwayTeam;
@@ -880,9 +939,13 @@ else
                 // Which stats source fills the board (ADR 0026), for the empty state's sentence and key.
                 var port = scope.ServiceProvider.GetService<SourceRegistry>()?.Port;
 
-                return (Rows: rows, Port: port, Moves: await movesRead, Alerts: await alertsRead, Names: await namesRead);
+                // The books the desk polls (PolledBooks), so an unpriced row and the Priced tile
+                // account for them; empty with no odds provider live, and both read as before.
+                var polled = XLines.Web.Services.PolledBooks.Read(scope.ServiceProvider);
+
+                return (Rows: rows, Port: port, Moves: await movesRead, Alerts: await alertsRead, Names: await namesRead, Polled: polled);
             },
-            read => HandOver(read.Rows, read.Port, read.Moves, read.Alerts, read.Names));
+            read => HandOver(read.Rows, read.Port, read.Moves, read.Alerts, read.Names, read.Polled));
         },
         settle: () => _rows.Count == 0 ? PulseState.Idle : PulseState.Healthy,
         status: () => _rows.Count == 0 ? "no games" : $"{_priced}/{_rows.Count} priced");
@@ -890,9 +953,11 @@ else
 
     /// <summary>What the latest load read, onto the board at once.</summary>
     private void HandOver(
-        List<BoardRow> rows, StatsPort? port, long moves, (int Open, int Critical) alerts, Dictionary<string, string> names)
+        List<BoardRow> rows, StatsPort? port, long moves, (int Open, int Critical) alerts, Dictionary<string, string> names,
+        IReadOnlyList<string>? polled = null)
     {
         _rows = rows;
+        _polled = polled ?? [];
         _bookCount = _rows.Count == 0 ? 0 : _rows.Max(r => r.BookCount);
         _fewestBooks = _rows.Where(r => r.BookCount > 0).Select(r => r.BookCount).DefaultIfEmpty().Min();
         _priced = _rows.Count(r => r.HasPrices);

@@ -23,7 +23,9 @@ else
 {
     var card = _card;
 
-    <div class="fighter">
+    @* Section cards in a flow (ADR 0032), as the Team window's own cards are: each group's name
+       in its bar, and a wide window more cards across rather than a label a screen from its value. *@
+    <div class="wflow fighter">
         @if (card.Profile is null)
         {
             @* The fix sits where the gap is stated (HIG 16): an operator reads the profiles from
@@ -53,52 +55,44 @@ else
         }
         else
         {
-            <section class="fighter__group" aria-label="Profile">
-                <div class="fighter__list">
-                    @Fact("Record", card.Record)
-                    @Fact("Nickname", card.Profile.Nickname is { } n ? $"“{n}”" : null)
-                    @Fact("Weight class", card.Profile.WeightClass)
-                    @Fact("Age", card.Age is { } age ? $"{age:0}" : null)
-                    @Fact("Height", card.Profile.HeightInches is { } h ? $"{(int)h / 12}' {h % 12:0.#}\"" : null)
-                    @Fact("Reach", card.Profile.ReachInches is { } r ? $"{r:0.#}\"" : null)
-                    @Fact("Stance", card.Profile.Stance)
-                    @Fact("Gym", card.Profile.Association)
-                    @Fact("Country", card.Profile.Country)
-                </div>
-                <p class="fighter__footer">From ESPN, @card.Profile.RefreshedAt.ToLocalTime().ToString("d MMM yyyy").</p>
-            </section>
+            <FormGroup Title="Profile" Footer="@(Words($"From ESPN, {card.Profile.RefreshedAt.ToLocalTime():d MMM yyyy}."))">
+                @Fact("Record", card.Record)
+                @Fact("Nickname", card.Profile.Nickname is { } n ? $"“{n}”" : null)
+                @Fact("Weight class", card.Profile.WeightClass)
+                @Fact("Age", card.Age is { } age ? $"{age:0}" : null)
+                @Fact("Height", card.Profile.HeightInches is { } h ? $"{(int)h / 12}' {h % 12:0.#}\"" : null)
+                @Fact("Reach", card.Profile.ReachInches is { } r ? $"{r:0.#}\"" : null)
+                @Fact("Stance", card.Profile.Stance)
+                @Fact("Gym", card.Profile.Association)
+                @Fact("Country", card.Profile.Country)
+            </FormGroup>
 
             @if (card.Career.Rates.Count > 0)
             {
-                <section class="fighter__group" aria-label="Career rates">
-                    <h4 class="fighter__title">Career, as ESPN rates it</h4>
-                    <div class="fighter__list">
-                        @foreach (var rate in card.Career.Rates)
-                        {
-                            @Fact(rate.Label, rate.Value)
-                        }
-                    </div>
-                </section>
+                <FormGroup Title="Career, as ESPN rates it">
+                    @foreach (var rate in card.Career.Rates)
+                    {
+                        @Fact(rate.Label, rate.Value)
+                    }
+                </FormGroup>
             }
 
             @if (card.Career.Record.Count > 0)
             {
-                <section class="fighter__group" aria-label="Record">
-                    <h4 class="fighter__title">How the record was made</h4>
-                    <div class="fighter__list">
-                        @foreach (var split in card.Career.Record)
-                        {
-                            @Fact(split.Label, split.Value)
-                        }
-                    </div>
-                </section>
+                <FormGroup Title="How the record was made">
+                    @foreach (var split in card.Career.Record)
+                    {
+                        @Fact(split.Label, split.Value)
+                    }
+                </FormGroup>
             }
         }
 
         @if (card.History.Count > 0)
         {
-            <section class="fighter__group" aria-label="Fights">
-                <h4 class="fighter__title">Every recorded fight · @card.History.Count</h4>
+            @* The card is the group: the log list inside it gives up its own frame (FighterView.razor.css). *@
+            <FormGroup Title="Every recorded fight" Keys="@(Words(card.History.Count.ToString("N0")))"
+                       Span="DeskCardSpan.Row" GroupClass="fighter__fights">
                 <div class="loglist">
                     @foreach (var fight in card.History)
                     {
@@ -137,7 +131,7 @@ else
                         </DeskDisclosure>
                     }
                 </div>
-            </section>
+            </FormGroup>
         }
     </div>
 }
@@ -214,6 +208,9 @@ else
             _reading = false;
         }
     }
+
+    /// <summary>A line of text as a fragment, for a card's footer or its bar.</summary>
+    private static RenderFragment Words(string text) => __builder => __builder.AddContent(0, text);
 
     private static RenderFragment Fact(string label, string? value) => __builder =>
     {

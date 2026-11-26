@@ -151,9 +151,12 @@ else
                is a setting, so it is a row of a card that leads the curve it starts — its name in
                the label column, the field and its key trailing, what it is for in the footer — and
                not a field on a section's rule, where keys narrow what a section shows and a hidden
-               label beside it named it to nobody. A Set that cannot be pressed says why; one that
-               did not store says so under the card, with the figure still in the field. *@
-            <FormGroup Title="Bankroll" LabelWidth="128px">
+               label beside it named it to nobody. A Set that did not store says so under the card,
+               with the figure still in the field.
+
+               Set's reason trails it (xlines.css, .opsrow > .keyrow): between the field and the key
+               it pushed Set along at rest, and Set jumped left on the first keystroke. *@
+            <FormGroup Title="Bankroll" LabelWidth="var(--ops-label-field)">
                 <ChildContent>
                     <FormRow Label="Starting bankroll">
                         <div class="opsrow">
@@ -163,7 +166,7 @@ else
                             <KeyRow Justify="DeskJustify.Start"
                                     Reason="@(_bankrollInput == _startingBankroll ? "Type a different figure to set it." : null)">
                                 <Primary Context="why">
-                                    <DeskButton Size="DeskKeySize.Small" Disabled="@(_bankrollInput == _startingBankroll)"
+                                    <DeskButton Disabled="@(_bankrollInput == _startingBankroll)"
                                                 aria-describedby="@why"
                                                 OnClick="SaveBankrollAsync">
                                         Set
@@ -186,24 +189,30 @@ else
                first row once two tracks fit, the whole row below that. Height="auto" with
                .perf-chart: the plot spans its card and keeps its own proportions, so its axis
                labels are drawn near the size they are written at rather than shrunk to fit a
-               200px box (xlines.css, "The Performance window"). *@
+               200px box (xlines.css, "The Performance window"). It is as tall as two or three
+               cards, so it spans that many rows (PerformancePanel.razor.css) and the breakdowns
+               stack under the bankroll beside it, rather than the one-field bankroll card standing
+               over 400px of nothing. *@
             <FormGroup Title="@(_startingBankroll > 0 ? "Bankroll over settled bets" : "Profit over settled bets")"
-                       Span="DeskCardSpan.Rest" GroupClass="perf-card">
-                <div class="perf-card__body">
-                    @if (_bankroll.Length > 1)
-                    {
+                       Span="DeskCardSpan.Rest" Class="perf-curve" GroupClass="perf-card">
+                @if (_bankroll.Length > 1)
+                {
+                    <div class="perf-card__body">
                         <DeskChart Series="@_bankrollSeries" Labels="@_labels" Height="auto"
                                    Class="perf-chart"
                                    Family="DeskChartFamily.Ledger"
                                    ShowLegend="false"
                                    Takeaway="@_takeaway"
                                    Description="@DeskChart.Describe(_startingBankroll > 0 ? "Bankroll over settled bets" : "Cumulative profit over settled bets", _labels, _bankrollSeries)" />
-                    }
-                    else
-                    {
-                        <EmptyState Kind="EmptyStateKind.New">Two settled bets are needed to plot a curve.</EmptyState>
-                    }
-                </div>
+                    </div>
+                }
+                else
+                {
+                    @* The card's own sentence, straight in the card at the rows' inset and leading, as
+                       every other card's is. Inside the plot's padded body, as New, it was centred and
+                       its inset doubled. *@
+                    <EmptyState>Two settled bets are needed to plot a curve.</EmptyState>
+                }
             </FormGroup>
 
             @* The three breakdowns are one table read three ways, so they share column widths: Bets,
@@ -285,8 +294,7 @@ else
     private decimal? _bankrollInput;
 
     /// <summary>Why the last Set did not store, said under the bankroll row.</summary>
-    private string? _bankrollError;
-    private double[] _bankroll = [];
+    private string? _bankrollError;    private double[] _bankroll = [];
     private List<ChartSeries<double>> _bankrollSeries = [];
     private string[] _labels = [];
     private string? _takeaway;
@@ -560,7 +568,8 @@ else
     private RenderFragment Breakdown(List<BreakdownRow> data, string by) => @<text>
         @if (data.Count == 0)
         {
-            <EmptyState Kind="EmptyStateKind.Filtered">No settled bets.</EmptyState>
+            @* Inside a card, at the rows' inset and leading, as Ops and Incidents say theirs. *@
+            <EmptyState>No settled bets.</EmptyState>
         }
         else
         {

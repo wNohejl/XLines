@@ -499,7 +499,8 @@ public class DeskThemeTests
     {
         string[] expected =
         [
-            "--accent-wash", "--accent-wash-strong", "--key-gloss", "--key-highlight", "--material-blur",
+            "--accent-wash", "--accent-wash-strong", "--control-fill", "--control-fill-hover", "--control-fill-press",
+            "--key-gloss", "--key-highlight", "--material-blur",
             "--state-negative-wash", "--state-positive-wash", "--state-warning-wash"
         ];
         Assert.Equal(expected, DeskCss.DerivedTokens);
@@ -1184,7 +1185,7 @@ public class DeskThemeTests
         {
             "density", Stampable<DeskDensity>(DeskDensity.Standard),
             ["--space-1", "--space-2", "--space-3", "--space-4", "--space-5", "--space-6", "--space-8", "--space-12", "--space-16",
-             "--titlebar-h", "--footer-h", "--control-h", "--control-h-sm", "--control-h-lg", "--row-h", "--cell-pad-y", "--cell-inset"]
+             "--titlebar-h", "--footer-h", "--control-h", "--control-h-sm", "--control-h-lg", "--row-h", "--form-row-h", "--cell-pad-y", "--cell-inset"]
         },
         { "font", Stampable<DeskTypeface>(DeskTypeface.System), ["--face-ui", "--face-display"] }
     };

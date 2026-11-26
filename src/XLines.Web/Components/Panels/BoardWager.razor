@@ -50,7 +50,10 @@
 @if (context == WagerTab.Slip)
 {
     @* An empty slip here offers the way back to this window's own form, not a second window. *@
-    <SlipPanel OnPickBet="@(EventCallback.Factory.Create(this, PickBet))" />
+    @* At the wizard's width and centre, so turning to this tab does not change the window's column. *@
+    <div class="wager-slip">
+        <SlipPanel OnPickBet="@(EventCallback.Factory.Create(this, PickBet))" />
+    </div>
 }
 else if (_loading)
 {
@@ -309,7 +312,7 @@ else
                                 @(priced.IsBest ? "Best" : "One") of @priced.BooksQuoting @(priced.BooksQuoting == 1 ? "book" : "books")
                                 @if (!priced.IsBest && WagerOffer.Best(_market!, fetched) is { } best)
                                 {
-                                    <text> · best is @best.Book @Price(best.PriceAmerican)</text>
+                                    <text> · best is @best.BookName @Price(best.PriceAmerican)</text>
                                 }
                             </span>
                             @* The age says what it is in its own words ("captured 1h 49m ago",
@@ -385,7 +388,7 @@ else
             @if (BuildParlay && _offer is { } leg)
             {
                 <p class="wreview">
-                    You are adding <strong>@leg.Label at @Price(leg.PriceAmerican)</strong> with @leg.Book@(leg.Manual ? ", your own price" : "")
+                    You are adding <strong>@leg.Label at @Price(leg.PriceAmerican)</strong> with @leg.BookName@(leg.Manual ? ", your own price" : "")
                     as a leg. The slip holds @LegCount @(LegCount == 1 ? "leg" : "legs") so far.
                 </p>
             }
@@ -393,7 +396,7 @@ else
             {
                 <p class="wreview">
                     You are logging <strong>@OddsMath.Money(_stake)</strong> on
-                    <strong>@logging.Label at @Price(logging.PriceAmerican)</strong> with @logging.Book@(logging.Manual ? ", your own price" : "").
+                    <strong>@logging.Label at @Price(logging.PriceAmerican)</strong> with @logging.BookName@(logging.Manual ? ", your own price" : "").
                     @if (logging.PriceAmerican != 0)
                     {
                         <text>It returns <strong>@OddsMath.Money(OddsMath.PayoutOnWin(logging.PriceAmerican, _stake))</strong> if it wins.</text>
@@ -837,7 +840,7 @@ else
             && string.Equals(_offer.Book, before.Book, StringComparison.OrdinalIgnoreCase)
             && (_offer.PriceAmerican != before.PriceAmerican || _offer.Line != before.Line))
         {
-            _moved = $"Price moved since you opened this: {LinePrice(before)} → {LinePrice(_offer)} ({_offer.Book}).";
+            _moved = $"Price moved since you opened this: {LinePrice(before)} → {LinePrice(_offer)} ({_offer.BookName}).";
             // A number that moved is worth a look: the step opens to show it.
             _opened = BetStep;
         }
@@ -1158,6 +1161,13 @@ else
         var away = game.AwayTeam?.Name;
         var home = game.HomeTeam?.Name;
 
+        // A fight has no home: either corner is "vs" the other, billed red corner first (ADR 0021).
+        if (FightSports.IsFight(game.Sport?.Key))
+            return outcome == away && home is not null ? $"{name} · vs {SelectionText.Short(home)}"
+                 : outcome == home && away is not null ? $"{name} · vs {SelectionText.Short(away)}"
+                 : away is not null && home is not null ? $"{name} · {SelectionText.Short(home)} vs {SelectionText.Short(away)}"
+                 : name;
+
         return outcome == away && home is not null ? $"{name} · at {SelectionText.Short(home)}"
              : outcome == home && away is not null ? $"{name} · vs {SelectionText.Short(away)}"
              : away is not null && home is not null ? $"{name} · {SelectionText.Short(away)} at {SelectionText.Short(home)}"
@@ -1423,7 +1433,7 @@ else
             InJournal = _priorRead && _prior is { } prior ? Checks.Prior(prior) : null
         });
 
-        var logged = $"Added {offer.Label} at {Price(offer.PriceAmerican)} ({offer.Book}) as a leg · "
+        var logged = $"Added {offer.Label} at {Price(offer.PriceAmerican)} ({offer.BookName}) as a leg · "
                      + $"{LegCount} {(LegCount == 1 ? "leg" : "legs")} on the slip.";
         Banked(logged);
         _banked = new Banking(card.Id, ShapeNow!);
@@ -1460,8 +1470,8 @@ else
             // next bet on the same game (a form left exactly as it was, key still lit, logged the
             // same wager twice on the next press) and says what it did in one line above the
             // steps, with Same bet again for a second stake on this side.
-            var receipt = new LoggedWager(offer.Label, offer.PriceAmerican, offer.Book, _stake, offer.Manual, Chosen());
-            var logged = $"Logged {OddsMath.Money(_stake)} on {offer.Label} at {Price(offer.PriceAmerican)} ({offer.Book})"
+            var receipt = new LoggedWager(offer.Label, offer.PriceAmerican, offer.BookName, _stake, offer.Manual, Chosen());
+            var logged = $"Logged {OddsMath.Money(_stake)} on {offer.Label} at {Price(offer.PriceAmerican)} ({offer.BookName})"
                          + (offer.Manual ? ", your own price." : ".");
             Toasts.Success(logged);
 

@@ -1,6 +1,7 @@
 @using XLines.Desk.Windowing
 @implements IDisposable
 @inject WindowManager Manager
+@inject IDeskAlerts Alerts
 
 @*
     The toolbar: the whole catalogue, in one strip that does not move.
@@ -53,6 +54,9 @@
             currentSlot = 0;
 
         var slot = 0;
+
+        if (_groupRefs.Length != groups.Count)
+            _groupRefs = new ElementReference[groups.Count];
     }
 
     @* One run, in catalogue order, that does not move — but folded. Each catalogue group is
@@ -72,15 +76,19 @@
             var openInGroup = group.Where(i => i.Open is not null).ToList();
             var currentInGroup = group.Any(i => i.IsCurrent);
             var pinned = _pinned == name;
+            var groupIndex = g;
+            var firstSlot = slot;
 
             <div class="bar__menu @(pinned ? "bar__menu--pinned" : null)"
-                 @onpointerleave="() => Unpin(name)">
+                 @onpointerleave="e => OnLeave(e, name)">
                 <button class="bar__group @(currentInGroup ? "bar__group--current" : null) @(openInGroup.Count > 0 ? "bar__group--open" : null)"
                         type="button"
                         aria-haspopup="true"
                         aria-expanded="@(pinned ? "true" : "false")"
                         title="@GroupTip(name, openInGroup)"
                         data-glide-rest="@(currentInGroup ? "" : null)"
+                        @ref="_groupRefs[groupIndex]"
+                        @onkeydown="e => OnGroupKey(e, name, firstSlot, firstSlot + group.Count - 1)"
                         @onclick="() => TogglePin(name)">
                     <span class="bar__group-name">@name</span>
                     <Glyph Icon="@Icons.Material.Filled.ExpandMore" />
@@ -101,7 +109,7 @@
                                 type="button"
                                 role="menuitem"
                                 aria-current="@(item.IsCurrent ? "true" : null)"
-                                tabindex="@(index == currentSlot ? "0" : "-1")"
+                                tabindex="@(index == currentSlot || (pinned && index == firstSlot) ? "0" : "-1")"
                                 title="@Tip(item)"
                                 aria-label="@Label(item)"
                                 @ref="_refs[index]"
@@ -247,6 +255,65 @@
             _pinned = null;
     }
 
+    // A touch lifts off its target the moment the tap ends, and pointerleave follows it: the drawer
+    // a tap had just pinned closed again under the finger. Only a pointer that hovers leaves.
+    private void OnLeave(PointerEventArgs e, string group)
+    {
+        if (e.PointerType != "touch")
+            Unpin(group);
+    }
+
+    private ElementReference[] _groupRefs = [];
+
+    /// <summary>A key to focus once the drawer holding it is drawn open: a closed drawer's keys cannot take focus.</summary>
+    private int? _focusAfterRender;
+
+    /// <summary>
+    /// A group key is a menu button: Down opens its drawer on the first window, Up on the last,
+    /// Escape closes it. Enter and Space press it, which pins the drawer and leaves focus on the key.
+    /// Without this only the drawer holding the current window could be reached from the keyboard.
+    /// </summary>
+    private void OnGroupKey(KeyboardEventArgs e, string group, int first, int last)
+    {
+        if (e.CtrlKey || e.MetaKey || e.AltKey)
+            return;
+
+        switch (e.Key)
+        {
+            case "ArrowDown":
+                _pinned = group;
+                _focusAfterRender = first;
+                break;
+            case "ArrowUp":
+                _pinned = group;
+                _focusAfterRender = last;
+                break;
+            case "Escape":
+                Unpin(group);
+                break;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusAfterRender is not { } index)
+            return;
+
+        _focusAfterRender = null;
+
+        if (index < _refs.Length)
+        {
+            try
+            {
+                await _refs[index].FocusAsync();
+            }
+            catch (InvalidOperationException)
+            {
+                // Not attached yet in a test renderer.
+            }
+        }
+    }
+
     /// <summary>The loudest pulse among a group's open windows, so a critical Ops still shows on a closed drawer.</summary>
     private static PulseState Worst(List<Item> open) => open
         .Select(i => i.Open!.Pulse)
@@ -280,16 +347,27 @@
 
         // Closing from the keyboard: acts on the key that has focus, and only if it has a
         // window — there is nothing to close about a closed key.
+        // Escape closes the drawer and hands focus back to its group key: the key that held it is
+        // about to be hidden.
         if (e.Key == "Escape")
         {
+            var group = flat[current].Definition?.Group;
             _pinned = null;
+
+            var index = CatalogueGroups.FindIndex(g => g[0].Definition?.Group == group);
+            if (index >= 0 && index < _groupRefs.Length)
+                await _groupRefs[index].FocusAsync();
+
             return;
         }
 
-        if (e.Key is "Delete" or "Backspace")
+        // Delete closes the window the key names, by the one road every close key takes: a window
+        // holding unsaved input asks first. It used to close it outright, and Backspace with it —
+        // the easiest key there is to press by accident — so it is Delete alone now.
+        if (e.Key == "Delete")
         {
             if (flat[current].Open is { } window)
-                Manager.Close(window.Id);
+                await WindowClosing.CloseAsync(Manager, Alerts, window);
 
             return;
         }
@@ -310,9 +388,9 @@
         // focus to a closed window would otherwise open a window per keystroke.
         // Walking into another group's drawer opens it; a focused key in a closed drawer
         // would be a key nobody can see.
+        // Focused after the render that opens its drawer, since a key in a closed one cannot be.
         _pinned = flat[next].Definition?.Group;
-
-        if (next < _refs.Length)
-            await _refs[next].FocusAsync();
+        _focusAfterRender = next;
+        await Task.CompletedTask;
     }
 }

@@ -229,6 +229,12 @@ else
             var lines = new List<string>();
             if (Offer.IsClosing)
                 lines.Add(PriceProvenance.Caption(Offer.CapturedAt, StartsAt));
+            // What shopping is worth ("+1.9 pts vs worst"): the cell's own note under its rail,
+            // which a narrow Board drops with the rail (xlines.css), so the tooltip says it too
+            // and nothing worth acting on is lost to a narrow one. A live price's only: at the
+            // close there is nothing left to shop, and the title already says it is a close.
+            if (!Offer.IsClosing && Offer.Rungs.Count > 1)
+                lines.Add(EdgeLabel);
             if (Offer.Fair is { } fair)
                 lines.Add(FairLabel(fair));
 
@@ -269,8 +275,34 @@ else
                     Emphasis: Offer.Rungs.Count > 1 && r.Book == Offer.Book))
                 .ToList();
 
-    /// <summary>Where the books left out are — a tooltip cannot be clicked into, More bets lists them.</summary>
-    private string? TipFootnote => Unshown > 0 ? $"+{Unshown} more in More bets" : null;
+    /// <summary>
+    /// The books the desk polls (<c>PolledBooks</c>), so the tooltip accounts for the polled books
+    /// with no price on this side. Null or empty: unknown, and the tooltip reads as before.
+    /// </summary>
+    [Parameter] public IReadOnlyCollection<string>? Polled { get; set; }
+
+    /// <summary>
+    /// Where the books left out are — a tooltip cannot be clicked into, More bets lists them — and
+    /// how many polled books have no price here: "+3 more in More bets · 2 of 10 polled books not
+    /// priced". Either part alone where the other has nothing to say; nothing when every polled
+    /// book is priced and shown.
+    /// </summary>
+    private string? TipFootnote
+    {
+        get
+        {
+            var parts = new List<string>();
+
+            if (Unshown > 0)
+                parts.Add($"+{Unshown} more in More bets");
+
+            if (Offer is not null
+                && XLines.Web.Components.Snippets.BookCoverage.Of(Offer.Rungs.Select(r => r.Book), Polled) is { Complete: false } coverage)
+                parts.Add(coverage.UnpricedText);
+
+            return parts.Count == 0 ? null : string.Join(" · ", parts);
+        }
+    }
 
     /// <summary>
     /// What shopping is worth here, said plainly. A differing line is reported as such rather

@@ -109,9 +109,9 @@
 
 /* ---- Menu -------------------------------------------------------------------
    Rows at macOS density: 28px, one radius inside the panel's, no rules between
-   items, a hairline only between groups. The highlight is the neutral fill the
-   launcher and the palette already use, so every menu on the desk lights the same
-   way; the accent is kept for the focus ring and for the check of a choice.
+   items, a hairline only between groups. The highlight is the accent wash, and
+   every menu-like list on the desk (the launcher, the palette, a Mud list) lights
+   the same way, so a row under the pointer reads alike wherever it is.
    --------------------------------------------------------------------------- */
 
 .menu {
@@ -313,13 +313,13 @@
                 color var(--dur-fast) var(--ease-standard);
 }
 
-.menu__remove svg { width: 14px; height: 14px; }
+.menu__remove svg { width: var(--glyph-sm); height: var(--glyph-sm); }
 
 .menu__item:hover .menu__remove,
 .menu__item:focus-visible .menu__remove { color: var(--text-secondary); }
 
 .menu__remove:hover {
-    background: color-mix(in srgb, var(--text-primary) 12%, transparent);
+    background: var(--control-fill-hover);
     color: var(--text-primary);
 }
 
@@ -394,8 +394,9 @@
     margin: 0;
     padding: 0 var(--space-1) 0 var(--space-3);
     border: 0;
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--text-primary) 9%, transparent);
+    /* The control radius: a pop-up beside a key is the same shape as the key. */
+    border-radius: var(--radius);
+    background: var(--control-fill);
     color: var(--text-primary);
     font: inherit;
     font-size: var(--text-body);
@@ -412,9 +413,9 @@
     box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 60%, transparent);
 }
 
-.popup__key:hover:not(:disabled) { background-color: color-mix(in srgb, var(--text-primary) 15%, transparent); }
+.popup__key:hover:not(:disabled) { background-color: var(--control-fill-hover); }
 .popup__key:active:not(:disabled) {
-    background-color: color-mix(in srgb, var(--text-primary) 20%, transparent);
+    background-color: var(--control-fill-press);
     background-image: none;
     box-shadow: inset 0 1px 2px var(--key-press);
 }
@@ -469,7 +470,7 @@
     color: var(--text-secondary);
 }
 
-.popup__chevron svg { width: 14px; height: 14px; }
+.popup__chevron svg { width: var(--glyph); height: var(--glyph); }
 
 .popup__key:disabled .popup__chevron { color: var(--text-tertiary); }
 
@@ -503,8 +504,9 @@
 
 /* ---- Stepper ----------------------------------------------------------------
    One control, not two keys: a single capsule in the resting-control fill with
-   one edge, two 28px-wide halves parted by a hairline. It is the field's height,
-   so the pair lines up in a row; it never shows the value — the field beside it
+   no edge of its own (a field's fill, so it reads on a card), two 28px-wide halves
+   parted by a hairline. It is the field's height, so the pair lines up in a row;
+   it never shows the value — the field beside it
    does. A half at its bound is disabled and stays drawn, dimmed, so the capsule
    keeps its shape at either end of the range.
    --------------------------------------------------------------------------- */
@@ -514,8 +516,8 @@
     flex: 0 0 auto;
     height: var(--control-h);
     box-sizing: border-box;
-    background: var(--surface-2);
-    border: 1px solid var(--separator);
+    background: var(--control-fill);
+    border: 0;
     border-radius: var(--radius);
 }
 
@@ -548,13 +550,13 @@
 }
 
 .stepper__half svg {
-    width: 15px;
-    height: 15px;
+    width: var(--glyph);
+    height: var(--glyph);
     flex: 0 0 auto;
 }
 
 .stepper__half:hover:not(:disabled) {
-    background: var(--surface-3);
+    background: var(--control-fill-hover);
 }
 
 /* The ring sits on the half that has the keyboard, above its neighbour. */
@@ -672,7 +674,7 @@
 .search__field {
     -webkit-appearance: none;
     appearance: none;
-    padding-left: calc(var(--space-2) + 15px + var(--space-2));
+    padding-left: calc(var(--space-2) + var(--glyph) + var(--space-2));
     padding-right: calc(24px + var(--space-1));
 }
 
@@ -693,8 +695,8 @@
 }
 
 .search__glyph svg {
-    width: 15px;
-    height: 15px;
+    width: var(--glyph);
+    height: var(--glyph);
 }
 
 .search__clear {
@@ -727,8 +729,8 @@
 }
 
 .search__clear svg {
-    width: 14px;
-    height: 14px;
+    width: var(--glyph-sm);
+    height: var(--glyph-sm);
 }
 
 /* ---- Toolbar ----------------------------------------------------------------
@@ -892,9 +894,10 @@
 }
 
 /* Second in the source, after the input it names; first on the row. */
+/* It wraps in a narrow card rather than being cut at the card's edge; the track keeps its size. */
 .toggle__label {
     order: -1;
-    white-space: nowrap;
+    min-width: 0;
 }
 
 .toggle__track {
@@ -1033,6 +1036,7 @@
 
 /* On a tab it follows the name across a small gap, inside the tab's own padding. */
 .tabs__badge {
+    flex: none;
     margin-left: var(--space-1);
 }
 
@@ -1146,7 +1150,7 @@
     background: var(--surface-3);
 }
 
-.radio__label { white-space: nowrap; }
+.radio__label { min-width: 0; } /* wraps in a narrow card; the mark keeps its size */
 
 .radio:focus-visible {
     outline: none;
