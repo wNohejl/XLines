@@ -31,7 +31,17 @@
     min-width: 0;
 }
 
-/* The down and the spot head the play, as a league's play-by-play prints them. */
+/* The headline leads: what the play was, in the primary ink at the sentence's size, one weight
+   heavier, so the log scans down its first words. Size stays the sentence's: weight, not scale,
+   says which line to read first. */
+.gc__headline {
+    display: block;
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    text-wrap: pretty;
+}
+
+/* The down and the spot sit under the headline, as a league's play-by-play prints them. */
 .gc__dd {
     display: block;
     font-size: var(--text-footnote);

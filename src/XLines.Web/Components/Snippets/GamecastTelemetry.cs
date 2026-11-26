@@ -26,19 +26,32 @@ namespace XLines.Web.Components.Snippets;
 /// </summary>
 public static partial class GamecastTelemetry
 {
-    /// <summary>The field graphic's height in its viewBox units (its width is <see cref="FieldGeometry.Width"/>).</summary>
-    public const double Height = 32;
+    /// <summary>
+    /// The field graphic's height in its viewBox units (its width is <see cref="FieldGeometry.Width"/>).
+    /// Taller than the strip of stacked bars it replaced (32), because a thirty-yard pass thrown as
+    /// an arc needs the air above the ground to be read as one.
+    /// </summary>
+    public const double Height = 36;
 
-    /// <summary>The top of the band the drive's plays are stacked in.</summary>
-    public const double BandTop = 7;
+    /// <summary>
+    /// The ground every arc leaves from and lands on, and the ball sits on: low on the field, so
+    /// the air above it is the arcs' and the strip under it the losses' dip and the result's name.
+    /// </summary>
+    public const double Baseline = 27;
 
-    /// <summary>The bottom of that band; the yard numbers sit above and below it.</summary>
-    public const double BandBottom = 25;
+    /// <summary>The highest an arc's apex may reach, clear of the yard numbers along the top edge.</summary>
+    public const double ArcCeiling = 7;
 
-    /// <summary>The band's height.</summary>
-    public const double BandHeight = BandBottom - BandTop;
+    /// <summary>The most an arc may rise above <see cref="Baseline"/>.</summary>
+    public const double MaxRise = Baseline - ArcCeiling;
 
-    /// <summary>The vertical middle of the field, where the ball sits.</summary>
+    /// <summary>The ground the drive has covered, a quiet strip this thick centred on <see cref="Baseline"/>.</summary>
+    public const double BandThickness = 1.2;
+
+    /// <summary>The top of that strip.</summary>
+    public const double BandTop = Baseline - BandThickness / 2;
+
+    /// <summary>The vertical middle of the field, where the end zones' abbreviations are set.</summary>
     public const double Middle = Height / 2;
 
     /// <summary>The fifty's x.</summary>
@@ -68,11 +81,87 @@ public static partial class GamecastTelemetry
     /// <inheritdoc cref="AwayMarkX"/>
     public const double HomeMarkX = FieldGeometry.EndZone * 1.5 + 100;
 
-    /// <summary>The tallest one play's lane may be, so a three-play drive does not draw slabs.</summary>
-    private const double MaxLane = 3;
-
-    /// <summary>A play that went nowhere still leaves a mark this wide, so it can be seen.</summary>
+    /// <summary>The covered ground is never drawn narrower than this, so a drive that went nowhere still shows where it was.</summary>
     public const double MinSegment = 0.6;
+
+    // ---- The arcs' shapes -------------------------------------------------------------------
+    // An arc's rise is the height of its apex above the ground: a base plus so much a yard, capped.
+    // A pass is thrown — it climbs with its length, a forty-yard ball near the ceiling; a run stays
+    // on the ground, never more than a few units up whatever it gained; a kick is a pass's height
+    // and dotted; a loss dips under the ground by its length, so a sack reads as the ball going
+    // back before its colour or its direction is looked at.
+
+    /// <summary>A pass's rise: <see cref="PassRiseBase"/> plus <see cref="PassRisePerYard"/> a yard, at most <see cref="MaxRise"/>.</summary>
+    public const double PassRiseBase = 3;
+
+    /// <inheritdoc cref="PassRiseBase"/>
+    public const double PassRisePerYard = 0.4;
+
+    /// <summary>A run's (and a penalty's) rise: <see cref="RunRiseBase"/> plus <see cref="RunRisePerYard"/> a yard, at most <see cref="RunRiseMax"/>.</summary>
+    public const double RunRiseBase = 0.8;
+
+    /// <inheritdoc cref="RunRiseBase"/>
+    public const double RunRisePerYard = 0.1;
+
+    /// <inheritdoc cref="RunRiseBase"/>
+    public const double RunRiseMax = 3;
+
+    /// <summary>A kick's rise: <see cref="KickRiseBase"/> plus <see cref="KickRisePerYard"/> a yard, at most <see cref="MaxRise"/>.</summary>
+    public const double KickRiseBase = 4;
+
+    /// <inheritdoc cref="KickRiseBase"/>
+    public const double KickRisePerYard = 0.25;
+
+    /// <summary>A loss's dip below the ground: <see cref="LossDipBase"/> plus <see cref="LossDipPerYard"/> a yard, at most <see cref="LossDipMax"/>.</summary>
+    public const double LossDipBase = 1.2;
+
+    /// <inheritdoc cref="LossDipBase"/>
+    public const double LossDipPerYard = 0.2;
+
+    /// <inheritdoc cref="LossDipBase"/>
+    public const double LossDipMax = 3.5;
+
+    /// <summary>The dot a play for no gain leaves at its spot, and the latest arc's landing dot.</summary>
+    public const double SpotRadius = 0.7;
+
+    /// <summary>The drive's start, a short upright: from this far above the ground…</summary>
+    public const double StartMarkAbove = 3;
+
+    /// <summary>…to this far below it.</summary>
+    public const double StartMarkBelow = 1.5;
+
+    /// <summary>The ring at the end of a finished drive.</summary>
+    public const double EndMarkRadius = 1.1;
+
+    /// <summary>The baseline of the finished drive's result, under the ground and above the bottom yard numbers.</summary>
+    public const double ResultY = Baseline + 2.9;
+
+    /// <summary>
+    /// The result's centre is kept this far in from either edge, so the longest of ESPN's results
+    /// ("Interception Touchdown", about 26 units at its size) can end on a goal line without
+    /// running off the field.
+    /// </summary>
+    public const double ResultInset = 13;
+
+    /// <summary>The ball's arrow, about the ball at x = 0: its back edge's offset, its nose's, and its half-height.</summary>
+    public const double ArrowBack = 1.4;
+
+    /// <inheritdoc cref="ArrowBack"/>
+    public const double ArrowNose = 4;
+
+    /// <inheritdoc cref="ArrowBack"/>
+    public const double ArrowHalf = 1.8;
+
+    /// <summary>The ball's arrow pointing left (home attacking) or right, about x = 0 on <see cref="Baseline"/>.</summary>
+    public static string ArrowPoints(bool leftward)
+    {
+        var s = leftward ? -1 : 1;
+        return string.Join(' ',
+            Pt(s * ArrowBack, Baseline - ArrowHalf), Pt(s * ArrowNose, Baseline), Pt(s * ArrowBack, Baseline + ArrowHalf));
+    }
+
+    /// <summary>Where a finished drive's result is centred: the end's x, kept <see cref="ResultInset"/> in from either edge.</summary>
+    public static double ResultX(double endX) => Math.Clamp(endX, ResultInset, FieldGeometry.Width - ResultInset);
 
     // ---- The field ------------------------------------------------------------------------
 
@@ -110,30 +199,54 @@ public static partial class GamecastTelemetry
     }
 
     /// <summary>
-    /// One segment per play of the drive, from each play's <see cref="GamecastPlay.Start"/> to its
-    /// <see cref="GamecastPlay.End"/> yard line, in sequence, each in a lane of its own so a play
-    /// that went backwards does not hide under the one before it.
+    /// One arc per play of the drive, as ESPN's Gamecast field draws a drive: from each play's
+    /// <see cref="GamecastPlay.Start"/> yard line to its <see cref="GamecastPlay.End"/>, on the
+    /// ground at <see cref="Baseline"/>, so each lands where the next begins and the drive reads
+    /// as the ball going down the field.
     ///
     /// <para>
     /// <paramref name="homeOffence"/> is the side with the ball on this drive: it says which way
-    /// is a gain. A play lacking either end is skipped, as are the plays that are not the offence
-    /// moving the ball — an "Official Timeout" (ESPN's play type, which repeats the spot) and a
-    /// kickoff (whose ball travels toward the receiving side's own goal, and would read as a
-    /// loss). Both ends are clamped to the field.
+    /// is a gain. The play store's yard lines are all on the home-goal frame — the start, the end,
+    /// a punt's landing and an interception's return alike (checked against game 2049's 181 plays
+    /// and the store's turnovers) — so nothing is flipped per side. Both ends are clamped to the field.
     /// </para>
     ///
     /// <para>
-    /// The kind is, first, what the play was — a turnover, a score, a penalty — and otherwise
-    /// what it did: a gain, a loss, or no gain. <see cref="DriveSegment.Latest"/> marks the last
-    /// segment, the play that put the ball where it is.
+    /// What is left out: a play lacking either end, and the rows that are not the offence moving
+    /// the ball — timeouts (ESPN's "Timeout" and "Official Timeout", which repeat the spot, and an
+    /// Official Timeout after a punt sits at the <i>next</i> drive's spot under this one), the
+    /// two-minute warning, every "End …" of a period, half or game, and every kickoff. A kickoff
+    /// opens the receiving side's drive in ESPN's store (its <c>TeamId</c> is the receiver), but
+    /// its ball travels from the kicking side's 35 toward the receiver's own goal: drawn, it would
+    /// read as the drive's first play losing sixty yards. The drive starts where the return ended,
+    /// which is <see cref="GamecastDrive.StartYardLine"/>, and the start mark says so.
+    /// </para>
+    ///
+    /// <para>
+    /// A punt or a field goal is a <see cref="DriveArcKind.Kick"/>: drawn, faint and dotted, as
+    /// the long ball it was — a punt to where the receiving side took it, a field goal to the goal
+    /// line it was kicked at (ESPN ends a good one there and a missed one at its own spot; the
+    /// kick went at the posts either way). It is the drive's last word, so it is drawn rather than
+    /// left to the result's mark alone, but quietly, so it does not outweigh the drive.
+    /// </para>
+    ///
+    /// <para>
+    /// The shape is what the play was: a pass (any play ESPN typed as one, or whose words say
+    /// "pass", as a fumble after a catch does) arcs high by its length; anything else that gained
+    /// stays low; anything that lost ground dips under it; a penalty is low and dashed and dips
+    /// when it went back; a play that went nowhere (an incompletion) is a dot at its spot. A
+    /// turnover is drawn as what it was thrown or run as, above the ground whichever way the return
+    /// went, and is <see cref="DriveArc.Turnover"/>; a play that scored for the offence is
+    /// <see cref="DriveArc.Score"/> (a safety scores for the defence and is not). The last arc is
+    /// <see cref="DriveArc.Latest"/>: the play that put the ball where it is, or ended the drive.
     /// </para>
     /// </summary>
-    public static IReadOnlyList<DriveSegment> DriveSegments(IReadOnlyList<GamecastPlay>? plays, bool homeOffence)
+    public static IReadOnlyList<DriveArc> DriveArcs(IReadOnlyList<GamecastPlay>? plays, bool homeOffence)
     {
         if (plays is null || plays.Count == 0)
             return [];
 
-        var moves = new List<(double From, double To, DriveSegmentKind Kind)>();
+        var arcs = new List<DriveArc>();
 
         foreach (var play in plays)
         {
@@ -146,44 +259,157 @@ public static partial class GamecastTelemetry
             start = Math.Clamp(start, 0, 100);
             end = Math.Clamp(end, 0, 100);
 
+            var type = play.Type ?? string.Empty;
+            var kick = IsKick(type);
+
+            // A field goal goes at the posts: the goal the offence attacks, 100 for home, 0 for away.
+            if (kick && Has(type, "Field Goal") && !Has(type, "Blocked"))
+                end = homeOffence ? 100 : 0;
+
             // Home attacks the away goal: a gain takes its yard line up the home-goal frame.
             var gained = homeOffence ? end - start : start - end;
+            var length = Math.Abs(end - start);
+            var passing = Has(type, "Pass") || Has(type, "Interception") || Has(play.Text, " pass ");
 
-            var kind = play.IsTurnover ? DriveSegmentKind.Turnover
-                : play.IsScoring ? DriveSegmentKind.Score
-                : play.IsPenalty ? DriveSegmentKind.Penalty
-                : gained > 0 ? DriveSegmentKind.Gain
-                : gained < 0 ? DriveSegmentKind.Loss
-                : DriveSegmentKind.NoGain;
+            var kind = kick ? DriveArcKind.Kick
+                : play.IsTurnover ? (passing ? DriveArcKind.Pass : DriveArcKind.Run)
+                : play.IsPenalty || Has(type, "Penalty") ? DriveArcKind.Penalty
+                : gained == 0 ? DriveArcKind.NoGain
+                : gained < 0 ? DriveArcKind.Loss
+                : passing ? DriveArcKind.Pass
+                : DriveArcKind.Run;
 
-            moves.Add((FieldGeometry.X(start), FieldGeometry.X(end), kind));
+            // Height of the apex above the ground; a negative rise is a dip under it.
+            var rise = kind switch
+            {
+                DriveArcKind.Pass => Math.Min(MaxRise, PassRiseBase + PassRisePerYard * length),
+                DriveArcKind.Kick => Math.Min(MaxRise, KickRiseBase + KickRisePerYard * length),
+                DriveArcKind.Run => Math.Min(RunRiseMax, RunRiseBase + RunRisePerYard * length),
+                DriveArcKind.Penalty => (gained < 0 ? -1 : 1) * Math.Min(RunRiseMax, RunRiseBase + RunRisePerYard * length),
+                DriveArcKind.Loss => -Math.Min(LossDipMax, LossDipBase + LossDipPerYard * length),
+                _ => 0,
+            };
+
+            var score = play.IsScoring && !play.IsTurnover && !Has(type, "Safety");
+
+            arcs.Add(Arc(play.Sequence, FieldGeometry.X(start), FieldGeometry.X(end), rise, kind, score, play.IsTurnover));
         }
 
-        if (moves.Count == 0)
-            return [];
+        if (arcs.Count > 0)
+            arcs[^1] = arcs[^1] with { Latest = true };
 
-        const double band = BandHeight;
-        var step = Math.Min(MaxLane, band / moves.Count);
-        var thickness = step * 0.6;
-        var first = BandTop + (band - step * moves.Count) / 2 + (step - thickness) / 2;
+        return arcs;
+    }
 
-        return moves
-            .Select((m, i) => new DriveSegment(
-                m.From, m.To, m.Kind,
-                Left: Math.Min(m.From, m.To),
-                Width: Math.Max(Math.Abs(m.To - m.From), MinSegment),
-                Top: first + i * step,
-                Thickness: thickness,
-                Latest: i == moves.Count - 1))
-            .ToList();
+    private static DriveArc Arc(long sequence, double from, double to, double rise, DriveArcKind kind, bool score, bool turnover)
+    {
+        // A quadratic's apex is halfway between its ends' line and its control point, so the
+        // control sits twice the rise above the ground.
+        var apex = Baseline - rise;
+        var control = Baseline - 2 * rise;
+        var path = kind == DriveArcKind.NoGain
+            ? null
+            : $"M {N(from)} {N(Baseline)} Q {N((from + to) / 2)} {N(control)} {N(to)} {N(Baseline)}";
+
+        return new DriveArc(sequence, from, to, apex, kind, score, turnover, Latest: false, path);
     }
 
     private static bool IsNotAMove(string? type)
         => type is not null
-           && (type.Contains("Timeout", StringComparison.OrdinalIgnoreCase)
-               || type.Contains("Kickoff", StringComparison.OrdinalIgnoreCase)
-               || type.Contains("Two-minute warning", StringComparison.OrdinalIgnoreCase)
+           && (Has(type, "Timeout")
+               || Has(type, "Kickoff")
+               || Has(type, "Two-minute warning")
                || type.StartsWith("End ", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsKick(string type) => Has(type, "Punt") || Has(type, "Field Goal");
+
+    private static bool Has(string? text, string part)
+        => text is not null && text.Contains(part, StringComparison.OrdinalIgnoreCase);
+
+    private static string N(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string Pt(double x, double y) => $"{N(x)},{N(y)}";
+
+    // ---- The drive chart --------------------------------------------------------------------
+
+    /// <summary>
+    /// One drive as the drive chart draws it: a bar from its start yard line to its end, in
+    /// percent of the whole field's width (<see cref="FieldGeometry.Width"/>, end zones included,
+    /// so a touchdown's end — 0 or 100 on the home-goal frame, as ESPN stores it — lands on the
+    /// goal line and not off the row). Null when either end is unknown. A drive that went nowhere
+    /// is still <see cref="MinChartBar"/> wide, so it leaves a mark at its spot.
+    /// <see cref="DriveBar.Leftward"/> is the way it went: a home drive goes left, an away drive
+    /// right, and a drive that lost ground the other way, as its numbers say.
+    /// </summary>
+    public static DriveBar? ChartBar(int? startYardLine, int? endYardLine, bool homeSide)
+    {
+        if (startYardLine is not { } start || endYardLine is not { } end)
+            return null;
+
+        var a = FieldGeometry.X(Math.Clamp(start, 0, 100));
+        var b = FieldGeometry.X(Math.Clamp(end, 0, 100));
+        var leftward = b == a ? homeSide : b < a;
+        var width = Math.Max(Math.Abs(b - a), MinChartBar);
+        var left = Math.Min(Math.Min(a, b), FieldGeometry.Width - width);
+
+        return new DriveBar(Pct(left), Pct(width), Pct(b), leftward);
+    }
+
+    /// <summary>The narrowest a drive's bar is drawn, in the field's units (yards).</summary>
+    public const double MinChartBar = 1;
+
+    private static double Pct(double x) => Math.Round(100 * x / FieldGeometry.Width, 3);
+
+    /// <summary>
+    /// What a drive's <see cref="GamecastDrive.Result"/> was, for the weight of its mark: a
+    /// touchdown or a field goal for the offence is a <see cref="DriveOutcome.Score"/>; an
+    /// interception, a fumble, a safety, a blocked kick or a punt returned for a score is a
+    /// <see cref="DriveOutcome.Turnover"/> — ESPN marks a pick-six <c>IsScore</c>, but the points
+    /// were the other side's; anything else (a punt, downs, the clock) is <see cref="DriveOutcome.Other"/>.
+    /// </summary>
+    public static DriveOutcome Outcome(string? result, bool isScore)
+    {
+        if (result is null)
+            return isScore ? DriveOutcome.Score : DriveOutcome.Other;
+
+        if (Has(result, "Interception") || Has(result, "Fumble") || Has(result, "Safety")
+            || Has(result, "Blocked") || Has(result, "Punt Touchdown"))
+            return DriveOutcome.Turnover;
+
+        return isScore || Has(result, "Touchdown") || result.Equals("Field Goal", StringComparison.OrdinalIgnoreCase)
+            ? DriveOutcome.Score
+            : DriveOutcome.Other;
+    }
+
+    /// <summary>
+    /// A drive's result as a short mark for the drive chart's narrow trailing column — "TD", "FG",
+    /// "Punt", "INT", "Downs" — as NFL.com and ESPN abbreviate them; a result this does not know is
+    /// kept as ESPN wrote it, and the row's accessible name always says it in full. No result is
+    /// "Now" for the drive in progress and nothing otherwise.
+    /// </summary>
+    public static string? ShortResult(string? result, bool isCurrent)
+    {
+        if (string.IsNullOrWhiteSpace(result))
+            return isCurrent ? "Now" : null;
+
+        return result.Trim() switch
+        {
+            "Touchdown" => "TD",
+            "Field Goal" => "FG",
+            "Missed FG" => "FG miss",
+            "Interception" => "INT",
+            "Interception Touchdown" => "INT TD",
+            "Fumble" => "Fumble",
+            "Fumble Touchdown" or "Fumble Return Touchdown" => "Fum TD",
+            "End of Game" => "End",
+            "End of Half" => "Half",
+            "Punt Touchdown" => "Punt TD",
+            "Blocked Punt Touchdown" or "Blocked FG Touchdown" => "Blk TD",
+            var r when r.StartsWith("Blocked FG", StringComparison.OrdinalIgnoreCase) => "Blk FG",
+            var r when r.StartsWith("Blocked Punt", StringComparison.OrdinalIgnoreCase) => "Blk punt",
+            var r => r,
+        };
+    }
 
     // ---- The comparison -------------------------------------------------------------------
 
@@ -355,32 +581,62 @@ public sealed record YardNumber(double X, int Number);
 /// <summary>The stretch the drive has covered so far: its left edge and width on the field's x.</summary>
 public sealed record DriveBand(double Left, double Width);
 
-/// <summary>What one play of the drive was, as its segment draws it.</summary>
-public enum DriveSegmentKind
+/// <summary>The shape one play of the drive is drawn in (<see cref="GamecastTelemetry.DriveArcs"/>).</summary>
+public enum DriveArcKind
 {
-    Gain,
-    NoGain,
+    /// <summary>Thrown: arcs high, by its length.</summary>
+    Pass,
+
+    /// <summary>Carried, or anything else that gained: stays low.</summary>
+    Run,
+
+    /// <summary>Lost ground (a sack, a run stopped behind the line): dips under the ground.</summary>
     Loss,
+
+    /// <summary>A flag: low and dashed, dipping when it went back.</summary>
     Penalty,
-    Score,
-    Turnover,
+
+    /// <summary>Went nowhere (an incompletion, a run for none): a dot at the spot, no path.</summary>
+    NoGain,
+
+    /// <summary>A punt or a field goal: high, faint and dotted.</summary>
+    Kick,
 }
 
 /// <summary>
 /// One play of the drive on the field. <see cref="From"/> and <see cref="To"/> are where the ball
-/// started and ended, on the field's x (so a home gain has <c>To &lt; From</c>); <see cref="Left"/>
-/// and <see cref="Width"/> are the rectangle that draws it, at least <see cref="GamecastTelemetry.MinSegment"/>
-/// wide; <see cref="Top"/> and <see cref="Thickness"/> are its lane, in the same units.
+/// started and ended, on the field's x (so a home gain has <c>To &lt; From</c>); <see cref="Apex"/>
+/// is the y the arc reaches (above <see cref="GamecastTelemetry.Baseline"/> for a rise, below it
+/// for a dip); <see cref="Path"/> is the SVG quadratic that draws it, null for
+/// <see cref="DriveArcKind.NoGain"/>, which is a dot at <see cref="From"/>. <see cref="Score"/> and
+/// <see cref="Turnover"/> mark the play that scored for the offence and the one that gave the
+/// ball away; <see cref="Latest"/> the drive's last drawn play.
 /// </summary>
-public sealed record DriveSegment(
+public sealed record DriveArc(
+    long Sequence,
     double From,
     double To,
-    DriveSegmentKind Kind,
-    double Left,
-    double Width,
-    double Top,
-    double Thickness,
-    bool Latest);
+    double Apex,
+    DriveArcKind Kind,
+    bool Score,
+    bool Turnover,
+    bool Latest,
+    string? Path);
+
+/// <summary>
+/// A drive on the drive chart, in percent of the field's whole width (end zones included):
+/// <see cref="Left"/> and <see cref="Width"/> the bar, <see cref="End"/> where it finished, and
+/// <see cref="Leftward"/> the way it went.
+/// </summary>
+public sealed record DriveBar(double Left, double Width, double End, bool Leftward);
+
+/// <summary>What a drive came to, for the weight of its mark on the drive chart.</summary>
+public enum DriveOutcome
+{
+    Other,
+    Score,
+    Turnover,
+}
 
 /// <summary>
 /// One line of the team comparison: the label, each side's figure as it is shown, and each

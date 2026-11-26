@@ -1,0 +1,80 @@
+@using XLines.Data.CrossReference
+
+@*
+    ESPN's "Game leaders": a row per category — passing, rushing and receiving yards, then sacks
+    and tackles — with the away side's leader at the leading edge and the home side's at the
+    trailing edge, as the field, the title and the team comparison have them. Each leader is the
+    figure, the player's name (pressable, to the Player window, as a box score's names are) and a
+    quiet line of what else the box holds for them ("28/40, 2 TD", "6 car", "9 rec, 1 TD").
+
+    Who leads is GameLeadersModel's to say; this draws it. A side with no one in a category shows
+    a dash; a category neither side has never arrives; an empty box draws nothing at all, and the
+    window says why. No edge and no card: the window's FormGroup holds it, and its rows are divided
+    by spacing, as the team comparison's are. Nothing is coloured as ahead: the figures are ink.
+
+    To assistive tech each side reads as its team, then the figure and the name ("CIN 300 Joe
+    Burrow"), under the category's label, and the name stays a real button so a keyboard reaches
+    it; the crests in the head are hidden, the abbreviations being said where they matter.
+*@
+
+@if (_rows.Count > 0)
+{
+    <div class="leaders">
+        <div class="leaders__head" aria-hidden="true">
+            <span class="leaders__team"><TeamMark Sport="@Sport" Abbrev="@AwayAbbrev" />@AwayAbbrev</span>
+            <span class="leaders__team leaders__team--home">@HomeAbbrev<TeamMark Sport="@Sport" Abbrev="@HomeAbbrev" /></span>
+        </div>
+
+        <ul class="leaders__rows" aria-label="Game leaders">
+            @foreach (var row in _rows)
+            {
+                <li class="leaders__row" data-row="@row.Label">
+                    <span class="leaders__label">@row.Label</span>
+                    @Side(row.Away, AwayAbbrev, "away")
+                    @Side(row.Home, HomeAbbrev, "home")
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@code {
+    /// <summary>The game's box score, as the Gamecast already read it; null or empty draws nothing.</summary>
+    [Parameter, EditorRequired] public GameBoxScore? Box { get; set; }
+
+    [Parameter] public string HomeAbbrev { get; set; } = "HOME";
+
+    [Parameter] public string AwayAbbrev { get; set; } = "AWAY";
+
+    /// <summary>The league's key, for the teams' marks; a league whose box is not football's draws nothing.</summary>
+    [Parameter] public string? Sport { get; set; }
+
+    /// <summary>A leader's name pressed: their id and name, for the host to open the Player window.</summary>
+    [Parameter] public EventCallback<(int PlayerId, string Name)> OnPlayer { get; set; }
+
+    private IReadOnlyList<GameLeadersRow> _rows = [];
+
+    protected override void OnParametersSet() => _rows = GameLeadersModel.For(Box, Sport);
+
+    private RenderFragment Side(GameLeader? leader, string abbrev, string side) => @<text>
+        <span class="leaders__side leaders__side--@side" data-side="@side">
+            <span class="sr-only">@abbrev </span>
+            @if (leader is null)
+            {
+                <span class="leaders__none" aria-label="none">—</span>
+            }
+            else
+            {
+                <span class="leaders__value">@leader.Value</span>
+                <span class="leaders__name">
+                    <DeskLink Destination="player" Icon="@Icons.Material.Filled.Person" Tooltip="@($"Open {leader.Name}")"
+                              OnClick="() => OnPlayer.InvokeAsync((leader.PlayerId, leader.Name))">@leader.Name</DeskLink>
+                </span>
+                @if (leader.Line is { } line)
+                {
+                    <span class="leaders__line">@line</span>
+                }
+            }
+        </span>
+    </text>;
+}

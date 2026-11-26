@@ -30,128 +30,236 @@ public class GamecastTelemetryTests
             End = end is null ? null : new GamecastSituation(2, 6, end, null, null, null, team),
         };
 
-    // ---- Drive segments ---------------------------------------------------------------------
+    // ---- Drive arcs -------------------------------------------------------------------------
 
     /// <summary>
     /// The away side at its own 25 is 75 yards from the home goal (x 35); four yards gained
-    /// rightward puts it at 71 (x 39).
+    /// rightward puts it at 71 (x 39). A rush stays on the ground: its apex no more than
+    /// <see cref="GamecastTelemetry.RunRiseMax"/> above the baseline.
     /// </summary>
     [Fact]
-    public void An_away_rush_from_its_own_25_for_four_runs_rightward()
+    public void An_away_rush_from_its_own_25_for_four_is_a_low_arc_rightward()
     {
-        var segment = Assert.Single(GamecastTelemetry.DriveSegments([Play(75, 71)], homeOffence: false));
+        var arc = Assert.Single(GamecastTelemetry.DriveArcs([Play(75, 71)], homeOffence: false));
 
-        Assert.Equal(35, segment.From);
-        Assert.Equal(39, segment.To);
-        Assert.Equal(DriveSegmentKind.Gain, segment.Kind);
-        Assert.Equal(35, segment.Left);
-        Assert.Equal(4, segment.Width);
-        Assert.True(segment.Latest);
+        Assert.Equal((35d, 39d), (arc.From, arc.To));
+        Assert.Equal(DriveArcKind.Run, arc.Kind);
+        Assert.True(arc.Apex < GamecastTelemetry.Baseline);
+        Assert.True(GamecastTelemetry.Baseline - arc.Apex <= GamecastTelemetry.RunRiseMax);
+        Assert.True(arc.Latest);
+        Assert.False(arc.Score || arc.Turnover);
+
+        // Rise 0.8 + 0.1 × 4 = 1.2: the control point twice that above the ground at 27.
+        Assert.Equal("M 35 27 Q 37 24.6 39 27", arc.Path);
     }
 
     /// <summary>The home side at its own 30 (x 80) gains twelve to its 42 (x 68): leftward.</summary>
     [Fact]
     public void A_home_gain_runs_leftward()
     {
-        var segment = Assert.Single(GamecastTelemetry.DriveSegments([Play(30, 42, Home)], homeOffence: true));
+        var arc = Assert.Single(GamecastTelemetry.DriveArcs([Play(30, 42, Home)], homeOffence: true));
 
-        Assert.Equal(80, segment.From);
-        Assert.Equal(68, segment.To);
-        Assert.Equal(DriveSegmentKind.Gain, segment.Kind);
-        Assert.Equal((68d, 12d), (segment.Left, segment.Width));
+        Assert.Equal((80d, 68d), (arc.From, arc.To));
+        Assert.Equal(DriveArcKind.Run, arc.Kind);
     }
 
-    /// <summary>An away sack from the home 40 (60 out) back to its own 33 (67 out) is a loss of seven.</summary>
+    /// <summary>
+    /// A pass is thrown: it arcs higher than a run of the same length, and higher the longer it
+    /// is, never past the ceiling.
+    /// </summary>
     [Fact]
-    public void A_sack_is_a_loss()
+    public void A_pass_arcs_high_by_its_length_and_a_run_stays_low()
     {
-        var segment = Assert.Single(GamecastTelemetry.DriveSegments([Play(60, 67, type: "Sack")], homeOffence: false));
+        var arcs = GamecastTelemetry.DriveArcs(
+        [
+            Play(75, 65, type: "Rush", sequence: 1),
+            Play(65, 55, type: "Pass Reception", sequence: 2),
+            Play(55, 25, type: "Pass Reception", sequence: 3),
+            Play(25, 0, type: "Passing Touchdown", scoring: true, sequence: 4),
+        ], homeOffence: false);
 
-        Assert.Equal(DriveSegmentKind.Loss, segment.Kind);
-        Assert.Equal((43d, 7d), (segment.Left, segment.Width));
+        Assert.Equal(new[] { DriveArcKind.Run, DriveArcKind.Pass, DriveArcKind.Pass, DriveArcKind.Pass }, arcs.Select(a => a.Kind));
+        Assert.True(arcs[1].Apex < arcs[0].Apex, "a ten-yard pass is higher than a ten-yard run");
+        Assert.True(arcs[2].Apex < arcs[1].Apex, "a thirty-yard pass is higher than a ten-yard one");
+        Assert.All(arcs, a => Assert.True(a.Apex >= GamecastTelemetry.ArcCeiling - 1e-9));
+
+        // Each lands where the next begins.
+        for (var i = 1; i < arcs.Count; i++)
+            Assert.Equal(arcs[i - 1].To, arcs[i].From);
+
+        Assert.True(arcs[^1].Score);
+        Assert.Equal(110, arcs[^1].To);
+    }
+
+    /// <summary>A fumble after a catch is typed as the fumble, but its words say it was thrown.</summary>
+    [Fact]
+    public void A_play_whose_words_say_pass_is_drawn_as_one()
+    {
+        var play = Play(68, 48, type: "Fumble Recovery (Opponent)", turnover: true) with
+        {
+            Text = "(Shotgun) J.Browning pass short right to J.Chase to CIN 47 for 15 yards. FUMBLES",
+        };
+
+        var arc = Assert.Single(GamecastTelemetry.DriveArcs([play], homeOffence: false));
+
+        Assert.Equal(DriveArcKind.Pass, arc.Kind);
+        Assert.True(arc.Turnover);
+        Assert.False(arc.Score);
+    }
+
+    /// <summary>
+    /// An away sack from the home 40 (60 out, x 50) back to its own 33 (67 out, x 43) is a loss of
+    /// seven: it dips under the ground, by its length, never past <see cref="GamecastTelemetry.LossDipMax"/>.
+    /// </summary>
+    [Fact]
+    public void A_sack_dips_under_the_ground()
+    {
+        var arcs = GamecastTelemetry.DriveArcs([Play(60, 67, type: "Sack"), Play(67, 99, type: "Rush", sequence: 2)], homeOffence: false);
+
+        Assert.Equal(DriveArcKind.Loss, arcs[0].Kind);
+        Assert.Equal((50d, 43d), (arcs[0].From, arcs[0].To));
+        Assert.True(arcs[0].Apex > GamecastTelemetry.Baseline);
+        Assert.True(arcs[0].Apex - GamecastTelemetry.Baseline <= GamecastTelemetry.LossDipMax);
+
+        // A run for a loss is a loss too.
+        Assert.Equal(DriveArcKind.Loss, arcs[1].Kind);
+        Assert.Equal(GamecastTelemetry.Baseline + GamecastTelemetry.LossDipMax, arcs[1].Apex, 6);
     }
 
     [Fact]
-    public void A_penalty_is_marked_as_one_whichever_way_it_went()
+    public void A_penalty_is_dashed_whichever_way_it_went_and_dips_when_it_went_back()
     {
-        var segments = GamecastTelemetry.DriveSegments(
-            [Play(50, 45, penalty: true), Play(45, 50, penalty: true, sequence: 2)], homeOffence: false);
+        var arcs = GamecastTelemetry.DriveArcs(
+            [Play(50, 45, penalty: true), Play(45, 50, type: "Penalty", sequence: 2)], homeOffence: false);
 
-        Assert.All(segments, s => Assert.Equal(DriveSegmentKind.Penalty, s.Kind));
+        Assert.All(arcs, a => Assert.Equal(DriveArcKind.Penalty, a.Kind));
+        Assert.True(arcs[0].Apex < GamecastTelemetry.Baseline, "five yards gained: above the ground");
+        Assert.True(arcs[1].Apex > GamecastTelemetry.Baseline, "five yards back: under it");
     }
 
     [Fact]
-    public void A_play_for_no_gain_still_leaves_a_mark()
+    public void A_play_for_no_gain_is_a_dot_with_no_path()
     {
-        var segment = Assert.Single(GamecastTelemetry.DriveSegments([Play(50, 50)], homeOffence: false));
+        var arc = Assert.Single(GamecastTelemetry.DriveArcs([Play(50, 50, type: "Pass Incompletion")], homeOffence: false));
 
-        Assert.Equal(DriveSegmentKind.NoGain, segment.Kind);
-        Assert.Equal(GamecastTelemetry.MinSegment, segment.Width);
+        Assert.Equal(DriveArcKind.NoGain, arc.Kind);
+        Assert.Null(arc.Path);
+        Assert.Equal((60d, 60d), (arc.From, arc.To));
+        Assert.Equal(GamecastTelemetry.Baseline, arc.Apex);
     }
 
+    /// <summary>
+    /// Kickoffs are left out: ESPN files one under the receiving side's drive, but its ball goes
+    /// from the kicker's 35 toward the receiver's own goal and would read as the drive's first play
+    /// losing sixty yards. Game 2049's first drive opens with one (35 → 76, under CIN).
+    /// </summary>
     [Fact]
-    public void A_play_missing_either_end_is_skipped_as_are_timeouts_and_kickoffs()
+    public void A_play_missing_either_end_is_skipped_as_are_timeouts_period_ends_and_kickoffs()
     {
-        var segments = GamecastTelemetry.DriveSegments(
+        var arcs = GamecastTelemetry.DriveArcs(
         [
             Play(null, 40),
             Play(40, null),
+            Play(35, 76, type: "Kickoff"),
             Play(40, 40, type: "Official Timeout"),
-            Play(65, 75, type: "Kickoff"),
+            Play(40, 40, type: "Timeout"),
             Play(75, 75, type: "Two-minute warning"),
             Play(75, 75, type: "End Period"),
+            Play(75, 75, type: "End of Half"),
+            Play(75, 75, type: "End of Game"),
+            Play(30, 30, type: "Kickoff Return Touchdown"),
             Play(75, 70),
         ], homeOffence: false);
 
-        var segment = Assert.Single(segments);
-        Assert.Equal(35, segment.From);
+        var arc = Assert.Single(arcs);
+        Assert.Equal(35, arc.From);
+    }
+
+    /// <summary>
+    /// A punt is the long ball, dotted: from game 2049's first drive, CIN punting from its 24
+    /// (76 out, x 34) to where WSH took it at its 19 (x 91).
+    /// </summary>
+    [Fact]
+    public void A_punt_is_a_kick_to_where_it_was_taken()
+    {
+        var arc = Assert.Single(GamecastTelemetry.DriveArcs([Play(76, 19, type: "Punt")], homeOffence: false));
+
+        Assert.Equal(DriveArcKind.Kick, arc.Kind);
+        Assert.Equal((34d, 91d), (arc.From, arc.To));
+        Assert.True(arc.Apex < GamecastTelemetry.Baseline - GamecastTelemetry.RunRiseMax);
+    }
+
+    /// <summary>
+    /// A field goal goes at the posts: ESPN ends a good one on the goal line and a missed one at its
+    /// own spot, and both are drawn to the goal line the offence attacks — home's is the away goal
+    /// (100 out, x 10), away's the home goal (x 110).
+    /// </summary>
+    [Fact]
+    public void A_field_goal_is_a_kick_to_the_goal_attacked()
+    {
+        var good = Assert.Single(GamecastTelemetry.DriveArcs([Play(76, 100, Home, type: "Field Goal Good", scoring: true)], homeOffence: true));
+        var missed = Assert.Single(GamecastTelemetry.DriveArcs([Play(53, 53, type: "Field Goal Missed")], homeOffence: false));
+
+        Assert.Equal(DriveArcKind.Kick, good.Kind);
+        Assert.Equal((34d, 10d), (good.From, good.To));
+        Assert.True(good.Score);
+
+        Assert.Equal(DriveArcKind.Kick, missed.Kind);
+        Assert.Equal((57d, 110d), (missed.From, missed.To));
+        Assert.False(missed.Score);
     }
 
     /// <summary>From the away 45 (55 out, x 55) to the home 40 (x 70): across the fifty at x 60.</summary>
     [Fact]
-    public void A_drive_crosses_midfield()
+    public void A_drive_crosses_midfield_and_only_its_last_arc_is_the_latest()
     {
-        var segments = GamecastTelemetry.DriveSegments(
+        var arcs = GamecastTelemetry.DriveArcs(
             [Play(75, 55), Play(55, 40, sequence: 2)], homeOffence: false);
 
-        Assert.Equal(2, segments.Count);
-        Assert.Equal((35d, 55d), (segments[0].From, segments[0].To));
-        Assert.Equal((55d, 70d), (segments[1].From, segments[1].To));
-        Assert.True(segments[1].From < GamecastTelemetry.Midfield && segments[1].To > GamecastTelemetry.Midfield);
-        Assert.False(segments[0].Latest);
-        Assert.True(segments[1].Latest);
+        Assert.Equal(2, arcs.Count);
+        Assert.Equal((35d, 55d), (arcs[0].From, arcs[0].To));
+        Assert.Equal((55d, 70d), (arcs[1].From, arcs[1].To));
+        Assert.True(arcs[1].From < GamecastTelemetry.Midfield && arcs[1].To > GamecastTelemetry.Midfield);
+        Assert.False(arcs[0].Latest);
+        Assert.True(arcs[1].Latest);
+        Assert.Equal(new long[] { 1, 2 }, arcs.Select(a => a.Sequence));
+    }
+
+    /// <summary>
+    /// An interception is drawn as the pass it was, above the ground whichever way it was returned,
+    /// and marked; a pick-six is the turnover, not the offence's score; a safety scores for the
+    /// defence and is not the offence's either. Ends are clamped to the field.
+    /// </summary>
+    [Fact]
+    public void A_score_and_a_turnover_are_marked_and_ends_are_clamped_to_the_field()
+    {
+        var arcs = GamecastTelemetry.DriveArcs(
+        [
+            Play(8, -3, type: "Rushing Touchdown", scoring: true),
+            Play(79, 74, Home, type: "Pass Interception Return", turnover: true, sequence: 2),
+            Play(36, 100, Home, type: "Interception Return Touchdown", scoring: true, turnover: true, sequence: 3),
+            Play(2, 0, Home, type: "Safety", scoring: true, sequence: 4),
+        ], homeOffence: true);
+
+        Assert.True(arcs[0].Score);
+        Assert.Equal(110, arcs[0].To);
+
+        Assert.Equal(DriveArcKind.Pass, arcs[1].Kind);
+        Assert.True(arcs[1].Turnover);
+        Assert.True(arcs[1].Apex < GamecastTelemetry.Baseline, "a returned interception still arcs above the ground");
+
+        Assert.True(arcs[2].Turnover);
+        Assert.False(arcs[2].Score);
+
+        Assert.False(arcs[3].Score);
     }
 
     [Fact]
-    public void A_score_and_a_turnover_are_what_they_were_and_ends_are_clamped_to_the_field()
+    public void No_plays_is_no_arcs()
     {
-        var segments = GamecastTelemetry.DriveSegments(
-            [Play(8, -3, scoring: true), Play(30, 32, turnover: true, sequence: 2)], homeOffence: false);
-
-        Assert.Equal(DriveSegmentKind.Score, segments[0].Kind);
-        Assert.Equal(110, segments[0].To);
-        Assert.Equal(DriveSegmentKind.Turnover, segments[1].Kind);
-    }
-
-    [Fact]
-    public void Each_play_has_its_own_lane_inside_the_band()
-    {
-        var plays = Enumerable.Range(0, 12).Select(i => Play(75 - i * 3, 72 - i * 3, sequence: i)).ToList();
-        var segments = GamecastTelemetry.DriveSegments(plays, homeOffence: false);
-
-        Assert.Equal(12, segments.Count);
-        for (var i = 1; i < segments.Count; i++)
-            Assert.True(segments[i].Top >= segments[i - 1].Top + segments[i - 1].Thickness);
-
-        Assert.True(segments[0].Top >= GamecastTelemetry.BandTop);
-        Assert.True(segments[^1].Top + segments[^1].Thickness <= GamecastTelemetry.BandBottom + 1e-9);
-    }
-
-    [Fact]
-    public void No_plays_is_no_segments()
-    {
-        Assert.Empty(GamecastTelemetry.DriveSegments([], homeOffence: true));
-        Assert.Empty(GamecastTelemetry.DriveSegments(null, homeOffence: true));
+        Assert.Empty(GamecastTelemetry.DriveArcs([], homeOffence: true));
+        Assert.Empty(GamecastTelemetry.DriveArcs(null, homeOffence: true));
+        Assert.Empty(GamecastTelemetry.DriveArcs([Play(null, null), Play(40, 40, type: "Timeout")], homeOffence: true));
     }
 
     [Fact]
@@ -162,6 +270,94 @@ public class GamecastTelemetryTests
         Assert.Null(GamecastTelemetry.Band(null, 55));
         Assert.Null(GamecastTelemetry.Band(75, null));
     }
+
+    [Fact]
+    public void The_arrow_points_the_way_the_ball_is_going_on_the_ground()
+    {
+        Assert.Equal("-1.4,25.2 -4,27 -1.4,28.8", GamecastTelemetry.ArrowPoints(leftward: true));
+        Assert.Equal("1.4,25.2 4,27 1.4,28.8", GamecastTelemetry.ArrowPoints(leftward: false));
+    }
+
+    [Fact]
+    public void The_result_is_kept_inside_the_field_s_edges()
+    {
+        Assert.Equal(GamecastTelemetry.ResultInset, GamecastTelemetry.ResultX(10));
+        Assert.Equal(FieldGeometry.Width - GamecastTelemetry.ResultInset, GamecastTelemetry.ResultX(110));
+        Assert.Equal(60, GamecastTelemetry.ResultX(60));
+    }
+
+    // ---- The drive chart's numbers -----------------------------------------------------------
+
+    /// <summary>
+    /// Game 2049's drive 7: CIN (away) from its 9 (91 out, x 19) to the WSH 20 (x 90), a field goal.
+    /// In percent of the 120-unit field: 15.833 to 75.
+    /// </summary>
+    [Fact]
+    public void A_drive_s_bar_is_its_start_to_its_end_in_percent_of_the_field()
+    {
+        var bar = GamecastTelemetry.ChartBar(91, 20, homeSide: false)!;
+
+        Assert.Equal(15.833, bar.Left);
+        Assert.Equal(59.167, bar.Width);
+        Assert.Equal(75, bar.End);
+        Assert.False(bar.Leftward);
+    }
+
+    /// <summary>A home touchdown ends at 100 on the home-goal frame: the away goal line, x 10, 8.333%.</summary>
+    [Fact]
+    public void A_home_touchdown_ends_on_the_away_goal_line_going_left()
+    {
+        var bar = GamecastTelemetry.ChartBar(21, 100, homeSide: true)!;
+
+        Assert.Equal(8.333, bar.End);
+        Assert.True(bar.Leftward);
+    }
+
+    [Fact]
+    public void A_drive_that_went_nowhere_still_has_a_mark_and_one_lacking_an_end_has_no_bar()
+    {
+        var still = GamecastTelemetry.ChartBar(55, 55, homeSide: true)!;
+        Assert.Equal(Math.Round(100 * GamecastTelemetry.MinChartBar / FieldGeometry.Width, 3), still.Width);
+        Assert.True(still.Leftward);
+
+        // A drive that lost ground goes the other way.
+        Assert.True(GamecastTelemetry.ChartBar(69, 75, homeSide: false)!.Leftward);
+
+        Assert.Null(GamecastTelemetry.ChartBar(null, 20, homeSide: false));
+        Assert.Null(GamecastTelemetry.ChartBar(35, null, homeSide: false));
+    }
+
+    [Theory]
+    [InlineData("Touchdown", true, DriveOutcome.Score)]
+    [InlineData("Field Goal", true, DriveOutcome.Score)]
+    [InlineData("Punt", false, DriveOutcome.Other)]
+    [InlineData("Downs", false, DriveOutcome.Other)]
+    [InlineData("Missed FG", false, DriveOutcome.Other)]
+    [InlineData("End of Half", false, DriveOutcome.Other)]
+    [InlineData("Interception", false, DriveOutcome.Turnover)]
+    [InlineData("Interception Touchdown", true, DriveOutcome.Turnover)]
+    [InlineData("Fumble", false, DriveOutcome.Turnover)]
+    [InlineData("Safety", false, DriveOutcome.Turnover)]
+    [InlineData("Blocked FG", false, DriveOutcome.Turnover)]
+    [InlineData("Punt Touchdown", true, DriveOutcome.Turnover)]
+    [InlineData(null, false, DriveOutcome.Other)]
+    public void A_drive_s_outcome_is_whose_points_they_were(string? result, bool isScore, DriveOutcome expected)
+        => Assert.Equal(expected, GamecastTelemetry.Outcome(result, isScore));
+
+    [Theory]
+    [InlineData("Touchdown", false, "TD")]
+    [InlineData("Field Goal", false, "FG")]
+    [InlineData("Punt", false, "Punt")]
+    [InlineData("Interception", false, "INT")]
+    [InlineData("Downs", false, "Downs")]
+    [InlineData("Missed FG", false, "FG miss")]
+    [InlineData("End of Half", false, "Half")]
+    [InlineData("Blocked FG, Downs", false, "Blk FG")]
+    [InlineData("Something new", false, "Something new")]
+    [InlineData(null, true, "Now")]
+    [InlineData(" ", false, null)]
+    public void A_drive_s_result_has_a_short_mark(string? result, bool current, string? expected)
+        => Assert.Equal(expected, GamecastTelemetry.ShortResult(result, current));
 
     [Fact]
     public void The_yard_numbers_read_ten_to_fifty_and_back()

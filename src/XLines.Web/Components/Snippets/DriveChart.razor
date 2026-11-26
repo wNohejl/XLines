@@ -1,0 +1,154 @@
+@using System.Globalization
+@using XLines.Data.Gamecast
+
+@*
+    Every drive of the game on one field: a row a drive in game order, each a bar from where the
+    drive started to where it ended on the same frame the field graphic draws (yards across, the
+    away end zone on the left and the home side's on the right, GamecastTelemetry.ChartBar's
+    geometry), coloured by the side with the ball in the pair the field spends
+    (away the chart's neutral, home the accent's ink), with a mark at its end in the way
+    it went and the result in a short word after the field. A score is the positive state and
+    heavier, a turnover the negative; a punt or downs keeps the side's ink. NFL.com's and ESPN's
+    drive lists are this as twenty disclosures; here it is one look.
+
+    Behind the rows the field itself — the two end zones, a hairline at each ten and the fifty
+    stronger — drawn once for the whole chart, so the bars read as ground covered and not as a
+    bar chart. A quiet line between quarters, with the quarter's name, when the period changes.
+
+    Each row is a real button: reachable by Tab, its focus the desk's inset ring, the chosen one
+    aria-pressed and washed in the accent (selection is what the accent is for), and its name the
+    drive in a sentence — "Drive 4, WSH, 6 plays, 25 yards, Punt" — because the bar alone says
+    nothing to a reader who cannot see it. Pressing one hands its Sequence to OnSelect; what that
+    selects is the window's business. A drive with no start or no end still has its row, with no
+    bar and its result in words. Rows are compact (one line of caption type), so twenty-odd drives
+    stand in a card as narrow as a phone's. No edge: the card holding it is the group.
+*@
+
+@if (Drives is { Count: > 0 })
+{
+    <ol class="drivechart" aria-label="Drive chart">
+        <li class="drivechart__field" aria-hidden="true">
+            <span class="drivechart__ground">
+                <span class="drivechart__zone drivechart__zone--away"></span>
+                <span class="drivechart__mid"></span>
+                <span class="drivechart__zone drivechart__zone--home"></span>
+            </span>
+        </li>
+
+        @{ int? period = null; var number = 0; }
+        @foreach (var drive in Ordered)
+        {
+            number++;
+            var home = drive.TeamId == HomeTeamId;
+            var sided = drive.TeamId is not null;
+            var bar = GamecastTelemetry.ChartBar(drive.StartYardLine, drive.EndYardLine, home);
+            var outcome = GamecastTelemetry.Outcome(drive.Result, drive.IsScore);
+            var shortResult = GamecastTelemetry.ShortResult(drive.Result, drive.IsCurrent);
+            var selected = Selected == drive.Sequence;
+            var sequence = drive.Sequence;
+
+            if (period is not null && drive.StartPeriod is { } p && p != period)
+            {
+                <li class="drivechart__period" aria-hidden="true"><span class="drivechart__periodname">@PeriodName(p)</span></li>
+            }
+            period = drive.StartPeriod ?? period;
+
+            <li class="drivechart__item">
+                <button type="button"
+                        class="drivechart__row @SideClass(drive) drivechart__row--@OutcomeName(outcome) @(selected ? "drivechart__row--selected" : null)"
+                        aria-pressed="@(selected ? "true" : "false")"
+                        aria-label="@Name(drive, number)"
+                        data-sequence="@drive.Sequence"
+                        @onclick="() => OnSelect.InvokeAsync(sequence)">
+                    <span class="drivechart__team" aria-hidden="true">
+                        @if (Abbrev(drive) is { } abbrev)
+                        {
+                            <TeamMark Sport="@Sport" Abbrev="@abbrev" />
+                            <span class="drivechart__abbrev">@abbrev</span>
+                        }
+                    </span>
+                    <span class="drivechart__track" aria-hidden="true">
+                        @if (bar is not null && sided)
+                        {
+                            <span class="drivechart__bar"
+                                  style="--left:@N(bar.Left); --width:@N(bar.Width)"></span>
+                            <span class="drivechart__end @(bar.Leftward ? "drivechart__end--left" : "drivechart__end--right")"
+                                  style="--end:@N(bar.End)"></span>
+                        }
+                    </span>
+                    <span class="drivechart__result" aria-hidden="true">@shortResult</span>
+                </button>
+            </li>
+        }
+    </ol>
+}
+
+@code {
+    /// <summary>The game's drives; drawn in <see cref="GamecastDrive.Sequence"/> order whatever order they arrive in.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<GamecastDrive> Drives { get; set; } = [];
+
+    /// <summary>The home side's team id: its drives are the home colour and go leftward.</summary>
+    [Parameter, EditorRequired] public int HomeTeamId { get; set; }
+
+    [Parameter] public string HomeAbbrev { get; set; } = "HOME";
+
+    [Parameter] public string AwayAbbrev { get; set; } = "AWAY";
+
+    /// <summary>The chosen drive's <see cref="GamecastDrive.Sequence"/>; null chooses none.</summary>
+    [Parameter] public int? Selected { get; set; }
+
+    /// <summary>Called with a drive's <see cref="GamecastDrive.Sequence"/> when its row is pressed.</summary>
+    [Parameter] public EventCallback<int> OnSelect { get; set; }
+
+    /// <summary>The league's key, for the crests beside the sides' names.</summary>
+    [Parameter] public string? Sport { get; set; }
+
+    private IEnumerable<GamecastDrive> Ordered => Drives.OrderBy(d => d.Sequence);
+
+    private string? Abbrev(GamecastDrive drive)
+        => drive.TeamId is null ? null
+            : drive.TeamId == HomeTeamId ? HomeAbbrev
+            : !string.IsNullOrWhiteSpace(drive.TeamAbbrev) ? drive.TeamAbbrev
+            : AwayAbbrev;
+
+    private string? SideClass(GamecastDrive drive)
+        => drive.TeamId is null ? null : drive.TeamId == HomeTeamId ? "drivechart__row--home" : "drivechart__row--away";
+
+    private static string OutcomeName(DriveOutcome outcome) => outcome switch
+    {
+        DriveOutcome.Score => "score",
+        DriveOutcome.Turnover => "turnover",
+        _ => "other",
+    };
+
+    /// <summary>The row in a sentence: "Drive 4, WSH, 6 plays, 25 yards, Punt"; a part the data does not hold is left out.</summary>
+    private string Name(GamecastDrive drive, int number)
+    {
+        var parts = new List<string> { $"Drive {number.ToString(CultureInfo.InvariantCulture)}" };
+
+        if (Abbrev(drive) is { } abbrev)
+            parts.Add(abbrev);
+
+        var plays = drive.OffensivePlays ?? (drive.PlayCount > 0 ? drive.PlayCount : null);
+        if (plays is { } n)
+            parts.Add(n == 1 ? "1 play" : $"{n.ToString(CultureInfo.InvariantCulture)} plays");
+
+        if (drive.Yards is { } y)
+            parts.Add(Math.Abs(y) == 1 ? $"{y.ToString(CultureInfo.InvariantCulture)} yard" : $"{y.ToString(CultureInfo.InvariantCulture)} yards");
+
+        if (!string.IsNullOrWhiteSpace(drive.Result))
+            parts.Add(drive.Result.Trim());
+        else if (drive.IsCurrent)
+            parts.Add("in progress");
+
+        return string.Join(", ", parts);
+    }
+
+    /// <summary>A quarter's name for the break before its first drive: "Q2", and "OT" past the fourth.</summary>
+    private static string PeriodName(int period)
+        => period <= 4 ? $"Q{period.ToString(CultureInfo.InvariantCulture)}"
+            : period == 5 ? "OT"
+            : $"OT{(period - 4).ToString(CultureInfo.InvariantCulture)}";
+
+    private static string N(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
+}

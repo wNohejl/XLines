@@ -1,13 +1,21 @@
 /* The field graphic (FieldGraphic.razor). Every fill and stroke is a token, so it re-themes with
-   the desk; nothing names a hue, and there is no turf: team has no colours on this desk, and a
-   green field would blur the one green that means something here, a scoring play. The field is
-   the content fill, the end zones a tier deeper, the yard lines hairlines. Hue is spent only
-   where it says something: the line to gain in the warning state, as a broadcast's first-down
-   line is the one coloured line on the field; the red zone the negative wash, once the ball is in
-   it; a scoring play positive and a turnover negative. A gain is ink, the latest play the primary
-   ink; a loss is hollow and a penalty dashed, so they read without their colour. The accent is
-   kept for what can be pressed. No edge: the window's card is the group, and an outline here
-   would be the box inside the box. */
+   the desk; nothing names a hue, and there is no turf: a club's colours are the crest's business
+   (TeamMark), and a green field would blur the one green that means something here, a scoring
+   play. The field is the content fill, the end zones a tier deeper, the yard lines hairlines.
+
+   The arcs are the side with the ball's, as the drive chart spends them: away the chart neutral,
+   home the accent's ink — DeskChart's own pair for two series that carry no state (the Volume
+   family), the ink because it is the accent taken to where it reads on the panel in every theme.
+   The dimmer neutral the home side wore before all but vanished on a dark field. Both opaque,
+   because a translucent ink would darken where two arcs cross. The shape says what a play was before its colour does: a
+   pass is high, a run low, a loss dips under the ground, a penalty is dashed, a kick dotted and
+   faint, a play for nothing a dot. Hue is spent only where it says something: the line to gain in
+   the warning state, as a broadcast's first-down line is the one coloured line on the field; the
+   red zone the negative wash once the ball is in it; the play that scored positive, the one that
+   gave the ball away negative. The latest play is heavier, and draws itself in. Beyond the home
+   side's ink, which is a series' colour as DeskChart's are, the accent is kept for what can be
+   pressed. No edge: the window's card is the group, and an outline here would be
+   the box inside the box. */
 
 .fieldgraphic {
     width: 100%;
@@ -70,44 +78,162 @@
     dominant-baseline: central;
 }
 
-/* The ground the drive has covered: a quiet wash under its plays. */
+/* The ground the drive has covered: a quiet strip on the line the arcs land on. */
 .fieldgraphic__band {
     fill: var(--separator);
 }
 
-.fieldgraphic__play {
-    fill: var(--text-secondary);
+/* Where the drive began: a short upright through the ground. */
+.fieldgraphic__start {
+    stroke: var(--text-secondary);
+    stroke-width: 0.4;
+    stroke-linecap: round;
+}
+
+/* ---- The arcs ---------------------------------------------------------------------------- */
+
+.fieldgraphic__arc {
+    fill: none;
+    stroke-width: 0.45;
+    stroke-linecap: round;
+}
+
+.fieldgraphic__arc--away {
+    stroke: var(--chart-neutral);
+}
+
+.fieldgraphic__arc--home {
+    stroke: var(--accent-ink);
+}
+
+/* A play for nothing is a dot at its spot, filled in the side's colour. */
+.fieldgraphic__arc--nogain {
     stroke: none;
 }
 
-.fieldgraphic__play--latest {
-    fill: var(--text-primary);
+.fieldgraphic__arc--nogain.fieldgraphic__arc--away {
+    fill: var(--chart-neutral);
 }
 
-/* A play that went nowhere: a thin mark, filled, at its spot. */
-.fieldgraphic__play--nogain {
-    fill: var(--text-tertiary);
+.fieldgraphic__arc--nogain.fieldgraphic__arc--home {
+    fill: var(--accent-ink);
 }
 
-/* A loss is hollow and a penalty dashed: the shape says it before the colour would. */
-.fieldgraphic__play--loss,
-.fieldgraphic__play--penalty {
-    fill: none;
-    stroke: var(--text-secondary);
-    stroke-width: 0.3;
+.fieldgraphic__arc--penalty {
+    stroke-dasharray: 0.9 0.6;
+    stroke-linecap: butt;
 }
 
-.fieldgraphic__play--penalty {
-    stroke-dasharray: 0.8 0.5;
+/* A kick is the drive handing the ball on: the long ball, dotted and faint, so it does not
+   outweigh the plays that moved the drive. */
+.fieldgraphic__arc--kick {
+    stroke-width: 0.35;
+    stroke-dasharray: 0.2 0.9;
+    opacity: 0.8;
 }
 
-.fieldgraphic__play--score {
+/* The latest play: heavier, the end of the story so far. */
+.fieldgraphic__arc--latest {
+    stroke-width: 0.8;
+}
+
+.fieldgraphic__arc--latest.fieldgraphic__arc--kick {
+    stroke-width: 0.5;
+    opacity: 1;
+}
+
+.fieldgraphic__arc--latest.fieldgraphic__arc--nogain {
+    r: 0.9;
+}
+
+/* The play that scored and the play that gave the ball away: their state colours, whatever side. */
+.fieldgraphic__arc--score {
+    stroke: var(--state-positive);
+}
+
+.fieldgraphic__arc--turnover {
+    stroke: var(--state-negative);
+    stroke-dasharray: none;
+}
+
+.fieldgraphic__arc--nogain.fieldgraphic__arc--score {
     fill: var(--state-positive);
 }
 
-.fieldgraphic__play--turnover {
+.fieldgraphic__arc--nogain.fieldgraphic__arc--turnover {
     fill: var(--state-negative);
 }
+
+/* Where the latest arc landed, once the drive is over and no ball sits there. */
+.fieldgraphic__landing.fieldgraphic__arc--away {
+    fill: var(--chart-neutral);
+}
+
+.fieldgraphic__landing.fieldgraphic__arc--home {
+    fill: var(--accent-ink);
+}
+
+/* The latest solid arc draws itself in from where the ball was: its path is one unit long
+   (pathLength="1"), so one dash covers it and the offset runs it out from its start. */
+.fieldgraphic__arc--draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: fieldgraphic-draw var(--dur-slow) var(--ease-enter) both;
+}
+
+@keyframes fieldgraphic-draw {
+    from {
+        stroke-dashoffset: 1;
+    }
+
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+/* ---- A finished drive's end ----------------------------------------------------------------- */
+
+.fieldgraphic__end {
+    fill: var(--surface-1);
+    stroke-width: 0.5;
+}
+
+.fieldgraphic__end--away {
+    stroke: var(--chart-neutral);
+}
+
+.fieldgraphic__end--home {
+    stroke: var(--accent-ink);
+}
+
+.fieldgraphic__end--score {
+    fill: var(--state-positive);
+    stroke: var(--state-positive);
+}
+
+.fieldgraphic__end--turnover {
+    stroke: var(--state-negative);
+}
+
+.fieldgraphic__result {
+    fill: var(--text-secondary);
+    stroke: none;
+    font-family: var(--face-ui);
+    font-size: 2.2px;
+    font-weight: var(--weight-semibold);
+    text-anchor: middle;
+    dominant-baseline: central;
+}
+
+.fieldgraphic__result.fieldgraphic__end--score {
+    fill: var(--state-positive-ink);
+}
+
+.fieldgraphic__result.fieldgraphic__end--turnover {
+    fill: var(--state-negative-ink);
+}
+
+/* ---- Live: the ball and the two lines ---------------------------------------------------- */
 
 /* The ball and the two lines move by a transform, so a new spot slides in from the old one. */
 .fieldgraphic__mover {
@@ -164,5 +290,9 @@
 @media (prefers-reduced-motion: reduce) {
     .fieldgraphic__mover {
         transition: none;
+    }
+
+    .fieldgraphic__arc--draw {
+        animation: none;
     }
 }

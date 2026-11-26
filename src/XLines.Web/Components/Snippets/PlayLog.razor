@@ -5,6 +5,12 @@
     A list of plays, as a league's play-by-play prints them: when, then the down and the spot
     over what happened, then what it was worth. A scoring play's words carry the weight.
 
+    A football play leads with its headline (PlayHeadline: "16-yard pass", "Punt, 48 yards"),
+    as NFL.com's Game Center heads each play, so the log scans down its first words and ESPN's
+    sentence stays beneath for the detail. Only football: the headline table is the NFL's types,
+    and another league's "End Period" is not a quarter. A play with nothing worth heading draws
+    no headline, and its row is the down and the sentence as before.
+
     The order is the caller's — newest first for a game that is on, from the kickoff down for one
     that is over — and so is the grouping: the Gamecast gives it one drive at a time, or every
     play of a game the feed wrote no drives for. Each row is keyed by the play's id, so a play
@@ -15,8 +21,12 @@
 <ol class="gc__log">
     @if (Plays.Count > VirtualizeAt)
     {
-        @* SpacerElement: inside an <ol> the spacers must be list items too. *@
-        <Virtualize Items="Plays" Context="play" ItemSize="48" SpacerElement="li">
+        @* SpacerElement: inside an <ol> the spacers must be list items too. ItemSize is a headed
+           play of one line at the standard density: --space-2 above and below (16), the headline
+           and the sentence at subheadline (12px × 1.45, twice), the down at footnote (11px × 1.45)
+           and the hairline (1) — 68. A sentence that wraps is taller; Virtualize measures the rows
+           it draws and only estimates the ones it has not. *@
+        <Virtualize Items="Plays" Context="play" ItemSize="68" SpacerElement="li">
             @Row(play)
         </Virtualize>
     }
@@ -39,10 +49,17 @@
     /// <summary>Past this many rows the list is virtualised.</summary>
     [Parameter] public int VirtualizeAt { get; set; } = 150;
 
+    /// <summary>Whether the plays are football's, the only league whose plays are headed.</summary>
+    private bool Football => Sport is "nfl" or "ncaaf";
+
     private RenderFragment Row(GamecastPlay play) => @<text>
         <li class="gc__play @(play.IsScoring ? "gc__play--score" : null)" @key="play.Id" data-seq="@play.Sequence" data-play="@play.Id">
             <span class="gc__when">@When(Sport, play)</span>
             <span class="gc__body">
+                @if (Football && PlayHeadline.For(play) is { } headline)
+                {
+                    <span class="gc__headline">@headline</span>
+                }
                 @if (play.Start?.DownDistanceText is { Length: > 0 } dd)
                 {
                     <span class="gc__dd">@dd</span>

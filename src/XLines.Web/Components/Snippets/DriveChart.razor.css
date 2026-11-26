@@ -1,0 +1,224 @@
+/* The drive chart (DriveChart.razor). Every fill is a token. The field behind the rows is drawn
+   once, for the whole list — the content fill, the end zones a tier deeper, a hairline at each ten
+   and the fifty stronger — so the rows' bars stand on one field and the eye can run down a yard
+   line from the first drive to the last. The bars are the sides', as the field graphic spends
+   them: away the chart neutral, home the accent's ink — DeskChart's own pair for two series that
+   carry no state (the Volume family), and the ink rather than the fill because it is the accent
+   taken to where it reads on the panel in every theme. The dimmer neutral the home side wore
+   before all but vanished on a dark field. A score's bar and mark are the positive state, a
+   turnover's mark the negative.
+
+   A row is a button the width of the chart: a team column, the field, a short result. Its hover
+   is a faint ink wash and its selection the accent's wash (what the accent is for), both
+   translucent so the field's lines show through; its focus the desk's inset ring. No edge: the
+   card it sits in is the group, and the quarters are divided by one quiet inset line each.
+
+   The three columns share their widths with the field behind them through three custom
+   properties, so the field's left and right edges sit exactly under every row's track. */
+
+.drivechart {
+    --dc-team: 44px;
+    --dc-result: 44px;
+    --dc-gap: var(--space-2);
+    --dc-pad: var(--space-2);
+    --dc-row: 20px;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--text-caption);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ---- The field, behind every row ---------------------------------------------------------- */
+
+.drivechart__field {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--dc-pad) + var(--dc-team) + var(--dc-gap));
+    right: calc(var(--dc-pad) + var(--dc-result) + var(--dc-gap));
+    pointer-events: none;
+}
+
+/* A hairline every ten yards of the field's 120 (end zones included), goal lines among them. */
+.drivechart__ground {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-xs);
+    background-color: var(--surface-1);
+    background-image: linear-gradient(to right, var(--separator) 1px, transparent 1px);
+    background-size: calc(100% / 12) 100%;
+}
+
+.drivechart__zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: calc(100% / 12);
+    background: var(--surface-3);
+}
+
+.drivechart__zone--away {
+    left: 0;
+}
+
+.drivechart__zone--home {
+    right: 0;
+}
+
+.drivechart__mid {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    border-left: 1px solid var(--separator-strong);
+}
+
+/* ---- The rows ----------------------------------------------------------------------------- */
+
+.drivechart__item {
+    position: relative;
+}
+
+.drivechart__row {
+    display: grid;
+    grid-template-columns: var(--dc-team) minmax(0, 1fr) var(--dc-result);
+    column-gap: var(--dc-gap);
+    align-items: center;
+    width: 100%;
+    min-height: var(--dc-row);
+    margin: 0;
+    padding: 0 var(--dc-pad);
+    border: 0;
+    border-radius: var(--radius-xs);
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.drivechart__row:hover {
+    background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.drivechart__row--selected,
+.drivechart__row--selected:hover {
+    background: var(--accent-wash);
+    color: var(--text-primary);
+}
+
+.drivechart__row:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring-inset);
+}
+
+.drivechart__team {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 0;
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.drivechart__team ::deep .teammark--crest {
+    --teammark-size: 14px;
+}
+
+.drivechart__abbrev {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drivechart__track {
+    position: relative;
+    height: var(--dc-row);
+}
+
+.drivechart__bar {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--left) * 1%);
+    width: calc(var(--width) * 1%);
+    height: 6px;
+    transform: translateY(-50%);
+    border-radius: var(--radius-xs);
+}
+
+/* The end, a point in the way the drive went, on the bar's leading edge. */
+.drivechart__end {
+    position: absolute;
+    top: 50%;
+    left: calc(var(--end) * 1%);
+    width: 5px;
+    height: 10px;
+    transform: translate(-50%, -50%);
+}
+
+.drivechart__end--left {
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+.drivechart__end--right {
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.drivechart__row--away .drivechart__bar,
+.drivechart__row--away .drivechart__end {
+    background: var(--chart-neutral);
+}
+
+.drivechart__row--home .drivechart__bar,
+.drivechart__row--home .drivechart__end {
+    background: var(--accent-ink);
+}
+
+/* A score: the bar and its end the positive state, the result in its ink and weight. */
+.drivechart__row--score .drivechart__bar,
+.drivechart__row--score .drivechart__end {
+    background: var(--state-positive);
+}
+
+.drivechart__row--turnover .drivechart__end {
+    background: var(--state-negative);
+}
+
+.drivechart__result {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: end;
+}
+
+.drivechart__row--score .drivechart__result {
+    color: var(--state-positive-ink);
+    font-weight: var(--weight-semibold);
+}
+
+.drivechart__row--turnover .drivechart__result {
+    color: var(--state-negative-ink);
+}
+
+/* ---- Between quarters ---------------------------------------------------------------------- */
+
+.drivechart__period {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 14px;
+    padding: 0 var(--dc-pad);
+    border-top: 1px solid var(--separator);
+    color: var(--text-tertiary);
+    font-size: var(--text-caption);
+    font-weight: var(--weight-semibold);
+}
+
+.drivechart__periodname {
+    width: var(--dc-team);
+}

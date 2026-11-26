@@ -3,32 +3,49 @@
 
 @*
     The field, drawn as a field: a hundred yards between two end zones, the away side's on the
-    left and the home side's on the right, with the yard lines and their numbers, the drive in
-    progress laid out play by play from where it started, the line of scrimmage, the line to gain
-    and the ball, pointing the way it is going.
+    left and the home side's on the right, with the yard lines and their numbers, and a drive laid
+    out on it play by play as ESPN's Gamecast draws one — each play an arc from where it started
+    to where it ended, landing where the next begins: a pass thrown high, a run kept on the ground,
+    a loss dipping back under it, a penalty dashed, a play for nothing a dot at its spot, a punt or
+    a field goal a faint dotted long ball, the play that scored and the one that gave the ball away
+    marked in their state colours. The arcs are in the colour of the side with the ball, the
+    pair a chart spends on two series with no state (away the chart's neutral, home the accent's
+    ink); the latest play is drawn heavier, and draws itself in, from where the ball was.
+
+    Two modes. Live (Replay false): the drive in progress, with the line of scrimmage, the line to
+    gain and the ball, pointing the way it is going; no spot, or nobody on the ball, draws the field
+    alone, so the window does not jump between plays. Replay: a drive that is over, from DrivePlays
+    for the side HomeBall names, with no ball and no lines (there is no next snap), its start marked
+    and its end ringed with the result named under it — the one piece of words on the turf that is
+    not a number or an end zone's name, because the drive's last word belongs where it happened.
+    The result is in the image's accessible name as well.
 
     Every position is GamecastTelemetry's or FieldGeometry's, in the viewBox's own units (yards
-    across, the same frame as the drive log's FieldSpan), so the markup says only how each mark looks. The ball
-    and the two lines sit in groups moved by a transform, so when the server redraws on the next
-    snap they slide from the old spot to the new one: motion that says where the ball came from.
-
-    Text on the field is the yard numbers and the end zones' abbreviations, nothing else; the play
-    in words is the caption under the field, real text. No spot (nobody on the ball, or none sent)
-    draws the field alone, so the window does not jump between plays. No edge and no card: the
-    window's card holds it.
+    across, the same frame as the drive log's FieldSpan and the drive chart), so the markup says
+    only how each mark looks. The ball and the two lines sit in groups moved by a transform, so when
+    the server redraws on the next snap they slide from the old spot to the new one: motion that
+    says where the ball came from. No edge and no card: the window's card holds it.
 *@
 
 @{
-    var marks = HomeBall is { } home ? FieldGeometry.Marks(YardLine, Distance, home) : null;
-    var segments = marks is not null ? GamecastTelemetry.DriveSegments(DrivePlays, HomeBall!.Value) : [];
-    var band = marks is not null ? GamecastTelemetry.Band(DriveStartYardLine, YardLine) : null;
-    var possession = HomeBall switch { true => HomeAbbrev, false => AwayAbbrev, null => null };
+    var side = HomeBall;
+    var marks = !Replay && side is { } home ? FieldGeometry.Marks(YardLine, Distance, home) : null;
+    var drawn = side is not null && (Replay || marks is not null);
+    var arcs = drawn ? GamecastTelemetry.DriveArcs(DrivePlays, side!.Value) : [];
+    var band = !drawn ? null
+        : Replay ? GamecastTelemetry.Band(DriveStartYardLine, DriveEndYardLine)
+        : GamecastTelemetry.Band(DriveStartYardLine, YardLine);
+    var sideClass = side switch { true => "fieldgraphic__arc--home", false => "fieldgraphic__arc--away", null => null };
+    double? startX = drawn && DriveStartYardLine is { } s ? FieldGeometry.X(Math.Clamp(s, 0, 100)) : null;
+    double? endX = drawn && Replay && DriveEndYardLine is { } e ? FieldGeometry.X(Math.Clamp(e, 0, 100)) : null;
+    var result = Replay && !string.IsNullOrWhiteSpace(DriveResult) ? DriveResult.Trim() : null;
+    var possession = side switch { true => HomeAbbrev, false => AwayAbbrev, null => null };
     var hasCaption = !string.IsNullOrWhiteSpace(Situation) || !string.IsNullOrWhiteSpace(LastPlay);
 }
 
-<div class="fieldgraphic">
+<div class="fieldgraphic @(Replay ? "fieldgraphic--replay" : null)">
     <svg class="fieldgraphic__svg" viewBox="0 0 @N(FieldGeometry.Width) @N(GamecastTelemetry.Height)"
-         role="img" aria-label="@Label">
+         role="img" aria-label="@AccessibleName(drawn ? result : null)">
         @* The field and its two end zones. *@
         <rect class="fieldgraphic__field" x="@N(FieldGeometry.EndZone)" y="0" width="100" height="@N(GamecastTelemetry.Height)" />
         <rect class="fieldgraphic__zone fieldgraphic__zone--away" x="0" y="0" width="@N(FieldGeometry.EndZone)" height="@N(GamecastTelemetry.Height)" />
@@ -67,22 +84,62 @@
         <text class="fieldgraphic__mark" transform="translate(@N(GamecastTelemetry.AwayMarkX) @N(GamecastTelemetry.Middle)) rotate(-90)">@AwayAbbrev</text>
         <text class="fieldgraphic__mark" transform="translate(@N(GamecastTelemetry.HomeMarkX) @N(GamecastTelemetry.Middle)) rotate(90)">@HomeAbbrev</text>
 
-        @if (marks is not null)
+        @if (drawn)
         {
-            @* The ground the drive has covered, then its plays, one lane each. *@
+            @* The ground the drive has covered, a quiet strip under its arcs; then where it began. *@
             @if (band is not null)
             {
                 <rect class="fieldgraphic__band" x="@N(band.Left)" y="@N(GamecastTelemetry.BandTop)"
-                      width="@N(band.Width)" height="@N(GamecastTelemetry.BandHeight)" />
+                      width="@N(band.Width)" height="@N(GamecastTelemetry.BandThickness)" />
             }
 
-            @foreach (var segment in segments)
+            @if (startX is { } sx)
             {
-                <rect class="fieldgraphic__play fieldgraphic__play--@Kind(segment.Kind) @(segment.Latest ? "fieldgraphic__play--latest" : null)"
-                      data-kind="@Kind(segment.Kind)"
-                      x="@N(segment.Left)" y="@N(segment.Top)" width="@N(segment.Width)" height="@N(segment.Thickness)" />
+                <line class="fieldgraphic__start" data-x="@N(sx)" x1="@N(sx)" x2="@N(sx)"
+                      y1="@N(GamecastTelemetry.Baseline - GamecastTelemetry.StartMarkAbove)"
+                      y2="@N(GamecastTelemetry.Baseline + GamecastTelemetry.StartMarkBelow)" />
             }
 
+            @* The plays, one arc each, in order: a new play is appended as a new element, so only it draws in. *@
+            <g class="fieldgraphic__arcs">
+                @foreach (var arc in arcs)
+                {
+                    var classes = ArcClasses(arc, sideClass);
+                    if (arc.Path is { } path)
+                    {
+                        <path class="@classes" data-kind="@Kind(arc.Kind)" d="@path"
+                              pathLength="@(DrawsIn(arc) ? "1" : null)" />
+                    }
+                    else
+                    {
+                        <circle class="@classes" data-kind="@Kind(arc.Kind)"
+                                cx="@N(arc.From)" cy="@N(GamecastTelemetry.Baseline)" r="@N(GamecastTelemetry.SpotRadius)" />
+                    }
+                }
+            </g>
+
+            @* Where the latest arc landed, so the eye finds the end of the drive's story. *@
+            @if (arcs.Count > 0 && arcs[^1] is { Path: not null } last && marks is null && endX is null)
+            {
+                <circle class="fieldgraphic__landing @sideClass" cx="@N(last.To)" cy="@N(GamecastTelemetry.Baseline)" r="@N(GamecastTelemetry.SpotRadius)" />
+            }
+
+            @if (endX is { } ex)
+            {
+                <circle class="fieldgraphic__end @EndClass" data-x="@N(ex)"
+                        cx="@N(ex)" cy="@N(GamecastTelemetry.Baseline)" r="@N(GamecastTelemetry.EndMarkRadius)" />
+                @if (result is not null)
+                {
+                    @* In a group, for the same reason as the yard numbers: a bare <text> here is Razor's own tag. *@
+                    <g class="fieldgraphic__results">
+                        <text class="fieldgraphic__result @EndClass" x="@N(GamecastTelemetry.ResultX(ex))" y="@N(GamecastTelemetry.ResultY)">@result</text>
+                    </g>
+                }
+            }
+        }
+
+        @if (marks is not null)
+        {
             @if (marks.Gain is { } gain)
             {
                 <g class="fieldgraphic__mover fieldgraphic__gain" style="transform: translateX(@(N(gain))px)">
@@ -94,10 +151,10 @@
                 <line x1="0" x2="0" y1="@N(GamecastTelemetry.LineTop)" y2="@N(GamecastTelemetry.LineBottom)" />
             </g>
 
-            @* The ball at the spot, its arrow toward the goal being attacked. *@
+            @* The ball at the spot, on the ground the arcs land on, its arrow toward the goal being attacked. *@
             <g class="fieldgraphic__mover fieldgraphic__ball" data-spot="@N(marks.Spot)" style="transform: translateX(@(N(marks.Spot))px)">
-                <polygon class="fieldgraphic__arrow" points="@(marks.Leftward ? LeftArrow : RightArrow)" />
-                <ellipse class="fieldgraphic__spot" cx="0" cy="@N(GamecastTelemetry.Middle)" rx="1.6" ry="1" />
+                <polygon class="fieldgraphic__arrow" points="@GamecastTelemetry.ArrowPoints(marks.Leftward)" />
+                <ellipse class="fieldgraphic__spot" cx="0" cy="@N(GamecastTelemetry.Baseline)" rx="1.6" ry="1" />
             </g>
         }
     </svg>
@@ -125,21 +182,20 @@
 </div>
 
 @code {
-    // The arrow, drawn about the ball at x = 0: from just behind its nose to a point ahead of it.
-    private const string LeftArrow = "-1.4,14.2 -4,16 -1.4,17.8";
-    private const string RightArrow = "1.4,14.2 4,16 1.4,17.8";
-
     [Parameter] public string HomeAbbrev { get; set; } = "HOME";
 
     [Parameter] public string AwayAbbrev { get; set; } = "AWAY";
 
-    /// <summary>Yards from the home goal line; null draws no ball, band or lines.</summary>
+    /// <summary>Yards from the home goal line; null draws no ball, arcs or lines. Ignored in <see cref="Replay"/>.</summary>
     [Parameter] public int? YardLine { get; set; }
 
-    /// <summary>Yards to go for a first down; null draws no line to gain.</summary>
+    /// <summary>Yards to go for a first down; null draws no line to gain. Ignored in <see cref="Replay"/>.</summary>
     [Parameter] public int? Distance { get; set; }
 
-    /// <summary>True when the home side has the ball, false for the away side, null when nobody does.</summary>
+    /// <summary>
+    /// True when the home side has the ball, false for the away side, null when nobody does. In
+    /// <see cref="Replay"/>, the side whose drive it was; null draws the field alone.
+    /// </summary>
     [Parameter] public bool? HomeBall { get; set; }
 
     /// <summary>The field in words, for a reader who cannot see it: "Field: PHI ball, 2nd and 6 at WSH 34".</summary>
@@ -148,10 +204,10 @@
     /// <summary>The league's key, for the crest beside the side with the ball in the caption.</summary>
     [Parameter] public string? Sport { get; set; }
 
-    /// <summary>The plays of the drive on the field, in sequence order; empty draws no segments.</summary>
+    /// <summary>The plays of the drive on the field, in sequence order; empty draws no arcs.</summary>
     [Parameter] public IReadOnlyList<GamecastPlay> DrivePlays { get; set; } = [];
 
-    /// <summary>Where the drive on the field started, on the home-goal frame; null draws no band under its plays.</summary>
+    /// <summary>Where the drive on the field started, on the home-goal frame; null draws no start mark and no covered ground.</summary>
     [Parameter] public int? DriveStartYardLine { get; set; }
 
     /// <summary>The last play in words, under the field.</summary>
@@ -160,15 +216,57 @@
     /// <summary>The down and the spot in words, "2nd & 6 at PHI 34", under the field.</summary>
     [Parameter] public string? Situation { get; set; }
 
-    private static string Kind(DriveSegmentKind kind) => kind switch
+    /// <summary>
+    /// True for a drive that is over: its arcs, start and end, with no ball, scrimmage line or
+    /// line to gain, and <see cref="YardLine"/> and <see cref="Distance"/> ignored.
+    /// </summary>
+    [Parameter] public bool Replay { get; set; }
+
+    /// <summary>Where the finished drive ended, on the home-goal frame (a touchdown's is 0 or 100); null draws no end mark. Replay only.</summary>
+    [Parameter] public int? DriveEndYardLine { get; set; }
+
+    /// <summary>What the finished drive came to — "Touchdown", "Punt", "Field Goal", "Interception", "Downs" — named at its end. Replay only.</summary>
+    [Parameter] public string? DriveResult { get; set; }
+
+    /// <summary>The end mark's weight: a score strong and positive, a turnover negative, anything else the side's ink.</summary>
+    private string EndClass => GamecastTelemetry.Outcome(DriveResult, isScore: false) switch
     {
-        DriveSegmentKind.Gain => "gain",
-        DriveSegmentKind.NoGain => "nogain",
-        DriveSegmentKind.Loss => "loss",
-        DriveSegmentKind.Penalty => "penalty",
-        DriveSegmentKind.Score => "score",
-        DriveSegmentKind.Turnover => "turnover",
-        _ => "gain",
+        DriveOutcome.Score => "fieldgraphic__end--score",
+        DriveOutcome.Turnover => "fieldgraphic__end--turnover",
+        _ => HomeBall == true ? "fieldgraphic__end--home" : "fieldgraphic__end--away",
+    };
+
+    /// <summary>The label, with the finished drive's result after it when the label does not already say it.</summary>
+    private string AccessibleName(string? result)
+        => result is null || Label.Contains(result, StringComparison.OrdinalIgnoreCase)
+            ? Label
+            : string.IsNullOrWhiteSpace(Label) ? $"Result: {result}" : $"{Label.TrimEnd('.', ' ')}. Result: {result}";
+
+    /// <summary>Only the latest solid arc draws in: a dashed or dotted one keeps its dashes in its own units.</summary>
+    private static bool DrawsIn(DriveArc arc)
+        => arc.Latest && arc.Kind is not (DriveArcKind.Penalty or DriveArcKind.Kick);
+
+    private static string ArcClasses(DriveArc arc, string? side)
+        => string.Join(' ', new[]
+        {
+            "fieldgraphic__arc",
+            $"fieldgraphic__arc--{Kind(arc.Kind)}",
+            side,
+            arc.Score ? "fieldgraphic__arc--score" : null,
+            arc.Turnover ? "fieldgraphic__arc--turnover" : null,
+            arc.Latest ? "fieldgraphic__arc--latest" : null,
+            DrawsIn(arc) ? "fieldgraphic__arc--draw" : null,
+        }.Where(c => c is not null));
+
+    private static string Kind(DriveArcKind kind) => kind switch
+    {
+        DriveArcKind.Pass => "pass",
+        DriveArcKind.Run => "run",
+        DriveArcKind.Loss => "loss",
+        DriveArcKind.Penalty => "penalty",
+        DriveArcKind.NoGain => "nogain",
+        DriveArcKind.Kick => "kick",
+        _ => "run",
     };
 
     private static string N(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);

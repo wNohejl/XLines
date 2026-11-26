@@ -1,0 +1,101 @@
+/* The game leaders (GameLeaders.razor). No edge and no card: it sits in the window's card, and
+   its rows are divided by spacing alone, as the team comparison's are. Each row is the category's
+   label across the top in the secondary ink at footnote size, then two columns: the away leader at
+   the leading edge and the home leader at the trailing edge, each the figure in the primary ink,
+   the name under it, and the quiet line under that. Nothing is coloured as ahead — no state colour
+   and no accent at rest; the accent arrives only on a name under the pointer or the focus, which is
+   the link resolving. Every figure is tabular. No fixed width: the two columns share the row, so
+   it reads in a narrow column and a wide one, and a long name ends in an ellipsis, not a wrap. */
+
+.leaders {
+    width: 100%;
+    font-variant-numeric: tabular-nums;
+}
+
+.leaders__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+    font-size: var(--text-subheadline);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+}
+
+.leaders__team {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+}
+
+.leaders__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.leaders__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--space-4);
+    row-gap: var(--space-1);
+}
+
+.leaders__label {
+    grid-column: 1 / -1;
+    font-size: var(--text-footnote);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.leaders__side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.leaders__side--home {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.leaders__value {
+    font-size: var(--text-title3);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+    color: var(--text-primary);
+}
+
+.leaders__name {
+    max-width: 100%;
+    font-size: var(--text-subheadline);
+    color: var(--text-primary);
+}
+
+/* The home side's name sits flush with the trailing edge, so the link's reserved shortcut goes
+   before it rather than after: the name lines up with the figure above it, and nothing moves when
+   the shortcut appears. */
+.leaders__side--home ::deep .desklink {
+    flex-direction: row-reverse;
+}
+
+.leaders__line {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-footnote);
+    color: var(--text-secondary);
+}
+
+.leaders__none {
+    font-size: var(--text-title3);
+    line-height: var(--leading-tight);
+    color: var(--text-tertiary);
+}

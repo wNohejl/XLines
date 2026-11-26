@@ -626,13 +626,257 @@ public class GamecastPanelTests : DeskTestContext
     [Theory]
     [InlineData(GameStatus.Final)]
     [InlineData(GameStatus.Scheduled)]
-    public void A_game_not_on_has_no_field_card(GameStatus status)
+    public void A_game_not_started_or_a_final_with_no_drives_has_no_field_card(GameStatus status)
     {
         _data.Header = FakeGamecastData.Live(status: status);
         var cut = Render();
 
         Assert.Empty(cut.FindAll(".gc__fieldcard"));
         Assert.Empty(cut.FindComponents<FieldGraphic>());
+    }
+
+    // ---- One drive selected: the log, the chart and the field ------------------------------
+
+    /// <summary>
+    /// A final in three drives: PHI's touchdown (plays 1–2, from its 25 to the end zone), WSH's
+    /// punt (3–4), and PHI's last drive, run out on downs (5). None is current.
+    /// </summary>
+    private void ThreeFinishedDrives()
+    {
+        _data.Header = FakeGamecastData.Live(status: GameStatus.Final);
+        _data.Plays.AddRange([
+            FakeGamecastData.Play(1, 1, "J.Hurts run for 4 yards"),
+            FakeGamecastData.Play(2, 1, "J.Hurts pass to D.Smith for a touchdown", scoring: true),
+            FakeGamecastData.Play(3, 2, "B.Robinson run for 2 yards"),
+            FakeGamecastData.Play(4, 2, "T.Way punts 48 yards"),
+            FakeGamecastData.Play(5, 3, "J.Hurts pass incomplete")
+        ]);
+        _data.Drives.AddRange([
+            FakeGamecastData.Drive(1, 1, 2, current: false, result: "TD", plays: 7, yards: 62, elapsed: "3:48", score: true) with { EndYardLine = 0 },
+            FakeGamecastData.Drive(2, 3, 4, current: false, result: "Punt", plays: 2, yards: 2)
+                with { TeamId = FakeGamecastData.HomeId, TeamAbbrev = "WSH", StartYardLine = 25, EndYardLine = 27 },
+            FakeGamecastData.Drive(3, 5, 5, current: false, result: "Downs", plays: 1, yards: 0) with { EndYardLine = 75 }
+        ]);
+    }
+
+    private FieldGraphic Field(IRenderedFragment cut) => cut.FindComponent<FieldGraphic>().Instance;
+
+    private static long[] FieldSeqs(FieldGraphic graphic) => graphic.DrivePlays.Select(p => p.Sequence).ToArray();
+
+    private static IReadOnlyList<AngleSharp.Dom.IElement> LiveDriveKeys(IRenderedFragment cut)
+        => cut.FindAll(".gc__fieldcard .wgroup__bar button").Where(b => b.TextContent.Trim() == "Live drive").ToList();
+
+    [Fact]
+    public void A_final_replays_its_last_scoring_drive_on_the_field()
+    {
+        ThreeFinishedDrives();
+        var cut = Render();
+
+        var card = cut.Find("section.wsection.gc__fieldcard");
+        Assert.Equal("Field", card.QuerySelector(".wgroup__bar .wgroup__title")!.TextContent.Trim());
+
+        var graphic = Field(cut);
+        Assert.True(graphic.Replay);
+        Assert.Equal(new long[] { 1, 2 }, FieldSeqs(graphic));
+        Assert.Equal((false, 75, 0, "TD"), (graphic.HomeBall!.Value, graphic.DriveStartYardLine!.Value, graphic.DriveEndYardLine!.Value, graphic.DriveResult));
+        Assert.Equal("Field: PHI drive, 7 plays, 62 yds, 3:48, TD", graphic.Label);
+
+        // The card says which drive it is, in the drive log's own words.
+        var caption = card.QuerySelector(".gc__fielddrive")!;
+        Assert.Contains("PHI", caption.TextContent);
+        Assert.Contains("7 plays, 62 yds, 3:48 · TD", caption.TextContent);
+
+        // A final has no live drive to return to; the chart marks the drive on the field.
+        Assert.Empty(LiveDriveKeys(cut));
+        Assert.Equal("true", cut.Find(".drivechart__row[data-sequence='1']").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void A_final_with_no_score_replays_its_last_drive_with_plays()
+    {
+        ThreeFinishedDrives();
+        _data.Drives[0] = _data.Drives[0] with { IsScore = false, Result = "Punt" };
+        _data.Drives.Add(FakeGamecastData.Drive(4, 9, 9, current: false, result: "End of Game"));
+        var cut = Render();
+
+        // Drive 4 holds no play, so the field replays drive 3.
+        Assert.Equal(new long[] { 5 }, FieldSeqs(Field(cut)));
+        Assert.Equal("Downs", Field(cut).DriveResult);
+    }
+
+    [Fact]
+    public void Pressing_a_drive_on_the_chart_moves_the_field_and_opens_it_in_the_log()
+    {
+        ThreeFinishedDrives();
+        var cut = Render();
+
+        cut.Find(".drivechart__row[data-sequence='2']").Click();
+
+        var graphic = Field(cut);
+        Assert.True(graphic.Replay);
+        Assert.Equal(new long[] { 3, 4 }, FieldSeqs(graphic));
+        Assert.Equal((true, "Punt"), (graphic.HomeBall!.Value, graphic.DriveResult));
+        Assert.Contains("WSH", cut.Find(".gc__fielddrive").TextContent);
+
+        Assert.Equal("true", cut.Find("[data-drive='2'] button").GetAttribute("aria-expanded"));
+        Assert.Equal(new string?[] { "3", "4" }, Seqs(cut, ".gc__plays .gc__play"));
+        Assert.Equal("true", cut.Find(".drivechart__row[data-sequence='2']").GetAttribute("aria-pressed"));
+        Assert.Equal("false", cut.Find(".drivechart__row[data-sequence='1']").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void Pressing_a_drive_in_the_log_moves_the_field_and_closing_it_keeps_it_there_once_the_game_is_over()
+    {
+        ThreeFinishedDrives();
+        var cut = Render();
+
+        cut.Find("[data-drive='3'] button").Click();
+        Assert.Equal(new long[] { 5 }, FieldSeqs(Field(cut)));
+        Assert.Equal("true", cut.Find(".drivechart__row[data-sequence='3']").GetAttribute("aria-pressed"));
+
+        // Closed in the log, the drive stays on the field: a final has nothing else to follow.
+        cut.Find("[data-drive='3'] button").Click();
+        Assert.Empty(cut.FindAll(".gc__plays"));
+        Assert.Equal(new long[] { 5 }, FieldSeqs(Field(cut)));
+    }
+
+    [Fact]
+    public void Every_play_still_opens_every_drive_with_a_drive_on_the_field()
+    {
+        ThreeFinishedDrives();
+        var cut = Render();
+
+        cut.Find(".drivechart__row[data-sequence='2']").Click();
+        cut.Find("label[title^='Open every drive'] input").Change(true);
+
+        Assert.Equal(new string?[] { "1", "2", "3", "4", "5" }, Seqs(cut, ".gc__plays .gc__play"));
+
+        // The chart still moves the field while every drive is open.
+        cut.Find(".drivechart__row[data-sequence='3']").Click();
+        Assert.Equal(new long[] { 5 }, FieldSeqs(Field(cut)));
+        Assert.Equal(5, cut.FindAll(".gc__plays .gc__play").Count);
+    }
+
+    [Fact]
+    public void A_live_game_follows_the_drive_in_progress_until_another_is_chosen()
+    {
+        TwoDrives();
+        var cut = Render();
+
+        Assert.False(Field(cut).Replay);
+        Assert.Equal(new long[] { 3, 4 }, FieldSeqs(Field(cut)));
+        Assert.Empty(LiveDriveKeys(cut));
+        Assert.Empty(cut.FindAll(".gc__fielddrive"));
+
+        // A past drive chosen in the log: replayed, and the card offers the way back.
+        cut.Find("[data-drive='1'] button").Click();
+        var graphic = Field(cut);
+        Assert.True(graphic.Replay);
+        Assert.Equal(new long[] { 1, 2 }, FieldSeqs(graphic));
+        Assert.Contains("Earlier drive", cut.Find(".gc__fielddrive").TextContent);
+        var back = Assert.Single(LiveDriveKeys(cut));
+
+        back.Click();
+        Assert.False(Field(cut).Replay);
+        Assert.Equal(new long[] { 3, 4 }, FieldSeqs(Field(cut)));
+        Assert.Empty(LiveDriveKeys(cut));
+        Assert.Equal("true", cut.Find("[data-drive='2'] button").GetAttribute("aria-expanded"));
+        Assert.Equal("false", cut.Find("[data-drive='1'] button").GetAttribute("aria-expanded"));
+    }
+
+    [Fact]
+    public void Live_closing_the_chosen_drive_in_the_log_returns_the_field_to_the_drive_in_progress()
+    {
+        TwoDrives();
+        var cut = Render();
+
+        cut.Find(".drivechart__row[data-sequence='1']").Click();
+        Assert.True(Field(cut).Replay);
+
+        cut.Find("[data-drive='1'] button").Click();
+        Assert.False(Field(cut).Replay);
+        Assert.Equal(new long[] { 3, 4 }, FieldSeqs(Field(cut)));
+        Assert.Empty(LiveDriveKeys(cut));
+    }
+
+    [Fact]
+    public void Live_choosing_the_drive_in_progress_is_following_it()
+    {
+        TwoDrives();
+        var cut = Render();
+
+        cut.Find(".drivechart__row[data-sequence='1']").Click();
+        cut.Find(".drivechart__row[data-sequence='2']").Click();
+
+        Assert.False(Field(cut).Replay);
+        Assert.Equal(new long[] { 3, 4 }, FieldSeqs(Field(cut)));
+        Assert.Empty(LiveDriveKeys(cut));
+        Assert.Equal("true", cut.Find(".drivechart__row[data-sequence='2']").GetAttribute("aria-pressed"));
+    }
+
+    [Fact]
+    public void A_final_with_no_drives_has_no_field_and_no_drive_chart()
+    {
+        _data.Header = FakeGamecastData.Live(status: GameStatus.Final);
+        FourPlays();
+        var cut = Render();
+
+        Assert.Empty(cut.FindAll(".gc__fieldcard"));
+        Assert.Empty(cut.FindAll(".gc__drivecard"));
+        Assert.Empty(cut.FindComponents<DriveChart>());
+    }
+
+    [Fact]
+    public void The_drive_chart_card_follows_the_field_and_is_handed_the_sides()
+    {
+        TwoDrives();
+        var cut = Render();
+
+        var card = cut.Find("section.wsection.gc__drivecard");
+        Assert.Equal("Drive chart", card.QuerySelector(".wgroup__bar .wgroup__title")!.TextContent.Trim());
+        var chart = cut.FindComponent<DriveChart>().Instance;
+        Assert.Equal((FakeGamecastData.HomeId, "WSH", "PHI", (int?)2), (chart.HomeTeamId, chart.HomeAbbrev, chart.AwayAbbrev, chart.Selected));
+    }
+
+    // ---- Game leaders ----------------------------------------------------------------------
+
+    private static GameBoxScore LeadersBox() => new(new Game { Id = BoardRows.GameId },
+        [new BoxScoreLine(21, "Jayden Daniels", "QB", true, new Dictionary<string, string> { ["passing.YDS"] = "289", ["C/ATT"] = "23/35" })],
+        [new BoxScoreLine(11, "Jalen Hurts", "QB", false, new Dictionary<string, string> { ["passing.YDS"] = "250", ["C/ATT"] = "20/30" })]);
+
+    [Fact]
+    public void The_game_leaders_card_sits_beside_the_comparison_when_the_box_has_leaders()
+    {
+        _data.Header = FakeGamecastData.Live(status: GameStatus.Final);
+        TwoDrives();
+        _data.Box = LeadersBox();
+        var cut = Render();
+
+        var titles = cut.FindAll(".gc__flow .wgroup__title").Select(t => t.TextContent.Trim()).ToList();
+        Assert.Equal(titles.IndexOf("Team comparison") + 1, titles.IndexOf("Game leaders"));
+        Assert.Contains("Jayden Daniels", cut.Find(".gc__leaderscard").TextContent);
+    }
+
+    [Fact]
+    public void A_leaders_name_opens_the_player()
+    {
+        _data.Header = FakeGamecastData.Live(status: GameStatus.Final);
+        TwoDrives();
+        _data.Box = LeadersBox();
+        var cut = Render();
+
+        Assert.True(cut.FindComponent<GameLeaders>().Instance.OnPlayer.HasDelegate);
+    }
+
+    [Fact]
+    public void No_box_score_no_game_leaders_card()
+    {
+        _data.Header = FakeGamecastData.Live(status: GameStatus.Final);
+        TwoDrives();
+        var cut = Render();
+
+        Assert.Empty(cut.FindAll(".gc__leaderscard"));
+        Assert.Empty(cut.FindComponents<GameLeaders>());
     }
 
     // ---- Empty states and the box score ----------------------------------------------------
@@ -861,21 +1105,22 @@ public class GamecastPanelTests : DeskTestContext
     // ---- The cards -------------------------------------------------------------------------
 
     [Fact]
-    public void A_live_game_flows_the_field_the_score_and_the_comparison_then_the_sections_across_the_row()
+    public void A_live_game_flows_the_field_its_drive_chart_the_score_and_the_comparison_then_the_sections_across_the_row()
     {
         TwoDrives();
         var cut = Render();
 
         var flow = cut.Find(".wflow.gc__flow");
         var children = flow.Children.Select(c => c.ClassList).ToList();
-        Assert.Equal(4, children.Count);
+        Assert.Equal(5, children.Count);
         Assert.Contains("gc__fieldcard", children[0]);
-        Assert.Contains("gc__scorecard", children[1]);
-        Assert.Contains("gc__comparecard", children[2]);
-        Assert.Contains("wsection--span", children[3]);
-        Assert.NotEmpty(flow.Children[3].QuerySelectorAll("[role='tab']"));
+        Assert.Contains("gc__drivecard", children[1]);
+        Assert.Contains("gc__scorecard", children[2]);
+        Assert.Contains("gc__comparecard", children[3]);
+        Assert.Contains("wsection--span", children[4]);
+        Assert.NotEmpty(flow.Children[4].QuerySelectorAll("[role='tab']"));
 
-        Assert.Equal(new[] { "Field", "Score by quarter", "Team comparison" },
+        Assert.Equal(new[] { "Field", "Drive chart", "Score by quarter", "Team comparison" },
             cut.FindAll(".gc__flow > section > .wgroup > .wgroup__bar .wgroup__title").Select(t => t.TextContent.Trim()).ToArray());
     }
 

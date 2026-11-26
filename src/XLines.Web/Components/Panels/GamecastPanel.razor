@@ -11,15 +11,30 @@
 @inject IJSRuntime JS
 
 @*
-    One NFL game, play by play, while it is on (spec 2026-10-24 §6.1, §6.4).
+    One NFL game, play by play, while it is on and once it is over (spec 2026-10-24 §6.1, §6.4;
+    the drive chart, the replayed field and the leaders are spec 2026-11-26 §3).
 
     The anatomy is ADR 0020's: the title is the matchup and the score with the period and the
     clock as tags and the situation as its one quiet line. Under it, a flow of cards (ADR 0032):
-    the field while the game is on, the score by quarter, and the two teams compared — as many
-    across as the window's width allows, stacked in a narrow one — and beneath them, the whole
-    row, the sections: the drive log, the win probability, the scoring and the box score. No
-    in-play market: that is a later step, and an empty section promising it would be a
-    placeholder shaped like nothing.
+    the field, the drive chart, the score by quarter, the two teams compared and the game's
+    leaders — as many across as the window's width allows, stacked in a narrow one — and beneath
+    them, the whole row, the sections: the drive log, the win probability, the scoring and the
+    box score. A card with nothing to hold is left out rather than drawn empty: a final with no
+    drives has no field and no chart, a box score with no leader no leaders. No in-play market:
+    that is a later step, and an empty section promising it would be a placeholder shaped like
+    nothing.
+
+    One drive is selected, and the log, the chart and the field all show it, so the three never
+    disagree about which drive the operator is reading. Pressing a drive on the chart or in the
+    log selects it: it opens in the log and the field replays it — its plays as arcs, its start,
+    and its end with the result — with the drive named under the field in the log's own words.
+    While the game is on the field follows the drive in progress until another is chosen; with a
+    past drive on it the card says so and offers one key, "Live drive", back to the play, and
+    choosing the drive in progress is simply following it. Closing the selected drive in the log
+    sends a live field back to the drive in progress, and leaves a final's where it is, since a
+    game that is over has nothing else for the field to follow. A final opens on its last
+    scoring drive, the moment a game is usually remembered by, else on its last drive with a
+    play held.
 
     How the plays are arriving is one state (StateOf): live, read in turn, quiet, final or not
     started. Live says nothing extra — the period tag and the running clock already say it. Read
@@ -126,6 +141,8 @@ else
         var feed = Data.Feed(GameId);
         var state = StateOf(game.Status, feed, QuietFor(game, now), IsBreak(game));
         var (drivePlays, driveStart) = FieldDrive();
+        var replay = ReplayDrive;
+        var fieldShown = isLive || replay is not null;
         var hasLinescore = _header.AwayLinescore is { Count: > 0 } || _header.HomeLinescore is { Count: > 0 };
         var compared = (game.Status is GameStatus.Live or GameStatus.Final) && _comparison.Count > 0;
 
@@ -133,20 +150,55 @@ else
            a short card keeping its own height beside a tall one. The sections take the whole row
            beneath them (.wsection--span), as the Game window's box score does. *@
         <div class="wflow gc__flow">
-            @if (isLive)
+            @if (fieldShown)
             {
                 @* The field, and how its plays are arriving: a warning note about the card when
                    they are not (its Notice, never inside the card), one quiet footer line while
-                   the game is read in turn, and nothing while they arrive at full pace. *@
+                   the game is read in turn, and nothing while they arrive at full pace. A drive
+                   replayed is named under the field in the drive log's own words; while the game
+                   is on, the card's one key brings the field back to the drive in progress. *@
                 <FormGroup Title="Field" Class="gc__fieldcard"
+                           Keys="@(isLive && replay is not null ? LiveDriveKey : null)"
                            Notice="@(state == FeedState.Quiet ? QuietNote(feed, now) : null)"
                            Footer="@(state == FeedState.Slow ? Words(SlowLine(feed)) : null)">
                     <div class="gc__cardbody">
-                        <FieldGraphic HomeAbbrev="@_header.Home.Abbrev" AwayAbbrev="@_header.Away.Abbrev"
-                                      YardLine="@_header.YardLine" Distance="@_header.Distance"
-                                      HomeBall="@HomeBall(_header)" Label="@FieldLabel(game, situation)"
-                                      Sport="@_header.SportKey"
-                                      DrivePlays="drivePlays" DriveStartYardLine="driveStart" />
+                        @if (replay is not null)
+                        {
+                            <FieldGraphic HomeAbbrev="@_header.Home.Abbrev" AwayAbbrev="@_header.Away.Abbrev"
+                                          Replay="true" HomeBall="@SideOf(replay)" Label="@ReplayLabel(replay)"
+                                          Sport="@_header.SportKey"
+                                          DrivePlays="@PlaysOf(replay)"
+                                          DriveStartYardLine="replay.StartYardLine" DriveEndYardLine="replay.EndYardLine"
+                                          DriveResult="@replay.Result" />
+                            <p class="gc__fielddrive">
+                                @if (isLive)
+                                {
+                                    <span class="gc__fieldnote">Earlier drive</span>
+                                }
+                                @RenderDriveLead(replay)
+                            </p>
+                        }
+                        else
+                        {
+                            <FieldGraphic HomeAbbrev="@_header.Home.Abbrev" AwayAbbrev="@_header.Away.Abbrev"
+                                          YardLine="@_header.YardLine" Distance="@_header.Distance"
+                                          HomeBall="@HomeBall(_header)" Label="@FieldLabel(game, situation)"
+                                          Sport="@_header.SportKey"
+                                          DrivePlays="drivePlays" DriveStartYardLine="driveStart" />
+                        }
+                    </div>
+                </FormGroup>
+            }
+
+            @if (_drives.Count > 0)
+            {
+                @* Every drive on one field, a row each; pressing one is choosing the drive the
+                   field replays and the log opens, so the three always agree. *@
+                <FormGroup Title="Drive chart" Class="gc__drivecard">
+                    <div class="gc__cardbody">
+                        <DriveChart Drives="_drives" HomeTeamId="@_header.Home.Id"
+                                    HomeAbbrev="@_header.Home.Abbrev" AwayAbbrev="@_header.Away.Abbrev"
+                                    Selected="@FieldSequence" OnSelect="SelectDrive" Sport="@_header.SportKey" />
                     </div>
                 </FormGroup>
             }
@@ -169,6 +221,16 @@ else
                     <div class="gc__cardbody">
                         <TeamComparison Rows="_comparison" AwayAbbrev="@_header.Away.Abbrev" HomeAbbrev="@_header.Home.Abbrev"
                                         Sport="@_header.SportKey" />
+                    </div>
+                </FormGroup>
+            }
+
+            @if (_hasLeaders)
+            {
+                <FormGroup Title="Game leaders" Class="gc__leaderscard">
+                    <div class="gc__cardbody">
+                        <GameLeaders Box="_box" HomeAbbrev="@_header.Home.Abbrev" AwayAbbrev="@_header.Away.Abbrev"
+                                     Sport="@_header.SportKey" OnPlayer="OpenPlayer" />
                     </div>
                 </FormGroup>
             }
@@ -961,8 +1023,104 @@ else
     /// <summary>The comparison's rows, rebuilt only when the plays, the drives or the box score move.</summary>
     private IReadOnlyList<ComparisonRow> _comparison = [];
 
+    /// <summary>Whether the box score names a leader in any category; rebuilt with the comparison, when the box can have moved.</summary>
+    private bool _hasLeaders;
+
     private void RebuildComparison()
-        => _comparison = _header is null ? [] : GamecastTelemetry.Compare(_header, _drives, _plays, _box);
+    {
+        _comparison = _header is null ? [] : GamecastTelemetry.Compare(_header, _drives, _plays, _box);
+        _hasLeaders = GameLeadersModel.For(_box, _header?.SportKey).Count > 0;
+    }
+
+    // ---- The drive on the field ----------------------------------------------------------
+
+    /// <summary>
+    /// The drive the operator put on the field, from the log or the chart. Null with
+    /// <see cref="_fieldChosen"/> false is the window's own choice: the drive in progress while
+    /// the game is on, <see cref="FinalDrive"/> once it is over.
+    /// </summary>
+    private int? _fieldDrive;
+    private bool _fieldChosen;
+
+    /// <summary>The drive chosen for the field, while it is still among the drives read.</summary>
+    private GamecastDrive? ChosenDrive
+        => _fieldChosen && _fieldDrive is { } sequence ? _drives.FirstOrDefault(d => d.Sequence == sequence) : null;
+
+    /// <summary>
+    /// The drive the field replays, null while it follows the drive in progress: a live game's
+    /// past drive the operator chose (choosing the drive in progress is following it), and for a
+    /// final the chosen drive or else <see cref="FinalDrive"/>. A game not started replays nothing.
+    /// </summary>
+    private GamecastDrive? ReplayDrive => _game?.Status switch
+    {
+        GameStatus.Live => ChosenDrive is { } chosen && chosen.Sequence != CurrentDrive?.Sequence ? chosen : null,
+        GameStatus.Final => ChosenDrive ?? FinalDrive(),
+        _ => null
+    };
+
+    /// <summary>
+    /// What a final opens the field on: the last drive that scored, the moment a game is usually
+    /// remembered by, else the last drive with a play held. None for a game with no drives.
+    /// </summary>
+    private GamecastDrive? FinalDrive()
+        => _drives.LastOrDefault(d => d.IsScore) ?? _drives.LastOrDefault(d => _plays.Any(p => DriveOf(p, _drives) == d.Sequence));
+
+    /// <summary>The drive on the field, for the chart's selection: the replayed one, else the one in progress.</summary>
+    private int? FieldSequence => ReplayDrive?.Sequence ?? (_game?.Status == GameStatus.Live ? CurrentDrive?.Sequence : null);
+
+    /// <summary>
+    /// One drive chosen, from the chart or the log: it opens in the log and goes on the field.
+    /// The drive in progress, chosen while the game is on, is the field following it, so the
+    /// "Live drive" key does not offer to return to where the field already is.
+    /// </summary>
+    private void SelectDrive(int sequence)
+    {
+        _driveChosen = true;
+        _openDrive = sequence;
+
+        var following = _game?.Status == GameStatus.Live && sequence == CurrentDrive?.Sequence;
+        _fieldChosen = !following;
+        _fieldDrive = following ? null : sequence;
+    }
+
+    /// <summary>Back to the drive in progress: the field follows it again, and the log opens it again.</summary>
+    private void FollowLiveDrive()
+    {
+        _fieldChosen = false;
+        _fieldDrive = null;
+        _driveChosen = false;
+        _openDrive = null;
+    }
+
+    /// <summary>The field card's one key while a live game's past drive is on it.</summary>
+    private RenderFragment LiveDriveKey => @<DeskButton Icon="@Icons.Material.Filled.Replay" Size="DeskKeySize.Small"
+                                                        Title="Put the drive in progress back on the field"
+                                                        OnClick="FollowLiveDrive">Live drive</DeskButton>;
+
+    /// <summary>True when the drive was the home side's, false for the away side's, null for neither.</summary>
+    private bool? SideOf(GamecastDrive drive)
+        => drive.TeamId is not { } id || _header is null ? null
+            : id == _header.Home.Id ? true
+            : id == _header.Away.Id ? false
+            : null;
+
+    /// <summary>A drive's plays held, in sequence order.</summary>
+    private List<GamecastPlay> PlaysOf(GamecastDrive drive)
+        => _plays.Where(p => DriveOf(p, _drives) == drive.Sequence).ToList();
+
+    /// <summary>A replayed drive in words, as its log row says it: "Field: PHI drive, 7 plays, 62 yds, 3:48, TD".</summary>
+    private string ReplayLabel(GamecastDrive drive)
+    {
+        var side = SideOf(drive) switch
+        {
+            true => _header!.Home.Abbrev,
+            false => _header!.Away.Abbrev,
+            null => drive.TeamAbbrev
+        };
+
+        var line = DriveLine(drive).Replace(" · ", ", ", StringComparison.Ordinal);
+        return string.IsNullOrWhiteSpace(side) ? $"Field: drive, {line}" : $"Field: {side} drive, {line}";
+    }
 
     private static DateTimeOffset? Later(DateTimeOffset? a, DateTimeOffset? b)
         => a is null ? b : b is null ? a : a > b ? a : b;
@@ -1017,12 +1175,32 @@ else
 
     private int? OpenDrive => _driveChosen ? _openDrive : CurrentDrive?.Sequence;
 
-    /// <summary>One drive open at a time, as one row is everywhere on the desk. Pressing the open one closes it.</summary>
+    /// <summary>
+    /// One drive open at a time, as one row is everywhere on the desk; opening one is choosing it
+    /// for the field as well (<see cref="SelectDrive"/>). Pressing the open one closes it: while
+    /// the game is on the field goes back to the drive in progress, and once it is over the field
+    /// keeps the drive, since there is nothing else for it to follow. "Other plays" is no drive,
+    /// so it only opens and closes.
+    /// </summary>
     private void ToggleDrive(int sequence)
     {
         var open = OpenDrive;
-        _driveChosen = true;
-        _openDrive = open == sequence ? null : sequence;
+
+        if (sequence == OtherPlays || open == sequence)
+        {
+            _driveChosen = true;
+            _openDrive = open == sequence ? null : sequence;
+
+            if (sequence != OtherPlays && _game?.Status == GameStatus.Live)
+            {
+                _fieldChosen = false;
+                _fieldDrive = null;
+            }
+
+            return;
+        }
+
+        SelectDrive(sequence);
     }
 
     /// <summary>

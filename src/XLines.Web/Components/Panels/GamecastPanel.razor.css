@@ -52,6 +52,28 @@
     }
 }
 
+/* The drive the field replays, named under it in the drive log's words: one quiet line where a
+   live field's caption would sit, cut to fit rather than wrapped. While the game is on it opens
+   with "Earlier drive", so a replay is never read as the play in progress. */
+.gc__fielddrive {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    min-width: 0;
+    margin: var(--space-2) 0 0;
+    font-size: var(--text-footnote);
+}
+
+.gc__fieldnote {
+    flex: 0 0 auto;
+    color: var(--text-secondary);
+}
+
+.gc__fieldnote::after {
+    content: "·";
+    margin-left: var(--space-2);
+}
+
 /* A period's heading in the drive log: a quiet line the drives of that period sit under. */
 .gc__period {
     min-height: 0;
