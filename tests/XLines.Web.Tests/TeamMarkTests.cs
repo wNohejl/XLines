@@ -123,6 +123,29 @@ public class TeamMarkTests : DeskTestContext
         Assert.All(cut.FindAll("img"), img => Assert.Equal(box, img.GetAttribute("height")));
     }
 
+    /// <summary>
+    /// A crest that does not arrive draws the club's disc, not a sized box with nothing in it; and
+    /// the component asked for another club afterwards tries that club's crest again.
+    /// </summary>
+    [Fact]
+    public void A_crest_that_fails_to_load_falls_back_to_the_disc()
+    {
+        var cut = RenderComponent<TeamMark>(p => p
+            .Add(m => m.Sport, "nfl")
+            .Add(m => m.Abbrev, "PIT")
+            .Add(m => m.Size, TeamMarkSize.Large));
+
+        cut.Find("img.teammark__img--dark").TriggerEvent("onerror", new Microsoft.AspNetCore.Components.Web.ErrorEventArgs());
+
+        var disc = cut.Find("span.teammark.teammark--disc");
+        Assert.Contains("teammark--lg", disc.ClassList);
+        Assert.Equal($"--team:{TeamColors.For("nfl", "PIT")}", disc.GetAttribute("style"));
+        Assert.Empty(cut.FindAll("img"));
+
+        cut.SetParametersAndRender(p => p.Add(m => m.Abbrev, "DEN"));
+        Assert.Contains("/nfl/500-dark/den.png", cut.Find("img.teammark__img--dark").GetAttribute("src"));
+    }
+
     [Fact]
     public void Every_abbrev_the_desk_uses_has_a_colour()
     {

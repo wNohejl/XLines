@@ -23,7 +23,8 @@
     heading above the table is the caller's too, since each window titles its sides its own way.
 *@
 
-<div class="gridwrap @Class">
+@* .rostertable carries the fit rule in xlines.css: the name gives way, the figures do not. *@
+<div class="gridwrap rostertable @Class">
     <DeskGrid T="PlayerForm" Items="Side" Class="@(OnRowClick.HasDelegate ? "deskgrid--clickable" : null)"
               RowClassFunc="@((p, _) => RowClass?.Invoke(p) ?? string.Empty)"
               OnRowClick="@(e => OnRowClick.InvokeAsync(e.Item))"

@@ -2137,6 +2137,46 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
 
 /* A player's name is the row's subject; the stat columns scroll before it is cut to "Alo…". */
 .gameplayers .deskgrid .mud-table-body .mud-table-cell.trunc { min-width: 9.5rem; }
+
+/* ---- A roster table fits its card (RosterTable, .rostertable) ---------------------------
+   Player, Pos, GP, the stat columns and Last, in a card as narrow as Line movement's 720px. The
+   figure headings were held to one line, so "Passes defended" or "Receptions" set its column's
+   width, the nine columns came to about 770px, and Last was cut to "L…" behind a scroll inside
+   the card. The split is the one the operations windows use (.ops-col--fit, .ops-col--grow): the
+   name is the column that gives way, down to a floor that still reads a name and then to an
+   ellipsis (its full text in its title), and the figure columns keep their content's width,
+   right-aligned and tabular as the Desk sets every end column. */
+.rostertable .deskgrid .mud-table-cell.ops-col--grow { min-width: 8rem; }
+
+/* In a grid of a card's width or less a figure heading may break between its words, so its
+   column is as wide as its longest word or its widest figure, not its whole label: "Passes
+   defended" stands over its column in two lines rather than pushing Last out of the card. The
+   heading row aligns to its foot, so a one-line heading stands on the line a two-line one ends
+   on, over its figures. Wider than that a heading keeps its one line; the name has the room. */
+@container deskgrid (max-width: 720px) {
+    .rostertable .deskgrid .mud-table-head .mud-table-cell { vertical-align: bottom; }
+    .rostertable .deskgrid .mud-table-head .mud-table-cell.deskgrid__end { white-space: normal; }
+    .rostertable .mud-table-head .mud-table-cell.deskgrid__end .column-header .sortable-column-header {
+        white-space: normal;
+        text-wrap: balance;
+    }
+}
+
+/* Only a card narrower than its figures at their narrowest scrolls them, inside the table (the
+   Desk's grid rule), and then the name stays pinned at the leading edge over the card's opaque
+   ground, so a figure scrolled into view still has its player beside it. Low specificity
+   (`:where()`), so the Desk's hover and the open row's wash still reach the cell; the wash is
+   translucent, so on the pinned cell it is laid over the ground rather than replacing it, as the
+   Board's pinned cells take it. */
+:where(.gameroster__side > .psection, .oddsform > .psection) .rostertable :where(.mud-table-row) > .mud-table-cell:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: var(--surface-2);
+}
+:where(.gameroster__side > .psection, .oddsform > .psection) .rostertable .deskgrid--clickable .mud-table-row.board__row--open > .mud-table-cell:first-child {
+    background: linear-gradient(var(--accent-wash), var(--accent-wash)), var(--surface-2);
+}
 .gamelines__book {
     overflow: hidden;
     text-overflow: ellipsis;

@@ -261,6 +261,59 @@ public class GameWindowCardsTests : DeskTestContext
         Assert.Matches(@"@container wflow \(min-width: 1320px\) \{[^}]*\}\s*\.gameroster__cols \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}", css);
     }
 
+    /// <summary>
+    /// Every stat card names its club with its crest, the home column's as well as the away's: a
+    /// Game window once showed "[crest] Denver Broncos · Passing" over a gap before "Pittsburgh
+    /// Steelers · Passing". Each card's header carries a crest for its own club, at the card size.
+    /// </summary>
+    [Fact]
+    public void Both_columns_stat_cards_draw_their_own_club_s_crest()
+    {
+        var game = BoardRows.Game();
+        _data.Detail = GameWindowDetail.Empty with
+        {
+            Matchup = new MatchupForm(game,
+                [Player(2, "Patrick Mahomes", true), Player(3, "Travis Kelce", true)],
+                [Player(1, "Josh Allen", false)], 2)
+        };
+
+        var cut = Render();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".gameroster__side")));
+        foreach (var (side, club) in new[] { ("away", "buf"), ("home", "kc") })
+        {
+            var heads = cut.FindAll($".gameroster__side[data-side={side}] > .psection > .psection__head .panel-h");
+            Assert.NotEmpty(heads);
+            Assert.All(heads, head =>
+            {
+                var mark = head.QuerySelector("span.teammark.teammark--crest.teammark--lg");
+                Assert.NotNull(mark);
+                Assert.Contains($"/nfl/500-dark/{club}.png", mark!.QuerySelector("img.teammark__img--dark")!.GetAttribute("src"));
+            });
+        }
+    }
+
+    /// <summary>A club with no crest still draws its mark in a stat card: the colour disc, not a gap.</summary>
+    [Fact]
+    public void A_stat_card_for_a_club_with_no_crest_draws_its_disc()
+    {
+        var game = BoardRows.Game();
+        game.Sport = new Sport { Key = "mlb", Name = "MLB" };
+        game.HomeTeam = new Team { Name = "Arizona Diamondbacks", Abbrev = "AZ" };
+        _data.Row = BoardRows.Row() with { Game = game };
+        _data.Detail = GameWindowDetail.Empty with
+        {
+            Matchup = new MatchupForm(game, [Player(2, "Ketel Marte", true)], [Player(1, "Josh Allen", false)], 2)
+        };
+
+        var cut = Render();
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".gameroster__side[data-side=home] .panel-h")));
+        var head = cut.Find(".gameroster__side[data-side=home] > .psection > .psection__head .panel-h");
+        Assert.NotNull(head.QuerySelector("span.teammark.teammark--disc.teammark--lg"));
+        Assert.Empty(head.QuerySelectorAll("img"));
+    }
+
     /// <summary>View more is the window's to keep: a market closed and opened again shows every book still.</summary>
     [Fact]
     public void An_opened_market_keeps_view_more_across_closing_and_reopening()

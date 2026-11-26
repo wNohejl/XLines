@@ -5,18 +5,25 @@
 
     The crest is two images, one drawn for a dark ground and one for a light, and the sheet shows
     the one the theme wants; both are lazy, so the hidden one is never fetched. The box is sized
-    by the class whether or not the image arrives, so a row does not shift when it does, and an
-    image that fails draws nothing (its alt is empty). Decorative, so hidden from assistive tech:
-    the name beside it says who the team is.
+    by the class whether or not the image arrives, so a row does not shift when it does.
+    Decorative, so hidden from assistive tech: the name beside it says who the team is.
+
+    A crest that does not arrive falls back to the disc (or to nothing), as a club without one
+    does. Each size is its own file on ESPN's host, so one window can ask for a club's crest at a
+    size no other window has fetched, and when that one request fails the sized box used to stay
+    on the page with nothing in it: a Game window's home cards showed a gap before "Pittsburgh
+    Steelers · Passing" while the matchup card above, the same club at another size, drew it.
 *@
 
-@if (TeamLogos.Has(Sport, Abbrev))
+@if (!_crestFailed && TeamLogos.Has(Sport, Abbrev))
 {
     <span class="teammark teammark--crest @SizeClass" aria-hidden="true">
         <img class="teammark__img teammark__img--dark" src="@TeamLogos.For(Sport, Abbrev, onDark: true, Pixels)"
-             alt="" width="@Box" height="@Box" loading="lazy" decoding="async" draggable="false" />
+             alt="" width="@Box" height="@Box" loading="lazy" decoding="async" draggable="false"
+             @onerror="CrestFailed" />
         <img class="teammark__img teammark__img--light" src="@TeamLogos.For(Sport, Abbrev, onDark: false, Pixels)"
-             alt="" width="@Box" height="@Box" loading="lazy" decoding="async" draggable="false" />
+             alt="" width="@Box" height="@Box" loading="lazy" decoding="async" draggable="false"
+             @onerror="CrestFailed" />
     </span>
 }
 else if (TeamColors.For(Sport ?? "", Abbrev ?? "") is { } hex)
@@ -32,6 +39,24 @@ else if (TeamColors.For(Sport ?? "", Abbrev ?? "") is { } hex)
     [Parameter] public string? Abbrev { get; set; }
 
     [Parameter] public TeamMarkSize Size { get; set; } = TeamMarkSize.Small;
+
+    // The crest the current parameters ask for failed to load. Reset when they name another
+    // file, since a component reused for another club or size (a season switched, a row moved)
+    // is asking for a different image.
+    private bool _crestFailed;
+    private (string?, string?, TeamMarkSize) _asked;
+
+    protected override void OnParametersSet()
+    {
+        var asked = (Sport, Abbrev, Size);
+        if (asked != _asked)
+        {
+            _asked = asked;
+            _crestFailed = false;
+        }
+    }
+
+    private void CrestFailed() => _crestFailed = true;
 
     private string SizeClass => Size switch
     {
