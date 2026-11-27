@@ -7,3 +7,13 @@
 *@
 <script src="@Assets["_content/MudBlazor/MudBlazor.min.js"]"></script>
 <script src="@Assets[DeskAssets.Js("desk-glide.js")]"></script>
+@*  ADR 0034, step 2: the native tooltip's one script, delegated on the document like the glide,
+    and only on a desk whose tooltips have left MudBlazor. *@
+@if ((Services.GetService(typeof(DeskNative)) as DeskNative ?? DeskNative.Off).Tooltip)
+{
+    <script src="@Assets[DeskAssets.Js("tooltip.js")]"></script>
+}
+
+@code {
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+}

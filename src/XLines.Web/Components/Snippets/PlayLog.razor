@@ -16,6 +16,10 @@
     play of a game the feed wrote no drives for. Each row is keyed by the play's id, so a play
     appended is an insert and a play corrected is its own row redrawn, never a rewrite of the list.
     Past VirtualizeAt rows the list is virtualised.
+
+    A play that moved the home side's win probability five points or more from the play before it
+    in the game ends its row with the swing, from the side that gained ("WSH +14"), and the same in
+    words for a reader who cannot see it; nothing where either play holds no probability.
 *@
 
 <ol class="gc__log">
@@ -49,11 +53,71 @@
     /// <summary>Past this many rows the list is virtualised.</summary>
     [Parameter] public int VirtualizeAt { get; set; } = 150;
 
+    /// <summary>
+    /// The id of the play that has just landed, null when none has since the window opened: its row
+    /// is marked (gc__play--new), and under reduced motion — where the field's arc does not draw
+    /// itself in — briefly washed, so the eye still finds what changed.
+    /// </summary>
+    [Parameter] public long? Fresh { get; set; }
+
+    /// <summary>The home side's short name, for whom a swing in its favour is told.</summary>
+    [Parameter] public string? HomeAbbrev { get; set; }
+
+    /// <summary>The away side's short name.</summary>
+    [Parameter] public string? AwayAbbrev { get; set; }
+
+    /// <summary>
+    /// Every play of the game, in any order, so a swing is measured from the play before in the
+    /// game — a drive's first play from the last of the drive before it — rather than from the play
+    /// before in <see cref="Plays"/>. Null measures within <see cref="Plays"/>, by sequence.
+    /// </summary>
+    [Parameter] public IReadOnlyCollection<GamecastPlay>? Game { get; set; }
+
+    /// <summary>A move in the home side's win probability this large or larger (a fraction of one) is told on its play.</summary>
+    public const double SwingAt = 0.05;
+
+    /// <summary>The plays that swung the win probability, by id: the move in the home side's favour, in points.</summary>
+    private Dictionary<long, int> _swings = [];
+
+    // Measured on every set: a game's few hundred plays sort in no time, and a list the caller
+    // appends to in place would leave a cached measure behind.
+    protected override void OnParametersSet()
+        => _swings = Swings(Game ?? (IEnumerable<GamecastPlay>)Plays);
+
+    /// <summary>
+    /// Every play whose home win probability moved <see cref="SwingAt"/> or more from the play
+    /// before it in sequence, both of them holding one; the move in rounded points, home's way.
+    /// </summary>
+    public static Dictionary<long, int> Swings(IEnumerable<GamecastPlay> plays)
+    {
+        var swings = new Dictionary<long, int>();
+        GamecastPlay? previous = null;
+
+        foreach (var play in plays.OrderBy(p => p.Sequence))
+        {
+            if (previous?.HomeWinPct is { } before && play.HomeWinPct is { } after
+                && Math.Abs(after - before) >= SwingAt - 1e-9)
+            {
+                swings[play.Id] = (int)Math.Round((after - before) * 100, MidpointRounding.AwayFromZero);
+            }
+
+            previous = play;
+        }
+
+        return swings;
+    }
+
+    /// <summary>Who gained, and by how many points.</summary>
+    private (string Side, int Points) SwingOf(int homePoints)
+        => homePoints > 0
+            ? (string.IsNullOrWhiteSpace(HomeAbbrev) ? "Home" : HomeAbbrev, homePoints)
+            : (string.IsNullOrWhiteSpace(AwayAbbrev) ? "Away" : AwayAbbrev, -homePoints);
+
     /// <summary>Whether the plays are football's, the only league whose plays are headed.</summary>
     private bool Football => Sport is "nfl" or "ncaaf";
 
     private RenderFragment Row(GamecastPlay play) => @<text>
-        <li class="gc__play @(play.IsScoring ? "gc__play--score" : null)" @key="play.Id" data-seq="@play.Sequence" data-play="@play.Id">
+        <li class="gc__play @(play.IsScoring ? "gc__play--score" : null) @(play.Id == Fresh ? "gc__play--new" : null)" @key="play.Id" data-seq="@play.Sequence" data-play="@play.Id">
             <span class="gc__when">@When(Sport, play)</span>
             <span class="gc__body">
                 @if (Football && PlayHeadline.For(play) is { } headline)
@@ -82,6 +146,14 @@
                 @if (play.Yardage is { } yards && !play.IsPenalty)
                 {
                     <span class="gc__yards @(yards > 0 ? "up" : yards < 0 ? "down" : null)">@Yards(yards)</span>
+                }
+                @if (_swings.TryGetValue(play.Id, out var swing))
+                {
+                    var (side, points) = SwingOf(swing);
+                    <span class="gc__swing">
+                        <span aria-hidden="true">@side +@points</span>
+                        <span class="sr-only">Win probability: @side up @points points</span>
+                    </span>
                 }
             </span>
         </li>

@@ -171,7 +171,7 @@
 /* A tooltip's trigger in a window title's detail line (the Gamecast's last play, HIG 12):
    MudTooltip's root takes the trigger's place in that flex row, so it is the root that may
    shrink, and the trigger inside keeps its own ellipsis. */
-.ptitle__text > .mud-tooltip-root { min-width: 0; max-width: 100%; }
+.ptitle__text > :is(.mud-tooltip-root, .desk-tipped) { min-width: 0; max-width: 100%; }
 
 .price__ev--plus {
     color: var(--state-positive-ink);
@@ -1905,10 +1905,10 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
     }
     button.gamelines__toggle { font-size: var(--text-subheadline); color: var(--text-secondary); }
 }
-.gamelines__sides > .mud-tooltip-root { display: block; min-width: 0; }
-.gamelines__sides > .mud-tooltip-root > .gamelines__cell { min-width: 0; }
+.gamelines__sides > :is(.mud-tooltip-root, .desk-tipped) { display: block; min-width: 0; }
+.gamelines__sides > :is(.mud-tooltip-root, .desk-tipped) > .gamelines__cell { min-width: 0; }
 /* The take key keeps its -4px bleed either side, so it spans its column plus the bleed. */
-.gamelines__sides > .mud-tooltip-root > .gamelines__cell--take { width: calc(100% + 8px); }
+.gamelines__sides > :is(.mud-tooltip-root, .desk-tipped) > .gamelines__cell--take { width: calc(100% + 8px); }
 .gamelines__cell[tabindex]:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius-sm); }
 
 /* The opened market's detail reads as the row's own continuation: no hairline between a row and
@@ -2213,14 +2213,14 @@ button.gamelines__toggle { font-size: var(--text-body); white-space: nowrap; }
 .odds-game { max-width: min(440px, 100%); }
 
 /* The last play sits in a tooltip: its wrapper is the flex item on the title's detail line. */
-.ptitle__text > .mud-tooltip-root:has(> .gamelive__last) { min-width: 0; max-width: 100%; }
-.ptitle__text > .mud-tooltip-root > .gamelive__last {
+.ptitle__text > :is(.mud-tooltip-root, .desk-tipped):has(> .gamelive__last) { min-width: 0; max-width: 100%; }
+.ptitle__text > :is(.mud-tooltip-root, .desk-tipped) > .gamelive__last {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.ptitle__text > .gamelive__situation + .mud-tooltip-root > .gamelive__last::before {
+.ptitle__text > .gamelive__situation + :is(.mud-tooltip-root, .desk-tipped) > .gamelive__last::before {
     content: "·";
     margin-right: var(--space-2);
 }

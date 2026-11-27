@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text.Json;
 using XLines.Core.Analytics;
 using XLines.Core.Contracts;
 using XLines.Data;
@@ -37,9 +39,24 @@ namespace XLines.Ingestion.Services;
 /// </para>
 ///
 /// <para>
-/// One port for the whole poll. ESPN's adapter spaces its requests by its own
-/// <c>RequestDelay</c>, measured from its own last request, so a port per game would start each
-/// game's clock afresh and send every summary — half a megabyte each — back to back.
+/// One port for the whole poll, and one pacer for the process: every ESPN request, the feed's and
+/// everyone else's, waits its turn at <see cref="EspnPacer"/>, <c>RequestDelay</c> apart. The
+/// feed's reads are marked (<see cref="GamecastRequest"/>): each is asked once and given
+/// <see cref="GamecastOptions.ReadTimeout"/> — the next poll is its retry — and a watched game's
+/// goes ahead of any other request waiting, so a backfill or a scoreboard pass running beside the
+/// feed costs the game someone has open one request's gap at most.
+/// </para>
+///
+/// <para>
+/// The game a window is watching comes before everything. It is read first in every poll, every
+/// poll, whatever it says — at a break, past the ceiling, failing — and never backed off: every
+/// poll is its retry. A game nobody watches adapts: a live one is read every
+/// <see cref="GamecastOptions.UnwatchedPoll"/>, and every <see cref="GamecastOptions.BreakPoll"/>
+/// while its header says halftime or the end of a quarter. The polls fall on a fixed beat, a
+/// <see cref="GamecastOptions.Poll"/> apart however long each takes. And a read whose gamecast
+/// hashes the same as the last one written is not written again: the writer would load the game
+/// only to find nothing to save. The hash is held in memory, so a restart, or a failed write,
+/// writes in full once.
 /// </para>
 ///
 /// <para>
@@ -55,10 +72,10 @@ namespace XLines.Ingestion.Services;
 ///
 /// <para>
 /// Two lanes, so no game in play is left without plays. The fast lane is the first
-/// <see cref="GamecastOptions.MaxFollowedGames"/> games, read every poll: the games a window is
-/// watching (<see cref="GamecastLanes.Watched"/>) first, then the healthy before the ones in
-/// trouble, earliest start first — so the game someone has open takes a slot from one nobody is
-/// looking at. Every other game on is in the slow lane, read in turn by game id,
+/// <see cref="GamecastOptions.MaxFollowedGames"/> games, read every poll (an unwatched one as its
+/// cadence falls due): the games a window is watching (<see cref="GamecastLanes.Watched"/>) first,
+/// all of them however many, then the healthy before the ones in trouble, earliest start first — so
+/// the game someone has open takes a slot from one nobody is looking at. Every other game on is in the slow lane, read in turn by game id,
 /// <see cref="GamecastOptions.SlowLanePerPoll"/> a poll: on a seven-game window each of the three
 /// past the ceiling is read every third poll instead of not at all. A slow game keeps what the feed
 /// holds for it between its turns — its probabilities, its box cadence — and the probability and
@@ -91,8 +108,10 @@ public class GamecastFeed(
     IOptions<IngestionOptions> options,
     GamecastLanes lanes,
     ILogger<GamecastFeed> logger,
-    TimeProvider clock) : BackgroundService
+    TimeProvider? time = null) : BackgroundService
 {
+    private readonly TimeProvider _time = time ?? TimeProvider.System;
+
     /// <summary>The run row the final box score is recorded under, beside the results sweep's.</summary>
     public const string JobKey = "espn:gamecast";
 
@@ -125,6 +144,18 @@ public class GamecastFeed(
 
         /// <summary>Reads since the game left play here, its summary not yet final.</summary>
         public int ReadsSinceLeaving { get; set; }
+
+        /// <summary>
+        /// When an unwatched game is next due a read, from what its last read said; null reads at
+        /// once. A watched game is read every poll and never looks at it.
+        /// </summary>
+        public DateTimeOffset? NextReadAt { get; set; }
+
+        /// <summary>
+        /// The last gamecast written for the game, hashed; null until a write lands, and again
+        /// after one fails. A read that hashes the same has nothing for the writer to find.
+        /// </summary>
+        public string? Fingerprint { get; set; }
     }
 
     /// <summary>A game whose reads keep failing or keep saying "scheduled", and when to ask it next.</summary>
@@ -171,9 +202,26 @@ public class GamecastFeed(
 
     private TimeSpan BoxPoll => Positive(_options.BoxPoll, new GamecastOptions().BoxPoll);
 
+    private TimeSpan ReadTimeout => Positive(_options.ReadTimeout, new GamecastOptions().ReadTimeout);
+
+    /// <summary>An unwatched live game's gap, never shorter than the poll that reads it.</summary>
+    private TimeSpan UnwatchedPoll => Max(Poll, Positive(_options.UnwatchedPoll, new GamecastOptions().UnwatchedPoll));
+
+    /// <summary>An unwatched game's gap at a break, never shorter than the poll that reads it.</summary>
+    private TimeSpan BreakPoll => Max(Poll, Positive(_options.BreakPoll, new GamecastOptions().BreakPoll));
+
     private static TimeSpan Positive(TimeSpan configured, TimeSpan fallback)
         => configured > TimeSpan.Zero ? configured : fallback;
 
+    private static TimeSpan Max(TimeSpan a, TimeSpan b) => a > b ? a : b;
+
+    /// <summary>
+    /// Polls on a fixed beat: a <see cref="PeriodicTimer"/>'s ticks are a <see cref="Poll"/>
+    /// apart from when the feed started, however long a poll took, where a delay after each poll
+    /// added the poll's own length to every gap and a watched game's plays drifted later through
+    /// the game. A poll that overruns its tick starts the next at once; ticks it missed are not
+    /// made up. A failed poll waits for the next tick too, rather than spinning on the database.
+    /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!_options.Enabled)
@@ -183,15 +231,16 @@ public class GamecastFeed(
         }
 
         logger.LogInformation(
-            "Gamecast feed started: {Sports}, every {Poll}, up to {Max} games every poll and {Slow} more a poll in turn",
-            string.Join(", ", _options.EffectiveSports), Poll, _options.MaxFollowedGames, SlowLanePerPoll);
+            "Gamecast feed started: {Sports}, every {Poll} for a watched game, {Unwatched} for one nobody watches ({Break} at a break), up to {Max} games every poll and {Slow} more a poll in turn",
+            string.Join(", ", _options.EffectiveSports), Poll, UnwatchedPoll, BreakPoll, _options.MaxFollowedGames, SlowLanePerPoll);
 
-        while (!stoppingToken.IsCancellationRequested)
+        using var timer = new PeriodicTimer(Poll, _time);
+
+        do
         {
             try
             {
-                await PollAsync(clock.GetUtcNow(), stoppingToken);
-                await Task.Delay(Poll, stoppingToken);
+                await PollAsync(_time.GetUtcNow(), stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -199,21 +248,25 @@ public class GamecastFeed(
             }
             catch (Exception ex)
             {
-                // The database restarting, say. Wait the poll out rather than spinning on it.
+                // The database restarting, say.
                 logger.LogError(ex, "Gamecast poll failed; continuing");
-
-                try
-                {
-                    await Task.Delay(Poll, stoppingToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
             }
         }
+        while (await NextTickAsync(timer, stoppingToken));
 
         logger.LogInformation("Gamecast feed stopped");
+    }
+
+    private static async Task<bool> NextTickAsync(PeriodicTimer timer, CancellationToken ct)
+    {
+        try
+        {
+            return await timer.WaitForNextTickAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
     }
 
     /// <summary>One poll: every game in play read and written once. Public so a test can drive the clock.</summary>
@@ -249,19 +302,25 @@ public class GamecastFeed(
         foreach (var gone in _trouble.Keys.Where(id => !onNow.Contains(id)).ToList())
             _trouble.Remove(gone);
 
-        // A backed-off game is out of the running until its wait is over. The fast lane takes the
-        // watched games first, then the healthy before the ones still in trouble (stable sorts, so
-        // earliest start first within each).
+        // A backed-off game is out of the running until its wait is over — unless a window is
+        // watching it, when every poll is its retry. The fast lane takes the watched games first,
+        // then the healthy before the ones still in trouble (stable sorts, so earliest start first
+        // within each).
         var watched = lanes.Watched(now);
 
         var candidates = inPlay
-            .Where(g => !_finished.Contains(g.Id) && !BackedOff(g.Id, now))
+            .Where(g => !_finished.Contains(g.Id) && (watched.Contains(g.Id) || !BackedOff(g.Id, now)))
             .OrderBy(g => !watched.Contains(g.Id))
             .ThenBy(g => InTrouble(g.Id))
             .ToList();
 
         var max = Math.Max(0, _options.MaxFollowedGames);
         var perPoll = SlowLanePerPoll;
+
+        // Every watched game, however many, and the ceiling's slots they leave to the rest. The
+        // game someone has open is never the one the ceiling leaves out.
+        var watchedOn = candidates.Count(g => watched.Contains(g.Id));
+        max = Math.Max(max, watchedOn);
 
         var fast = candidates.Take(max).ToList();
 
@@ -314,16 +373,25 @@ public class GamecastFeed(
         foreach (var displaced in _followed.Keys.Where(id => onNow.Contains(id) && !held.Contains(id)).ToList())
             _followed.Remove(displaced);
 
-        foreach (var (gameId, game) in current)
+        // An unwatched game not yet due — nobody is looking, or it is at a break — waits for a
+        // later poll, held as it is. A watched game is read every poll whatever it said last.
+        foreach (var (gameId, game) in current.Where(c => !watched.Contains(c.Key) && !Due(c.Value, now)).ToList())
         {
-            ct.ThrowIfCancellationRequested();
-            await FollowAsync(source, gameId, game, leaving: false, now, ct);
+            current.Remove(gameId);
+            _followed[gameId] = game;
         }
 
-        foreach (var (gameId, game) in leaving)
+        // Watched games first, whether in play or leaving it, so the game someone has open is
+        // asked before anything else this poll asks; then the rest in lane order, leaving last.
+        var reads = current.Select(c => (Id: c.Key, Game: c.Value, Leaving: false))
+            .Concat(leaving.Select(l => (Id: l.Key, Game: l.Value, Leaving: true)))
+            .OrderBy(r => !watched.Contains(r.Id))
+            .ToList();
+
+        foreach (var (gameId, game, isLeaving) in reads)
         {
             ct.ThrowIfCancellationRequested();
-            await FollowAsync(source, gameId, game, leaving: true, now, ct);
+            await FollowAsync(source, gameId, game, isLeaving, watched.Contains(gameId), now, ct);
         }
 
         foreach (var stale in _lastReadAt.Keys.Where(id => !onNow.Contains(id) && !_followed.ContainsKey(id)).ToList())
@@ -335,7 +403,7 @@ public class GamecastFeed(
 
         foreach (var g in inPlay.Where(g => !_finished.Contains(g.Id)))
         {
-            if (BackedOff(g.Id, now))
+            if (BackedOff(g.Id, now) && !watched.Contains(g.Id))
                 games[g.Id] = GamecastLane.BackedOff;
             else if (fastIds.Contains(g.Id))
                 games[g.Id] = GamecastLane.Fast;
@@ -368,6 +436,33 @@ public class GamecastFeed(
         return turn.ToHashSet();
     }
 
+    /// <summary>
+    /// Whether an unwatched game's gap has run. Half a poll early counts: the polls fall on a beat
+    /// and the gaps are whole polls, so a tick a few milliseconds early must not cost a whole poll.
+    /// </summary>
+    private bool Due(Followed game, DateTimeOffset now)
+        => game.NextReadAt is not { } next || now + Poll / 2 >= next;
+
+    /// <summary>
+    /// ESPN's header at a break — "Halftime", "End of 1st" … "End of 4th" — when nothing is played
+    /// and the summary barely moves. Read from the short detail, as the window shows it.
+    /// </summary>
+    internal static bool AtBreak(CanonicalGamecast gamecast)
+        => gamecast.State == "live"
+           && gamecast.StatusDetail is { } detail
+           && (detail.StartsWith("Halftime", StringComparison.OrdinalIgnoreCase)
+               || detail.StartsWith("End of", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The gamecast as it would be written, hashed: the plays, the drives and the probabilities laid
+    /// on them. The parsed gamecast rather than ESPN's body, because the body streams straight into
+    /// the parser and is never held whole (<c>EspnStatsAdapter.GetJsonAsync</c>); hashing it would
+    /// mean buffering half a megabyte a read again, and moving the hash into the port. The parse is
+    /// the cheap half; the writer's load and compare against the store is the half this skips.
+    /// </summary>
+    internal static string Fingerprint(CanonicalGamecast gamecast)
+        => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(gamecast)));
+
     private bool InTrouble(int gameId)
         => _trouble.TryGetValue(gameId, out var trouble) && trouble.Failures >= FailuresBeforeBackOff;
 
@@ -380,60 +475,85 @@ public class GamecastFeed(
     /// back-off once it has failed too often.
     /// </summary>
     private async Task FollowAsync(
-        IGamecastSource source, int gameId, Followed game, bool leaving, DateTimeOffset now, CancellationToken ct)
+        IGamecastSource source, int gameId, Followed game, bool leaving, bool watched, DateTimeOffset now, CancellationToken ct)
     {
         CanonicalGamecast? gamecast = null;
         StatsFetchResult? box = null;
 
         try
         {
-            // The box score rides on the summary read anyway, parsed when its cadence is due.
-            if (game.BoxAt is not { } boxed || now - boxed >= BoxPoll)
+            // The game's own requests, marked as a feed read's: asked once with a short timeout, and
+            // ahead of every other ESPN request if a window is watching (GamecastRequest).
+            using (GamecastRequest.Begin(watched, ReadTimeout))
             {
-                var read = await source.FetchGamecastWithBoxAsync(game.Sport, game.EventId, ct);
-                gamecast = read?.Gamecast;
-                box = read?.Box;
-            }
-            else
-            {
-                gamecast = await source.FetchGamecastAsync(game.Sport, game.EventId, ct);
+                // The box score rides on the summary read anyway, parsed when its cadence is due.
+                if (game.BoxAt is not { } boxed || now - boxed >= BoxPoll)
+                {
+                    var read = await source.FetchGamecastWithBoxAsync(game.Sport, game.EventId, ct);
+                    gamecast = read?.Gamecast;
+                    box = read?.Box;
+                }
+                else
+                {
+                    gamecast = await source.FetchGamecastAsync(game.Sport, game.EventId, ct);
+                }
+
+                if (gamecast is null)
+                {
+                    // The port cannot address this league; asking every fifteen seconds will not change that.
+                    _followed.Remove(gameId);
+                    _trouble.Remove(gameId);
+                    return;
+                }
+
+                _lastReadAt[gameId] = now;
+
+                // Probabilities only once the game is on: a game not started, or stuck before its start, has none.
+                if (gamecast.State == "live" && (game.ProbabilitiesAt is not { } asked || now - asked >= ProbabilityPoll))
+                    await RefreshProbabilitiesAsync(source, game, now, ct);
             }
 
-            if (gamecast is null)
-            {
-                // The port cannot address this league; asking every fifteen seconds will not change that.
-                _followed.Remove(gameId);
-                _trouble.Remove(gameId);
-                return;
-            }
-
-            _lastReadAt[gameId] = now;
-
-            // Probabilities only once the game is on: a game not started, or stuck before its start, has none.
-            if (gamecast.State == "live" && (game.ProbabilitiesAt is not { } asked || now - asked >= ProbabilityPoll))
-                await RefreshProbabilitiesAsync(source, game, now, ct);
+            // Nobody watching: a live game waits UnwatchedPoll, or BreakPoll at a break, before its
+            // next read. Anything else — not started, leaving, final — is read again next poll.
+            game.NextReadAt = gamecast.State == "live"
+                ? now + (AtBreak(gamecast) ? BreakPoll : UnwatchedPoll)
+                : null;
 
             var merged = EspnStatsAdapter.MergeProbabilities(gamecast, game.Probabilities);
 
-            await using (var scope = scopeFactory.CreateAsyncScope())
-            {
-                var writer = scope.ServiceProvider.GetRequiredService<GamecastWriter>();
-                var written = await writer.WriteAsync(gameId, source.Key, merged, ct);
+            // The same plays, drives and probabilities as the last write that landed: the writer
+            // would load the game's rows only to find nothing to save, so it is not asked.
+            var fingerprint = Fingerprint(merged);
 
-                if (written.Changed)
+            if (fingerprint != game.Fingerprint)
+            {
+                await using (var scope = scopeFactory.CreateAsyncScope())
                 {
-                    logger.LogInformation(
-                        "Gamecast {GameId}: {Plays} plays in, {Updated} changed, {Drives} drives written",
-                        gameId, written.PlaysInserted, written.PlaysUpdated, written.DrivesInserted + written.DrivesUpdated);
+                    var writer = scope.ServiceProvider.GetRequiredService<GamecastWriter>();
+                    var written = await writer.WriteAsync(gameId, source.Key, merged, ct);
+
+                    if (written.Changed)
+                    {
+                        logger.LogInformation(
+                            "Gamecast {GameId}: {Plays} plays in, {Updated} changed, {Drives} drives written",
+                            gameId, written.PlaysInserted, written.PlaysUpdated, written.DrivesInserted + written.DrivesUpdated);
+                    }
                 }
+
+                game.Fingerprint = fingerprint;
             }
 
             // Live only: a final summary's box is the final path's, written whole with the game.
+            // Its own cadence, apart from the fingerprint: a box can move while the plays do not.
             if (gamecast.State == "live" && box is not null)
                 await WriteLiveBoxAsync(source, gameId, game, box, now, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
+            // Whatever failed, the next read writes in full and the store decides.
+            game.Fingerprint = null;
+            game.NextReadAt = null;
+
             Failed(gameId, game, now, ex);
             gamecast = null;
 
@@ -611,7 +731,7 @@ public class GamecastFeed(
                     foreach (var drive in current)
                     {
                         drive.IsCurrent = false;
-                        drive.UpdatedAt = clock.GetUtcNow();
+                        drive.UpdatedAt = _time.GetUtcNow();
                     }
 
                     // Through SaveChanges, not a bulk update, so the window hears plays:{id} and drops the marker.

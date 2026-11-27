@@ -52,6 +52,60 @@ public class PlayLogTests : DeskTestContext
         Assert.Empty(cut.FindAll(".gc__headline"));
     }
 
+    private static GamecastPlay Win(long sequence, double? home) => Pass(sequence) with { Id = sequence, HomeWinPct = home };
+
+    private IRenderedComponent<PlayLog> RenderSwings(IReadOnlyList<GamecastPlay> plays, IReadOnlyList<GamecastPlay>? game = null)
+        => RenderComponent<PlayLog>(p =>
+        {
+            p.Add(l => l.Plays, plays.ToList()).Add(l => l.Sport, "nfl").Add(l => l.HomeAbbrev, "WSH").Add(l => l.AwayAbbrev, "CIN");
+            if (game is not null)
+                p.Add(l => l.Game, game);
+        });
+
+    private static string? Swing(IRenderedComponent<PlayLog> cut, long id)
+        => cut.Find($".gc__play[data-play='{id}']").QuerySelector(".gc__swing")?.QuerySelector("[aria-hidden='true']")?.TextContent;
+
+    /// <summary>
+    /// A play that moved the win probability five points or more says so at the end of its row,
+    /// from the side that gained — "WSH +14" — and in words for a reader who cannot see it; a
+    /// smaller move, or a play either side of which has no probability, says nothing.
+    /// </summary>
+    [Fact]
+    public void A_play_that_swung_the_win_probability_five_points_says_who_gained()
+    {
+        var plays = new[] { Win(1, .50), Win(2, .64), Win(3, .61), Win(4, .40), Win(5, null), Win(6, .70) };
+
+        var cut = RenderSwings(plays);
+
+        Assert.Null(Swing(cut, 1));
+        Assert.Equal("WSH +14", Swing(cut, 2));
+        Assert.Null(Swing(cut, 3));
+        Assert.Equal("CIN +21", Swing(cut, 4));
+        Assert.Null(Swing(cut, 5));
+        Assert.Null(Swing(cut, 6));
+
+        Assert.Equal("Win probability: WSH up 14 points", cut.Find(".gc__play[data-play='2'] .gc__swing .sr-only").TextContent);
+    }
+
+    /// <summary>
+    /// The swing is from the play before in the game, whatever order the log is read in (newest
+    /// first while the game is on) and whichever plays it holds: a drive's first play measures from
+    /// the last play of the drive before it when the window hands the log the whole game.
+    /// </summary>
+    [Fact]
+    public void The_swing_is_from_the_play_before_in_the_game_not_in_the_list()
+    {
+        var game = new[] { Win(1, .50), Win(2, .52), Win(3, .40), Win(4, .41) };
+
+        var newestFirst = RenderSwings([game[3], game[2]]);
+        Assert.Null(Swing(newestFirst, 3));
+        Assert.Null(Swing(newestFirst, 4));
+
+        var withGame = RenderSwings([game[3], game[2]], game);
+        Assert.Equal("CIN +12", Swing(withGame, 3));
+        Assert.Null(Swing(withGame, 4));
+    }
+
     [Fact]
     public void A_virtualised_log_heads_its_rows_the_same()
     {

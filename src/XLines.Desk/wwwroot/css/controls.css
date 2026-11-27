@@ -1519,3 +1519,61 @@
     color: var(--text-secondary);
     line-height: var(--leading-body);
 }
+
+/* ---- Tooltip, without MudBlazor (ADR 0034, step 2) ---------------------------
+   .desk-tipped is the wrapper DeskTooltip draws round its trigger, and takes the place of
+   .mud-tooltip-root: inline-block, so a tooltip never changes how its trigger is laid out.
+
+   .desk-tooltip is the body: a popover element, so it is drawn in the top layer and no window's
+   overflow can clip it. js/tooltip.js names the open trigger as the anchor --desk-tip; everything
+   about where the body sits is here. position-area puts it on the side asked for, the margin is
+   the gap to the trigger, and position-try-fallbacks turns it to the opposite side where the
+   first would run off the screen.
+
+   The surface is the one mud-bridge.css gave .mud-tooltip, for the same reasons: --surface-3 and
+   no edge. There is no arrow: the gap and the side say what it belongs to, as a Mac's own help
+   tag does. The measure can be set here directly, as it could not on MudBlazor's popover. */
+.desk-tipped { display: inline-block; }
+
+/* A trigger that asks for the full width gets it, as it did from MudBlazor's own wrapper rule.
+   The class is still MudBlazor's name for it, because callers still write that name. */
+.desk-tipped:has(> .mud-width-full) { display: block; width: 100%; }
+
+.desk-tooltip {
+    position: fixed;
+    position-anchor: --desk-tip;
+    position-area: top;
+    position-try-fallbacks: flip-block, flip-inline;
+    inset: auto;
+    margin: var(--space-2);
+    width: max-content;
+    max-width: min(20rem, calc(100vw - var(--space-8)));
+    padding: var(--space-1) var(--space-2);
+    overflow: visible;
+    pointer-events: none; /* it explains its trigger; it is never pointed at itself */
+
+    background-color: var(--surface-3);
+    border: 0;
+    box-shadow: var(--shadow-3); /* the lift MudBlazor's popover gave it */
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-family: var(--face-ui);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-medium);
+    letter-spacing: .02em;
+    line-height: var(--leading-body);
+    text-align: start;
+    white-space: pre-line;
+
+    opacity: 1;
+    transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+/* It arrives by fading, and only by fading: no travel, so reduced motion has nothing to remove. */
+@starting-style {
+    .desk-tooltip:popover-open { opacity: 0; }
+}
+
+[data-desk-tip="bottom"] > .desk-tooltip { position-area: bottom; }
+[data-desk-tip="start"] > .desk-tooltip { position-area: inline-start; }
+[data-desk-tip="end"] > .desk-tooltip { position-area: inline-end; }

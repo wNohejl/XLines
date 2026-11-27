@@ -20,24 +20,50 @@
     for the hierarchy this button replaced.
 *@
 
-<MudButton @ref="_button"
-           Class="@Classes"
-           Variant="Variant.Text"
-           Color="Color.Inherit"
-           Ripple="false"
-           DropShadow="false"
-           ButtonType="@ButtonType"
-           Disabled="@Disabled"
-           OnClick="PressAsync"
-           aria-busy="@(Busy ? "true" : null)"
-           title="@Title"
-           @attributes="Extra">
-    @if (Icon is not null)
-    {
-        <Glyph Icon="@Icon" />
-    }
-    @ChildContent
-</MudButton>
+@if (_native)
+{
+    @*  ADR 0034, step 1: the same key without MudBlazor. .desk-btn already draws all of it, so the
+        element is a <button> and nothing else. The caller's own attributes go first and the
+        button's go last, which is the order MudButton resolves them in: a caller can add an
+        attribute, and cannot take the class, the type or the disabled state away. A press stops
+        here, as MudButton's does, so a key inside a pressable row does not also press the row. *@
+    <button @ref="_element"
+            title="@Title"
+            aria-busy="@(Busy ? "true" : null)"
+            @attributes="Extra"
+            type="@NativeType"
+            class="@Classes"
+            disabled="@Disabled"
+            @onclick="PressAsync"
+            @onclick:stopPropagation="true">
+        @if (Icon is not null)
+        {
+            <Glyph Icon="@Icon" />
+        }
+        @ChildContent
+    </button>
+}
+else
+{
+    <MudButton @ref="_button"
+               Class="@Classes"
+               Variant="Variant.Text"
+               Color="Color.Inherit"
+               Ripple="false"
+               DropShadow="false"
+               ButtonType="@ButtonType"
+               Disabled="@Disabled"
+               OnClick="PressAsync"
+               aria-busy="@(Busy ? "true" : null)"
+               title="@Title"
+               @attributes="Extra">
+        @if (Icon is not null)
+        {
+            <Glyph Icon="@Icon" />
+        }
+        @ChildContent
+    </MudButton>
+}
 
 @code {
     /// <summary>The label. Omit it for an icon-only button — then <see cref="Title"/> is required.</summary>
@@ -87,6 +113,26 @@
     public IReadOnlyDictionary<string, object>? Extra { get; set; }
 
     private MudButton? _button;
+    private ElementReference _element;
+
+    /// <summary>
+    /// Whether this key draws without MudBlazor (ADR 0034). Read once: a desk is one or the other
+    /// for its whole life. A container that says nothing, a render test's for one, is the desk
+    /// as it was.
+    /// </summary>
+    private bool _native;
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    protected override void OnInitialized()
+        => _native = (Services.GetService(typeof(DeskNative)) as DeskNative ?? DeskNative.Off).Button;
+
+    private string NativeType => ButtonType switch
+    {
+        ButtonType.Submit => "submit",
+        ButtonType.Reset => "reset",
+        _ => "button"
+    };
 
     /// <summary>
     /// Puts the keyboard on this button. Exposed because <c>@ref</c> on a component hands
@@ -95,13 +141,17 @@
     /// boundary. MudBlazor already holds the underlying <c>ElementReference</c>; this only
     /// forwards it, and is a no-op before the first render has produced an element.
     /// </summary>
-    public ValueTask FocusAsync() => _button?.FocusAsync() ?? ValueTask.CompletedTask;
+    public ValueTask FocusAsync()
+        => _native
+            ? _element.Context is null ? ValueTask.CompletedTask : _element.FocusAsync()
+            : _button?.FocusAsync() ?? ValueTask.CompletedTask;
 
     private string Classes => string.Join(' ', Parts().Where(p => p is { Length: > 0 }));
 
     private IEnumerable<string?> Parts()
     {
         yield return "desk-btn";
+        yield return _native ? "desk-btn--native" : null;
 
         yield return Emphasis switch
         {

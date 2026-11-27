@@ -24,25 +24,48 @@
     no click handler, aria-disabled): dimmed, out of the tab order, and the press ignored.
 *@
 
-<MudChip T="string"
-         Class="@Classes"
-         Variant="Variant.Text"
-         Color="Color.Default"
-         Ripple="false"
-         Disabled="@Disabled"
-         OnClick="PressAsync"
-         aria-disabled="@(Disabled ? "true" : null)"
-         aria-expanded="@(IsDisclosure ? Pressed ? "true" : "false" : null)"
-         aria-controls="@Controls"
-         aria-pressed="@(IsDisclosure ? null : Pressed ? "true" : "false")"
-         title="@Title"
-         @attributes="Extra">
-    @if (Icon is not null)
-    {
-        <Glyph Icon="@Icon" />
-    }
-    @ChildContent
-</MudChip>
+@if (_native)
+{
+    @* ADR 0034, step 3: the capsule is the button itself, dressed whole by .desk-chip--native
+       (desk.css). Disabled is the element's own: out of the tab order, and the press refused. *@
+    <button aria-expanded="@(IsDisclosure ? Pressed ? "true" : "false" : null)"
+            aria-controls="@Controls"
+            aria-pressed="@(IsDisclosure ? null : Pressed ? "true" : "false")"
+            title="@Title"
+            @attributes="Extra"
+            type="button"
+            class="@Classes"
+            disabled="@Disabled"
+            @onclick="PressAsync">
+        @if (Icon is not null)
+        {
+            <Glyph Icon="@Icon" />
+        }
+        @ChildContent
+    </button>
+}
+else
+{
+    <MudChip T="string"
+             Class="@Classes"
+             Variant="Variant.Text"
+             Color="Color.Default"
+             Ripple="false"
+             Disabled="@Disabled"
+             OnClick="PressAsync"
+             aria-disabled="@(Disabled ? "true" : null)"
+             aria-expanded="@(IsDisclosure ? Pressed ? "true" : "false" : null)"
+             aria-controls="@Controls"
+             aria-pressed="@(IsDisclosure ? null : Pressed ? "true" : "false")"
+             title="@Title"
+             @attributes="Extra">
+        @if (Icon is not null)
+        {
+            <Glyph Icon="@Icon" />
+        }
+        @ChildContent
+    </MudChip>
+}
 
 @code {
     /// <summary>The chip's words — short, sentence case, and naming a count where it folds one: "More · 5 items".</summary>
@@ -77,6 +100,14 @@
 
     private bool IsDisclosure => Disclosure || Controls is not null;
 
+    /// <summary>Whether this desk draws the chip without MudBlazor (ADR 0034, step 3).</summary>
+    private bool _native;
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    protected override void OnInitialized()
+        => _native = (Services.GetService(typeof(DeskNative)) as DeskNative ?? DeskNative.Off).Chip;
+
     /// <summary>A MudBlazor icon string, drawn bare through <c>Glyph</c> before the words: a fold's chevron, so the chip reads as a key and not a tag.</summary>
     [Parameter] public string? Icon { get; set; }
 
@@ -95,6 +126,7 @@
     private string Classes => string.Join(' ', new[]
     {
         "desk-chip",
+        _native ? "desk-chip--native" : null,
         Pressed ? "desk-chip--pressed" : null,
         Disabled ? "desk-chip--disabled" : null,
         Class

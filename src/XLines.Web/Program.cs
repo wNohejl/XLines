@@ -30,7 +30,10 @@ builder.Services.AddDesk(
     // The product is XLines (ADR 0031). The layout key keeps the name it was saved under, so a
     // desk laid out as XLines opens as it was left.
     new DeskBrand("X", "LINES", "sports-data ingestion & analytics operations", "Go to a team, player, game or window") { StorageKey = "lineops.desk" },
-    new DeskClock(XLines.Core.Analytics.LeagueClock.Zone, XLines.Web.Components.DisplayTime.Label));
+    new DeskClock(XLines.Core.Analytics.LeagueClock.Zone, XLines.Web.Components.DisplayTime.Label),
+    // ADR 0034's trial: Desk:Native=true draws the primitives that have left MudBlazor without it.
+    // Unset, the desk is the one it has always been.
+    native: builder.Configuration.GetValue<bool>("Desk:Native") ? DeskNative.All : DeskNative.Off);
 builder.Services.AddSingleton<IWindowCatalog, XLines.Web.Windowing.AppWindowCatalog>();
 
 // Open windows refresh when the data under them changes, whichever process wrote it.
@@ -52,6 +55,9 @@ builder.Services.AddScoped<XLines.Web.Services.IMatchupData, XLines.Web.Services
 builder.Services.AddScoped<XLines.Web.Services.IGameWindowData, XLines.Web.Services.GameWindowData>();
 builder.Services.AddScoped<XLines.Web.Services.IGamecastData, XLines.Web.Services.GamecastData>();
 builder.Services.AddXLinesPanelData();
+// One game's plays and drives, read once for every circuit's Gamecast on it and evicted by the
+// same change notices the windows hear (per game and tier; see GamecastSnapshots).
+builder.Services.AddSingleton<XLines.Web.Services.GamecastSnapshots>();
 
 // Persist Data Protection keys outside the container when a path is configured. Without this
 // a replaced container generates fresh keys, which silently invalidates every live Blazor

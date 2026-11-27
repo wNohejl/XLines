@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Polly;
 
 namespace XLines.Ingestion;
 
@@ -109,14 +110,14 @@ public static class IngestionServiceCollectionExtensions
             AddProviderClient<EspnStatsAdapter>(services, EspnBaseUrl,
                 (sp, client) => ApplyUserAgent(client, options.Espn, EspnStatsAdapter.SourceKey, sp));
 
-            // One adapter behind every ESPN port, each resolved at the configured pace: the delay is
-            // ESPN's patience, not the port's, so no port may reach it faster than the others.
-            EspnStatsAdapter Paced(IServiceProvider sp)
-            {
-                var adapter = sp.GetRequiredService<EspnStatsAdapter>();
-                adapter.RequestDelay = options.Espn.RequestDelay;
-                return adapter;
-            }
+            // One gate for the process (EspnPacer), at the configured pace: the delay is ESPN's
+            // patience, not a port's or a scope's, so the feed, the scheduler's passes, a backfill
+            // and a box write running together still reach ESPN no faster than it says. A watched
+            // game's read goes first at it.
+            services.AddSingleton(new EspnPacer(options.Espn.RequestDelay));
+
+            // One adapter behind every ESPN port; the typed client hands it the pacer.
+            EspnStatsAdapter Paced(IServiceProvider sp) => sp.GetRequiredService<EspnStatsAdapter>();
 
             services.AddScoped<IStatsSource>(Paced);
 
@@ -206,9 +207,20 @@ public static class IngestionServiceCollectionExtensions
     /// <summary>
     /// Registers a provider's typed client the one way every provider is registered: its base
     /// address, a 30-second timeout, the shared <see cref="ProviderHandler"/>, and the standard
-    /// resilience handler — retry with jittered backoff, a circuit breaker that trips on sustained
-    /// failure, and per-attempt timeouts; a metered provider keeps all but the retry. A tripped breaker is what the reliability layer surfaces
-    /// as a degraded source. One method, so five registrations cannot drift apart.
+    /// resilience handler — retry with jittered backoff, a circuit breaker that opens on sustained
+    /// failure, and per-attempt timeouts. One method, so five registrations cannot drift apart.
+    ///
+    /// <para>
+    /// An open breaker fails a request at once rather than asking the provider; the job that made
+    /// it fails its run, and failed runs are what the reliability layer reads (<c>KpiCalculator</c>,
+    /// <c>AlertEngine</c>). The layer does not watch the breaker itself.
+    /// </para>
+    ///
+    /// <para>
+    /// The one exception to the retry is a request flagged <see cref="GamecastRequest.NoRetry"/>,
+    /// which only the gamecast feed's reads carry: their next poll is their retry. Every other
+    /// request, on every provider that is not metered, is retried exactly as the standard handler would.
+    /// </para>
     /// </summary>
     /// <param name="extra">Anything one provider needs beyond that, such as ESPN's User-Agent.</param>
     /// <param name="metered">
@@ -232,10 +244,22 @@ public static class IngestionServiceCollectionExtensions
             })
             .ConfigurePrimaryHttpMessageHandler(ProviderHandler);
 
-        if (metered)
-            builder.AddStandardResilienceHandler(NoRetry);
-        else
-            builder.AddStandardResilienceHandler();
+        builder.AddStandardResilienceHandler(o =>
+        {
+            if (metered)
+            {
+                NoRetry(o);
+                return;
+            }
+
+            var standard = o.Retry.ShouldHandle;
+
+            o.Retry.ShouldHandle = args =>
+                args.Context.GetRequestMessage() is { } request
+                && request.Options.TryGetValue(GamecastRequest.NoRetry, out var noRetry) && noRetry
+                    ? ValueTask.FromResult(false)
+                    : standard(args);
+        });
 
         return builder;
     }

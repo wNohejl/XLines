@@ -25,7 +25,7 @@
     white-space: nowrap;
 }
 
-.gc__situation + .mud-tooltip-root > .gc__last::before {
+.gc__situation + :is(.mud-tooltip-root, .desk-tipped) > .gc__last::before {
     content: "·";
     margin-right: var(--space-2);
 }
@@ -233,10 +233,106 @@ button.gc__toggle:hover {
     }
 
     .gc__score > .gc__team,
-    .gc__score > .gc__text,
+    .gc__score > .gc__scorebody,
     .gc__score > .gc__tally {
         grid-column: 2;
     }
+}
+
+/* A score leads with its headline, as the play log's rows do (weight, not size, says which line
+   to read first); ESPN's sentence sits under it, and the drive's figures under that, quieter. */
+.gc__scorebody {
+    min-width: 0;
+}
+
+.gc__scorebody > .gc__headline {
+    display: block;
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    text-wrap: pretty;
+}
+
+.gc__scorebody > .gc__text {
+    display: block;
+    text-wrap: pretty;
+}
+
+.gc__scoredrive {
+    display: block;
+    font-size: var(--text-footnote);
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+/* A score whose drive is known is a button onto it: the browser's look undone, the row's type
+   and its inset hairline kept, the hover the raised fill and the focus the desk's inset ring, as
+   the drive chart's rows are. The drive on the field is its pressed state, said by aria-pressed;
+   the field and the chart already show which drive it is, so the row takes no fill of its own. */
+button.gc__score {
+    appearance: none;
+    width: 100%;
+    margin: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: var(--text-primary);
+    text-align: start;
+    cursor: pointer;
+}
+
+button.gc__score:hover {
+    background: var(--surface-3);
+}
+
+button.gc__score:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring-inset);
+}
+
+/* Over the live field: each side's timeouts beside its abbreviation, away at the leading edge and
+   home at the trailing one as the field draws them, and the red zone's tag between. A pip is a
+   small disc: filled in the secondary ink for a timeout left, an empty ring for one spent, so the
+   count reads without hue. */
+.gc__fieldstatus {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-footnote);
+}
+
+.gc__timeouts {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.gc__timeouts--home {
+    margin-left: auto;
+}
+
+.gc__timeouts-side {
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+}
+
+.gc__pips {
+    display: inline-flex;
+    gap: var(--space-1);
+}
+
+.gc__pip {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px var(--separator-strong);
+}
+
+.gc__pip--left {
+    background: var(--text-secondary);
+    box-shadow: none;
 }
 
 /* The probability chart spans the section at a reading width and keeps its own proportions.

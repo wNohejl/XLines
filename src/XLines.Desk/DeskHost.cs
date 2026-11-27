@@ -91,8 +91,12 @@ public static class DeskServiceCollectionExtensions
         this IServiceCollection services,
         DeskBrand brand,
         DeskClock? clock = null,
-        Action<MudServicesConfiguration>? mud = null)
+        Action<MudServicesConfiguration>? mud = null,
+        DeskNative? native = null)
     {
+        // Which primitives draw without MudBlazor (ADR 0034). None, unless the host says so.
+        services.AddSingleton(native ?? DeskNative.Off);
+
         services.AddMudServices(options =>
         {
             // Nothing of the snackbar's is configured: the desk draws its own notices

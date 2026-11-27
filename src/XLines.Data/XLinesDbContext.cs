@@ -288,6 +288,10 @@ public class XLinesDbContext(DbContextOptions<XLinesDbContext> options) : DbCont
                 .HasDatabaseName("ux_game_play");
             e.HasIndex(x => new { x.GameId, x.Sequence }).HasDatabaseName("ix_game_play_game_sequence");
 
+            // What every open Gamecast reads on a plays:{id} notice: this game's rows stamped since
+            // its watermark (GamecastService.ChangesSinceAsync) — corrections in old drives included.
+            e.HasIndex(x => new { x.GameId, x.UpdatedAt }).HasDatabaseName("ix_game_play_game_updated");
+
             e.HasOne(x => x.Game).WithMany().HasForeignKey(x => x.GameId)
                 .OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Source).WithMany().HasForeignKey(x => x.SourceId);
@@ -306,6 +310,7 @@ public class XLinesDbContext(DbContextOptions<XLinesDbContext> options) : DbCont
             e.HasIndex(x => new { x.GameId, x.SourceId, x.SourceDriveId })
                 .IsUnique()
                 .HasDatabaseName("ux_game_drive");
+            e.HasIndex(x => new { x.GameId, x.UpdatedAt }).HasDatabaseName("ix_game_drive_game_updated");
 
             e.HasOne(x => x.Game).WithMany().HasForeignKey(x => x.GameId)
                 .OnDelete(DeleteBehavior.Cascade);

@@ -63,9 +63,9 @@ public record GamecastBackportOutcome(
 ///
 /// <para>
 /// <b>When.</b> Never while a game is in play in any configured league (<see cref="IngestionJobs.InPlay"/>):
-/// ESPN's patience is the live passes' first. One port for the whole run, so the adapter's
-/// <c>RequestDelay</c>, measured from its own last request, holds between games — the feed's
-/// lesson — and a scope per game for the writes, so one game's change tracker never carries into
+/// ESPN's patience is the live passes' first. Its requests wait at the process's one
+/// <see cref="Adapters.EspnPacer"/> as every other ESPN request does, behind any watched game's,
+/// and a scope per game for the writes, so one game's change tracker never carries into
 /// the next. Singleton for the reason <see cref="HistoryBackfillService"/> is.
 /// </para>
 /// </summary>

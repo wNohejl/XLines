@@ -34,7 +34,27 @@
     measure holds and the popover shrinks to fit it (mudblazor-seam.md).
 *@
 
-@if (IsStructured)
+@if (_native)
+{
+    @*  ADR 0034, step 2: the same tooltip without MudBlazor. The body is a popover element beside
+        the trigger, raised into the top layer by js/tooltip.js on hover and on keyboard focus
+        after the same pause, and placed by CSS anchor positioning, which also turns it to the
+        other side where it would be clipped. Nothing is asked of the server to show it. *@
+    <div class="desk-tipped" data-desk-tip="@Side">
+        @ChildContent
+        <div class="desk-tooltip" popover="manual" role="tooltip">
+            @if (IsStructured)
+            {
+                @Structure
+            }
+            else
+            {
+                @Text
+            }
+        </div>
+    </div>
+}
+else if (IsStructured)
 {
     <MudTooltip Placement="@Mapped"
                 Arrow="true"
@@ -43,40 +63,7 @@
                 ShowOnHover="true">
         <ChildContent>@ChildContent</ChildContent>
         <TooltipContent>
-            <div class="desk-tip">
-                <div class="desk-tip__face" aria-hidden="true">
-                    @if (!string.IsNullOrWhiteSpace(Title))
-                    {
-                        <div class="desk-tip__title">@Title</div>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(Caption))
-                    {
-                        <div class="desk-tip__caption">@Caption</div>
-                    }
-                    @if (Content is not null)
-                    {
-                        <div class="desk-tip__content">@Content</div>
-                    }
-                    @if (Rows is { Count: > 0 })
-                    {
-                        <div class="desk-tip__rows">
-                            @foreach (var row in Rows)
-                            {
-                                <div class="desk-tip__row@(row.Emphasis ? " desk-tip__row--emphasis" : null)">
-                                    <span class="desk-tip__label">@row.Label</span>
-                                    <span class="desk-tip__value">@row.Value</span>
-                                    <span class="desk-tip__qualifier">@row.Qualifier</span>
-                                </div>
-                            }
-                        </div>
-                    }
-                    @if (!string.IsNullOrWhiteSpace(Footnote))
-                    {
-                        <div class="desk-tip__footnote">@Footnote</div>
-                    }
-                </div>
-                <span class="sr-only">@Spoken</span>
-            </div>
+            @Structure
         </TooltipContent>
     </MudTooltip>
 }
@@ -93,6 +80,53 @@ else
 }
 
 @code {
+    /// <summary>The structured shape: the face drawn for the eye, and beside it what is spoken.</summary>
+    private RenderFragment Structure => @<div class="desk-tip">
+    <div class="desk-tip__face" aria-hidden="true">
+        @if (!string.IsNullOrWhiteSpace(Title))
+        {
+            <div class="desk-tip__title">@Title</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Caption))
+        {
+            <div class="desk-tip__caption">@Caption</div>
+        }
+        @if (Content is not null)
+        {
+            <div class="desk-tip__content">@Content</div>
+        }
+        @if (Rows is { Count: > 0 })
+        {
+            <div class="desk-tip__rows">
+                @foreach (var row in Rows)
+                {
+                    <div class="desk-tip__row@(row.Emphasis ? " desk-tip__row--emphasis" : null)">
+                        <span class="desk-tip__label">@row.Label</span>
+                        <span class="desk-tip__value">@row.Value</span>
+                        <span class="desk-tip__qualifier">@row.Qualifier</span>
+                    </div>
+                }
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Footnote))
+        {
+            <div class="desk-tip__footnote">@Footnote</div>
+        }
+    </div>
+    <span class="sr-only">@Spoken</span>
+    </div>;
+
+    /// <summary>Whether this tooltip draws without MudBlazor (ADR 0034). Read once.</summary>
+    private bool _native;
+
+    [Inject] private IServiceProvider Services { get; set; } = default!;
+
+    protected override void OnInitialized()
+        => _native = (Services.GetService(typeof(DeskNative)) as DeskNative ?? DeskNative.Off).Tooltip;
+
+    /// <summary>The side it opens on, as the stylesheet reads it.</summary>
+    private string Side => Placement.ToString().ToLowerInvariant();
+
     /// <summary>
     /// What the reader is told, in sentences. A line break in it is kept: two short lines read
     /// better than one long one. With the structured parts it is the spoken version of them —

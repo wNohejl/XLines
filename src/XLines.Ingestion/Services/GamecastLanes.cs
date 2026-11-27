@@ -36,9 +36,9 @@ public sealed record GamecastFeedSnapshot(
 /// Where the windows and the gamecast feed meet, in memory and in this process only.
 ///
 /// <para>
-/// A window watching a game says so with <see cref="Watch"/>, and the feed puts watched games
-/// first in its fast lane, so the game someone is looking at is the one read every poll when the
-/// ceiling bites. Interest is a lease of <see cref="Lease"/>, renewed with <see cref="Renew"/>: a
+/// A window watching a game says so with <see cref="Watch"/>, and the feed reads watched games
+/// first in every poll and every poll without fail — past the ceiling, at a break, while failing —
+/// and asks for them ahead of any other ESPN request (<c>EspnPacer</c>). Interest is a lease of <see cref="Lease"/>, renewed with <see cref="Renew"/>: a
 /// window whose circuit dies without saying goodbye would otherwise hold a fast-lane slot for the
 /// day. Each <see cref="Watch"/> counts once and each <see cref="Unwatch"/> takes one back, so one
 /// window closing does not cut off another still open on the same game; <see cref="Renew"/>

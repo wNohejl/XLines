@@ -307,6 +307,191 @@ public class GamecastServiceTests(PostgresFixture fixture)
         Assert.Null(series[1].SpreadCoverHome);
     }
 
+    // ---- The window's reads: the snapshot, and what changed since a watermark -----------------
+
+    /// <summary>A stored stamp, read back as Postgres holds it (to the microsecond, in UTC).</summary>
+    private async Task<DateTimeOffset> StampOfPlayAsync(long id)
+    {
+        await using var db = fixture.CreateContext();
+        return await db.GamePlays.Where(p => p.Id == id).Select(p => p.UpdatedAt).SingleAsync();
+    }
+
+    [Fact]
+    public async Task TheSnapshotHoldsEveryPlayAndDriveWithSpansAndTheNewestStampAsItsWatermark()
+    {
+        var s = await SeedAsync();
+        var old = DateTimeOffset.UtcNow.AddMinutes(-20);
+        var drive = Drive(s, 1, s.AwayTeamId);
+        drive.UpdatedAt = old;
+        var a = Play(s, 1001, 1);
+        a.UpdatedAt = old;
+        var b = Play(s, 1002, 1);
+        b.UpdatedAt = old.AddMinutes(5);
+        await AddAsync(drive, a, b);
+
+        var rows = await Service().SnapshotAsync(s.GameId);
+
+        Assert.Equal([1001L, 1002L], rows.Plays.Select(p => p.Sequence));
+        Assert.Equal((2, 1001L, 1002L), (rows.Drives[0].PlayCount, rows.Drives[0].FirstSequence, rows.Drives[0].LastSequence));
+        Assert.Equal(await StampOfPlayAsync(b.Id), rows.Watermark);
+    }
+
+    /// <summary>
+    /// A play ESPN rewrites in a drive long finished — a review, a stat correction — is read on the
+    /// next notice by its stamp, not by its sequence, so an open window sees it; nothing else that
+    /// did not move comes back with it.
+    /// </summary>
+    [Fact]
+    public async Task ChangesSinceReturnsACorrectedPlayInAnOlderDriveAndNothingThatDidNotMove()
+    {
+        var s = await SeedAsync();
+        var old = DateTimeOffset.UtcNow.AddMinutes(-20);
+        var first = Drive(s, 1, s.AwayTeamId);
+        var second = Drive(s, 2, s.HomeTeamId, current: true);
+        var reviewed = Play(s, 1001, 1);
+        var rows = new object[] { first, second, reviewed, Play(s, 1002, 1), Play(s, 1003, 2, s.HomeTeamId) };
+        // The plays well before the drives: the newest row read (here a drive) is always read
+        // again, by the overlap; the plays are history.
+        foreach (var row in rows)
+        {
+            if (row is GamePlay p) p.UpdatedAt = old.AddMinutes(-10);
+            if (row is GameDrive d) d.UpdatedAt = old;
+        }
+        await AddAsync(rows);
+
+        var watermark = (await Service().SnapshotAsync(s.GameId)).Watermark;
+
+        // The writer's own way: a tracked save that stamps the row it changed.
+        await using (var db = fixture.CreateContext())
+        {
+            var play = await db.GamePlays.SingleAsync(p => p.Id == reviewed.Id);
+            play.Text = "Play 1001 (reversed on review)";
+            play.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        var changes = await Service().ChangesSinceAsync(s.GameId, watermark);
+
+        var corrected = Assert.Single(changes.Plays);
+        Assert.Equal(reviewed.Id, corrected.Id);
+        Assert.Equal("Play 1001 (reversed on review)", corrected.Text);
+        Assert.Equal(await StampOfPlayAsync(reviewed.Id), changes.Watermark);
+
+        // From the new watermark, only what is within the overlap of it comes back: the correction.
+        var next = await Service().ChangesSinceAsync(s.GameId, changes.Watermark);
+        Assert.Equal([reviewed.Id], next.Plays.Select(p => p.Id));
+        Assert.Empty(next.Drives);
+    }
+
+    /// <summary>
+    /// The watermark is the rows' own stamp, and the next read takes everything at or after it less
+    /// <see cref="GamecastService.ChangeOverlap"/>: a row a second writer stamped with the very same
+    /// instant, or a little earlier on a clock that runs behind, but saved after the read, is not
+    /// missed. The window matches by id, so what comes back twice is drawn once.
+    /// </summary>
+    [Fact]
+    public async Task ARowStampedAtTheWatermarkOrJustBeforeItIsNotMissed()
+    {
+        var s = await SeedAsync();
+        var at = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var a = Play(s, 1001, 1);
+        a.UpdatedAt = at;
+        await AddAsync(a);
+
+        var watermark = (await Service().ChangesSinceAsync(s.GameId, null)).Watermark;
+        Assert.Equal(await StampOfPlayAsync(a.Id), watermark);
+
+        var same = Play(s, 1002, 1);
+        same.UpdatedAt = watermark!.Value;
+        var behind = Play(s, 1003, 1);
+        behind.UpdatedAt = watermark.Value.AddSeconds(-5);
+        await AddAsync(same, behind);
+
+        var changes = await Service().ChangesSinceAsync(s.GameId, watermark);
+
+        Assert.Contains(changes.Plays, p => p.Id == same.Id);
+        Assert.Contains(changes.Plays, p => p.Id == behind.Id);
+        Assert.Equal(watermark, changes.Watermark);
+
+        // Well behind the overlap is history, not a change.
+        Assert.DoesNotContain(
+            (await Service().ChangesSinceAsync(s.GameId, watermark.Value.Add(GamecastService.ChangeOverlap).AddMinutes(1))).Plays,
+            p => p.Id == behind.Id);
+    }
+
+    [Fact]
+    public async Task ChangesSinceReturnsADriveThatMovedWithoutSpans()
+    {
+        var s = await SeedAsync();
+        var old = DateTimeOffset.UtcNow.AddMinutes(-20);
+        var drive = Drive(s, 1, s.AwayTeamId, current: true);
+        drive.UpdatedAt = old;
+        var play = Play(s, 1001, 1);
+        play.UpdatedAt = old.AddMinutes(-10);
+        await AddAsync(drive, play);
+        var watermark = (await Service().SnapshotAsync(s.GameId)).Watermark;
+
+        await using (var db = fixture.CreateContext())
+        {
+            var row = await db.GameDrives.SingleAsync(d => d.Id == drive.Id);
+            row.IsCurrent = false;
+            row.Result = "Punt";
+            row.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync();
+        }
+
+        var changes = await Service().ChangesSinceAsync(s.GameId, watermark);
+
+        Assert.Empty(changes.Plays);
+        var moved = Assert.Single(changes.Drives);
+        Assert.Equal((drive.Id, 1, "Punt", false), (moved.Id, moved.Sequence, moved.Result, moved.IsCurrent));
+        Assert.True(changes.Watermark > watermark);
+    }
+
+    /// <summary>
+    /// The drive spans are derived in memory from the plays held — the window holds them all — and
+    /// equal what the per-append GROUP BY used to return, on a fixture with a drive with no plays, a
+    /// play under no drive, a play naming a drive not held and plays that share a sequence.
+    /// </summary>
+    [Fact]
+    public async Task DriveSpansDerivedInMemoryEqualTheGroupByTheyReplace()
+    {
+        var s = await SeedAsync();
+        var tie = Play(s, 1004, 2, s.HomeTeamId);
+        tie.SourcePlayId = "p1004b";
+        await AddAsync(
+            Drive(s, 1, s.AwayTeamId), Drive(s, 2, s.HomeTeamId), Drive(s, 3, s.AwayTeamId, current: true),
+            Play(s, 1001, 1), Play(s, 1003, 1), Play(s, 1002, 1),
+            Play(s, 1004, 2, s.HomeTeamId), tie, Play(s, 1009, 2, s.HomeTeamId),
+            Play(s, 1005, null), Play(s, 1010, 7));
+
+        Dictionary<int, (int Count, long First, long Last)> oracle;
+        await using (var db = fixture.CreateContext())
+        {
+            oracle = await db.GamePlays.AsNoTracking()
+                .Where(p => p.GameId == s.GameId && p.DriveSeq != null)
+                .GroupBy(p => p.DriveSeq!.Value)
+                .Select(g => new { Drive = g.Key, Count = g.Count(), First = g.Min(p => p.Sequence), Last = g.Max(p => p.Sequence) })
+                .ToDictionaryAsync(x => x.Drive, x => (x.Count, x.First, x.Last));
+        }
+
+        var snapshot = await Service().SnapshotAsync(s.GameId);
+        var derived = GamecastDrives.WithSpans(snapshot.Drives, snapshot.Plays);
+
+        Assert.Equal([1, 2, 3], derived.Select(d => d.Sequence));
+        foreach (var drive in derived)
+        {
+            var expected = oracle.TryGetValue(drive.Sequence, out var span) ? span : default;
+            Assert.Equal(
+                (expected.Count, oracle.ContainsKey(drive.Sequence) ? expected.First : (long?)null, oracle.ContainsKey(drive.Sequence) ? expected.Last : (long?)null),
+                (drive.PlayCount, drive.FirstSequence, drive.LastSequence));
+        }
+
+        // The snapshot's own drives carry the same spans, and so does DrivesAsync.
+        Assert.Equal(derived, snapshot.Drives);
+        Assert.Equal(derived, await Service().DrivesAsync(s.GameId));
+    }
+
     [Fact]
     public async Task ScoringPlaysAreOnlyTheScoresInOrder()
     {
