@@ -1,0 +1,348 @@
+@inject DeskToasts Toasts
+
+@* ==========================================================================
+   Display
+   ========================================================================== *@
+
+<PanelSection Title="Display — metrics">
+<p class="empty">
+    State lives on the value, not on a chrome around it. The label stays quiet in every
+    case; only the number changes colour, because the number is the thing that went wrong.
+</p>
+
+<MetricRow>
+    <Metric Label="Uptime" Value="98.4%" Note="30-day rolling" State="DeskState.Positive" Numeric="true" />
+    <Metric Label="Credits left" Value="412" State="DeskState.Warning" Numeric="true" />
+    <Metric Label="Change" Value="-2.1%" State="DeskState.Negative" Numeric="true" />
+    <Metric Label="Sources" Value="6" State="DeskState.Info" Numeric="true" />
+</MetricRow>
+
+</PanelSection>
+
+<PanelSection Title="Display — linked cell">
+<p class="empty">
+    <span class="mono">DeskLink</span> is a cell that names something with a window of its
+    own. A cell cannot lift the way a key does without disturbing its row, so it says the same
+    thing the other way: highlight it and the shortcut appears, naming where the click goes.
+    The shortcut's width is reserved rather than revealed, so nothing reflows as the pointer
+    crosses a column of them.
+</p>
+<p class="empty">
+    Beside it, a <span class="mono">Tag</span> carries the row's state in a word. Live leads
+    the word with a pulsing dot for something happening now — a second channel, like the hue,
+    never a stand-in for the word.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+<DeskRow Gap="DeskSpace.Space6" Align="DeskAlign.Center">
+    <DeskLink Destination="details" OnClick="@(() => _linkOpened = "North region")">North region</DeskLink>
+    <DeskLink Destination="history" Icon="@Icons.Material.Filled.History"
+              OnClick="@(() => _linkOpened = "Ames")">Ames</DeskLink>
+    <Tag State="DeskState.Positive" Live="true">Live</Tag>
+    <Tag State="DeskState.Info">Queued</Tag>
+</DeskRow>
+
+@if (_linkOpened is not null)
+{
+    <div class="meta">
+        Pressed <span class="mono">@_linkOpened</span> — a panel opens its window here.
+    </div>
+}
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Display — sparkline">
+<p class="empty">
+    A line chart the size of a word, for a row per thing: which way the number went, beside the
+    numbers themselves. Each is its own scale, so rows compare by shape and by their figures,
+    never by height, and no hue says rise or fall. <span class="mono">Step</span> holds each
+    value until the next, for a series written only when it changes; one value is a reading,
+    not a trend, and draws a dash.
+</p>
+
+<DeskStack Gap="DeskSpace.Space1">
+    @foreach (var (name, values, step) in _sparks)
+    {
+        <DeskRow Gap="DeskSpace.Space3" Align="DeskAlign.Center">
+            <span class="meta parts-key">@name@(step ? " — Step" : null)</span>
+            <DeskSparkline Values="values" Step="step" Label="@SparkLabel(name, values)" />
+            <span class="mono meta">@values[^1]</span>
+        </DeskRow>
+    }
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Display — progress">
+<p class="empty">
+    Prefer determinate whenever the denominator is knowable — if you are walking six sources,
+    you know it. The label names the action, never the wait: "Loading…" describes the
+    operator's experience, which they already have, rather than the system's work, which they
+    do not. Mode is a parameter, chosen once and held; a bar that changes style mid-flight
+    reads as a restart.
+</p>
+
+<DeskStack Gap="DeskSpace.Space4">
+    <DeskProgress Label="Fetching from 6 sources" Value="@_progress" Max="100" />
+    <DeskProgress Indeterminate="true" Label="Reconciling open items" />
+
+    <DeskRow Gap="DeskSpace.Space2">
+        <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
+                    Busy="@_stepping" OnClick="StepAsync">
+            Advance the bar
+        </DeskButton>
+    </DeskRow>
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Display — spinner">
+<p class="empty">
+    For work with no denominator and no room for a bar: beside a field checking what was typed,
+    or in a small empty state while its first read arrives. Small sits in a line of text; Medium
+    stands on its own. Its label is what a reader hears, so name the work rather than the wait.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    <DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+        <DeskSpinner Size="DeskKeySize.Small" Label="Checking the name" />
+        <span class="meta">Checking the name is free</span>
+    </DeskRow>
+    <DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+        <DeskSpinner Label="Fetching items" />
+        <span>Fetching items</span>
+    </DeskRow>
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Display — skeletons">
+<p class="empty">
+    A placeholder holds the shape the real content will take, so the layout does not jump
+    when it lands. Match the final shape — lines for prose, a block for a chart — and give it
+    the width the real thing has. Opaque, never a material: this holds data and does not
+    float. Reduced motion keeps the block and drops the shimmer.
+</p>
+
+<DeskStack Gap="DeskSpace.Space3">
+    <DeskStack Gap="DeskSpace.Space1">
+        <div class="meta">One line, 40% wide</div>
+        <DeskSkeleton Width="40%" />
+    </DeskStack>
+    <DeskStack Gap="DeskSpace.Space1">
+        <div class="meta">Three lines — the last runs short, the way prose does</div>
+        <DeskSkeleton Lines="3" />
+    </DeskStack>
+    <DeskStack Gap="DeskSpace.Space1">
+        <div class="meta">A block, standing in for a chart</div>
+        <DeskSkeleton Shape="DeskSkeletonShape.Block" Height="64px" />
+    </DeskStack>
+</DeskStack>
+
+<PanelSection Title="In a grid">
+<p class="empty">
+    <span class="mono">DeskGrid</span> takes <span class="mono">Loading</span>: with no rows
+    yet it stands aside and placeholder rows hold its rhythm. A grid that already has rows
+    keeps them and reports the refresh through the pulse strip instead — replacing read
+    numbers with grey bars loses information the operator was using.
+</p>
+
+<DeskStack>
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskButton Size="DeskKeySize.Small" OnClick="@(() => _gridLoading = !_gridLoading)">
+        @(_gridLoading ? "Show rows" : "Show placeholders")
+    </DeskButton>
+</DeskRow>
+
+<DeskGrid T="PartRow" Items="@(_gridLoading ? Array.Empty<PartRow>() : _rows)" Loading="@_gridLoading"
+          LoadingLabel="Fetching rows" SkeletonRows="4" Sortable="false">
+    <PropertyColumn T="PartRow" TProperty="string" Property="x => x.Source" Title="Source" />
+    <PropertyColumn T="PartRow" TProperty="string" Property="x => x.Stage" Title="Stage" />
+    <PropertyColumn T="PartRow" TProperty="string" Property="x => x.Amount" Title="Amount" />
+</DeskGrid>
+</DeskStack>
+
+<p class="empty">
+    Open a row and <span class="mono">RowActions</span> shows what can be done with it. A view
+    answers on the row, in a snippet, and offers a window only if the snippet is not enough; a
+    command that only opens a window goes straight there. One snippet at a time, and Escape
+    puts it away.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    <div class="meta"><span class="mono">North · Draft · 120</span> — the row, opened</div>
+    <RowActions Actions="_rowActions" />
+</DeskStack>
+
+<p class="empty">
+    Every snippet sits in a <span class="mono">SnippetShell</span>: a section card with its name
+    in the bar, a note on what it is missing, and the one way out as the bar's trailing key, so no
+    snippet builds its own. A snippet that draws cards of its own sets
+    <span class="mono">Cards</span>, and the shell becomes an unframed pane header over them in
+    the same voice — never a card around cards.
+</p>
+
+<SnippetShell Title="Last five" Icon="@Icons.Material.Filled.History" Note="5 of 12"
+              OpenLabel="Full history" OnOpen="@(() => Task.CompletedTask)">
+    <div class="meta">Draft · Review · Review · Final · Final</div>
+</SnippetShell>
+</PanelSection>
+
+</PanelSection>
+
+<PanelSection Title="Display — empty states">
+<p class="empty">
+    Nothing to show is still something to say. <span class="mono">Kind</span> picks which
+    sentence the panel is writing, and the reader's next move follows from it — the wrong
+    kind sends them to check the feed when the filter was the problem. Each carries at most
+    one action, and it is the first step rather than a menu of them.
+</p>
+
+<DeskStack Gap="DeskSpace.Space1">
+    <EmptyState>
+        Default — the bare line. Loading notes and neutral asides live here.
+    </EmptyState>
+
+    <EmptyState Kind="EmptyStateKind.New">
+        <ChildContent>
+            New — nothing exists yet, so the message is about what would.
+        </ChildContent>
+        <Action>
+            <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
+                        Icon="@Icons.Material.Filled.Add">Log the first entry</DeskButton>
+        </Action>
+    </EmptyState>
+
+    <EmptyState Kind="EmptyStateKind.Filtered">
+        <ChildContent>
+            Filtered — rows exist; this window excluded them. Name the control that did it.
+        </ChildContent>
+        <Action>
+            <DeskButton Size="DeskKeySize.Small"
+                        Icon="@Icons.Material.Filled.FilterAltOff">Clear the filter</DeskButton>
+        </Action>
+    </EmptyState>
+
+    <EmptyState Kind="EmptyStateKind.Error">
+        <ChildContent>
+            Error — the load failed, which a grey sentence alone would not distinguish from
+            "nothing here yet". Hue plus shape, never hue on its own.
+        </ChildContent>
+        <Action>
+            <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.Refresh">Retry</DeskButton>
+        </Action>
+    </EmptyState>
+</DeskStack>
+</PanelSection>
+
+<PanelSection Title="Load failure">
+<p class="empty">
+    What a window shows when its load failed: the sentence naming what did not load, as the
+    Error kind of the empty state, and the one key that loads it again. The exception went to
+    the log; the window never shows it.
+</p>
+
+<PanelLoadFailure Message="The list did not load."
+                  OnRetry="@(() => Toasts.Info("A retry loads the window again."))" />
+</PanelSection>
+
+<PanelSection Title="Display — pages">
+<p class="empty">
+    What a host shows when the desk cannot: a request that failed, or an address that opens
+    nothing. Each is an empty state set in an empty page — a heading that says what happened,
+    the sentence that says what to do, and one key back to the desk, loaded fresh. The error
+    page shows the request's reference when the host knows it, and never the exception.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    <div style="height: 22rem; overflow: hidden;">
+        <DeskErrorPage RequestId="00-4bf92f3577b34da6-01" style="min-height: 0; height: 100%;" />
+    </div>
+    <div style="height: 18rem; overflow: hidden;">
+        <DeskNotFound style="min-height: 0; height: 100%;" />
+    </div>
+</DeskStack>
+</PanelSection>
+
+@code {
+    // ---------------------------------------------------------------- display ---
+
+    private sealed record PartRow(string Source, string Stage, string Amount);
+
+    private static readonly PartRow[] _rows =
+    [
+        new("North", "Draft", "120"),
+        new("South", "Review", "85"),
+        new("East", "Final", "1,340"),
+        new("West", "Draft", "64")
+    ];
+
+    private bool _gridLoading = true;
+
+    // Two views that answer on the row and one command that only opens a window, so the strip
+    // shows both of its halves: the segmented views, then the key.
+    private IReadOnlyList<RowAction> _rowActions =>
+    [
+        new()
+        {
+            Key = "history", Label = "History", Icon = Icons.Material.Filled.History,
+            Snippet = HistorySnippet, OpenLabel = "Full history",
+            OpenWindow = EventCallback.Factory.Create(this, () => Task.CompletedTask)
+        },
+        new() { Key = "notes", Label = "Notes", Icon = Icons.Material.Filled.Notes, Snippet = NotesSnippet },
+        new()
+        {
+            Key = "open", Label = "Open item", Icon = Icons.Material.Filled.OpenInNew,
+            Emphasis = DeskEmphasis.Tinted,
+            OpenWindow = EventCallback.Factory.Create(this, () => Toasts.Info("A command opens its window directly."))
+        }
+    ];
+
+    private static RenderFragment HistorySnippet => @<div class="meta">Draft · Review · Final — filed Oct 12, final Oct 26</div>;
+
+    private static RenderFragment NotesSnippet => @<div class="meta">No notes on this item yet.</div>;
+
+    // Deliberately fake and shaped: one that rises, one written only when it changes, and one
+    // with a single reading, which draws a dash.
+    private static readonly (string Name, double[] Values, bool Step)[] _sparks =
+    [
+        ("North", new double[] { 120, 132, 128, 150, 164 }, false),
+        ("South", new double[] { 85, 85, 92, 92, 78 }, true),
+        ("East", new double[] { 1340 }, false)
+    ];
+
+    private static string SparkLabel(string name, double[] values) => values.Length < 2
+        ? $"{name}, one reading: {values[^1]}"
+        : $"{name}, from {values[0]} to {values[^1]} over {values.Length} readings";
+
+    /// <summary>What the last linked cell pressed would have opened, so the demo says it was heard.</summary>
+    private string? _linkOpened;
+
+    private double _progress = 34;
+    private bool _stepping;
+
+    // Deliberately fake, for the same reason the busy button is: a determinate bar is only
+    // legible while it is moving.
+    private async Task StepAsync()
+    {
+        _stepping = true;
+
+        try
+        {
+            for (var i = 0; i < 6; i++)
+            {
+                await Task.Delay(220);
+                _progress = _progress >= 100 ? 0 : Math.Min(100, _progress + 11);
+                StateHasChanged();
+            }
+        }
+        finally
+        {
+            // Without the finally the button would stay lit for good on a throw, which is
+            // the one thing a busy button must never do.
+            _stepping = false;
+            StateHasChanged();
+        }
+    }
+}

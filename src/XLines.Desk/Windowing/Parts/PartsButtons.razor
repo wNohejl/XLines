@@ -1,0 +1,121 @@
+@inject WindowManager Manager
+
+@* ==========================================================================
+   Buttons
+   ========================================================================== *@
+
+<PanelSection Title="Buttons — emphasis">
+<p class="empty">
+    Weight says how loud, not what colour. Hue is no longer an affordance channel: an
+    interface with five coloured button types has no primary action, only five competing
+    ones. A call site answers two questions it can actually answer —
+    <span class="mono">Emphasis</span> for how much of the panel this claims, and
+    <span class="mono">Role</span> for whether pressing it destroys something. Every weight
+    wears one finish — a light line along the top and a sheen that fades out above the label,
+    which goes while the key is held — so the finish says "a key" and the weight still says how
+    loud. A Plain key wears it only under the pointer; High contrast wears none.
+</p>
+
+<DeskStack Gap="DeskSpace.Space3">
+    @foreach (var (emphasis, name, use) in _emphases)
+    {
+        <DeskStack Gap="DeskSpace.Space1">
+            <div class="meta">
+                <span class="mono">@name</span> — @use
+            </div>
+            @* Destructive is red at Plain or Tinted weight and never Filled: the one prominent key
+               in a view is never the one that destroys (HIG, Buttons), so the catalogue does not
+               draw the pairing it would be wrong to copy. *@
+            <DeskRow Gap="DeskSpace.Space2">
+                <DeskButton Emphasis="@emphasis">Apply</DeskButton>
+                @if (emphasis != DeskEmphasis.Filled)
+                {
+                    <DeskButton Emphasis="@emphasis" Role="DeskRole.Destructive">Delete run</DeskButton>
+                }
+            </DeskRow>
+        </DeskStack>
+    }
+</DeskStack>
+
+<Note>
+    <strong>Exactly one Filled per context.</strong> If a panel seems to need two, one of
+    them is not the primary action — demote it to Tinted and the panel says what it is for.
+    And it is never the destructive key: a delete is red at Plain or Tinted weight.
+</Note>
+
+</PanelSection>
+
+<PanelSection Title="Buttons — size">
+<p class="empty">
+    Size is about how much of the panel the action deserves, not about fitting. Chrome and
+    row actions are Small; a panel's own intent is Medium; Large is for the one button a
+    whole view exists to press, which most views do not have.
+</p>
+
+<DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+    <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted">Small</DeskButton>
+    <DeskButton Size="DeskKeySize.Medium" Emphasis="DeskEmphasis.Tinted">Medium</DeskButton>
+    <DeskButton Size="DeskKeySize.Large" Emphasis="DeskEmphasis.Tinted">Large</DeskButton>
+    <DeskButton Icon="@Icons.Material.Filled.Refresh" Title="Reload" />
+</DeskRow>
+
+</PanelSection>
+
+<PanelSection Title="Buttons — state">
+
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskButton Emphasis="DeskEmphasis.Filled" Busy="@_busy" OnClick="RunAsync">
+        @(_busy ? "Ingesting" : "Press to run")
+    </DeskButton>
+    <DeskButton Emphasis="DeskEmphasis.Tinted" Disabled="true">Disabled</DeskButton>
+    <DeskButton Emphasis="DeskEmphasis.Plain" Disabled="true">Disabled, plain</DeskButton>
+</DeskRow>
+
+<p class="empty">
+    A busy button keeps its weight and runs the in-flight sweep: it is occupied, not inert,
+    and it refuses further presses without pretending it has gone away. A disabled button
+    drops to the muted ink instead — the two states look different because they mean
+    different things, and an operator who cannot tell them apart will keep pressing.
+</p>
+</PanelSection>
+
+@code {
+    // ---------------------------------------------------------------- buttons ---
+
+    private static readonly (DeskEmphasis Emphasis, string Name, string Use)[] _emphases =
+    [
+        (DeskEmphasis.Plain, "Plain",
+            "transparent until pointed at — toolbar actions, and every way out of a thing"),
+        (DeskEmphasis.Tinted, "Tinted",
+            "an accent wash — secondary actions that still have to be found in a dense panel"),
+        (DeskEmphasis.Filled, "Filled",
+            "solid accent — the one action this context exists to commit")
+    ];
+
+    private bool _busy;
+
+    // Deliberately fake. A catalog's job is to let you look at a state, and busy is a state
+    // you otherwise have to catch mid-request to see.
+    private async Task RunAsync()
+    {
+        _busy = true;
+        Report(PulseState.Active, "demonstrating");
+
+        await Task.Delay(1400);
+
+        _busy = false;
+        Report(PulseState.Healthy, "reference");
+    }
+
+    // The panel's own report (see PartsPanel), for the busy key: it puts the demonstration on
+    // the window's pulse.
+    [CascadingParameter(Name = "WindowId")]
+    private string? WindowId { get; set; }
+
+    /// <summary>Reports this window's state to its chrome. No-op when hosted outside a window.</summary>
+    private void Report(PulseState state, string? status = null)
+    {
+        if (WindowId is not null)
+            Manager.SetPulse(WindowId, state, status);
+    }
+}

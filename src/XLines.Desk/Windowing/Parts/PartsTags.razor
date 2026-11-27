@@ -1,0 +1,37 @@
+@* ==========================================================================
+   Tags
+   ========================================================================== *@
+
+<PanelSection Title="Tags">
+<p class="empty">
+    The state word, at word scale. A tag always says its word — the wash is the second
+    channel, never the only one, so the row still reads with the colour taken away. Neutral
+    carries no state at all and is the right choice for a label that is only a label.
+</p>
+
+<DeskRow Gap="DeskSpace.Space2">
+    @foreach (var (state, word) in _tagStates)
+    {
+        <Tag State="@state">@word</Tag>
+    }
+</DeskRow>
+
+<p class="empty">
+    Name the consequence, not the colour: <span class="mono">DeskState.Negative</span> on a
+    breached SLO, never "the red one". The day the wash changes, every call site that named
+    the outcome still reads correctly.
+</p>
+</PanelSection>
+
+@code {
+    // ------------------------------------------------------------------- tags ---
+
+    private static readonly (DeskState State, string Word)[] _tagStates =
+    [
+        (DeskState.Neutral, "Neutral"),
+        (DeskState.Info, "Selected"),
+        (DeskState.Positive, "Healthy"),
+        (DeskState.Warning, "Degraded"),
+        (DeskState.Negative, "Breached")
+    ];
+}

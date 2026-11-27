@@ -240,11 +240,11 @@ public class WindowInstance
     public string Title => TitleOverride ?? Definition.Title;
 
     // Computed by the manager from Weight and row order; nothing else writes these.
-    public double X { get; set; }
+    public double X { get; internal set; }
     public double Width { get; set; }
 
     /// <summary>Relative share of the row when expanded. Divider drags change this, nothing else.</summary>
-    public double Weight { get; set; } = 1;
+    public double Weight { get; internal set; } = 1;
 
     /// <summary>
     /// Collapsed to a slim, title-only tab. A collapsed window is still in the row at its
@@ -254,12 +254,12 @@ public class WindowInstance
     public bool Minimised { get; set; }
 
     /// <summary>Takes the whole row temporarily, without disturbing the other weights.</summary>
-    public bool Maximised { get; set; }
+    public bool Maximised { get; internal set; }
 
-    public PulseState Pulse { get; set; } = PulseState.Idle;
+    public PulseState Pulse { get; internal set; } = PulseState.Idle;
 
     /// <summary>Short status text on the title bar, e.g. "9m fresh" or "2 open".</summary>
-    public string? StatusText { get; set; }
+    public string? StatusText { get; internal set; }
 
     /// <summary>
     /// The panel holds input that has not been saved — a half-typed entry. Its close key asks

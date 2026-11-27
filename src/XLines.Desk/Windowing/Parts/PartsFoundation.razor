@@ -1,0 +1,135 @@
+@* ==========================================================================
+   Foundation
+   ========================================================================== *@
+
+<PanelSection Title="Spacing">
+<p class="empty">
+    One 4px ramp. Pass a step to <span class="mono">DeskRow</span> or
+    <span class="mono">DeskStack</span> rather than writing a pixel gap inline.
+</p>
+
+<DeskStack Gap="DeskSpace.Space1">
+    @foreach (var (step, name, px) in _spaces)
+    {
+        <DeskRow Gap="DeskSpace.Space3">
+            <span class="mono meta parts-key">@name</span>
+            <div style="height:8px; border-radius:1px; background:var(--text-tertiary); width:@px"></div>
+            <span class="meta">@px</span>
+            <span class="meta">@_spaceUse[step]</span>
+        </DeskRow>
+    }
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Type styles">
+<p class="empty">
+    The HIG's text styles at macOS's density, named for the job, not the size —
+    <span class="mono">--text-body</span> keeps meaning the right thing when Text size makes 13px
+    something else. Hierarchy comes from these and the four label colours; a screen that needs a
+    size not on this list needs a different style instead.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    @foreach (var (token, size, leading, weight, use) in _typeStyles)
+    {
+        <DeskRow Gap="DeskSpace.Space3" Align="DeskAlign.Baseline">
+            <span class="mono meta parts-key">@token</span>
+            <span style="font-size:var(@token); line-height:var(@leading); font-weight:var(@weight)">Every value in its place</span>
+            <span class="meta">@size / @use</span>
+        </DeskRow>
+    }
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Row and stack">
+<p class="empty">
+    <span class="mono">DeskRow</span> is the horizontal one with its gap, alignment and
+    justification named; <span class="mono">DeskStack</span> is the vertical one. Both leave
+    the 8px default alone when Gap is unset.
+</p>
+
+<DeskStack Gap="DeskSpace.Space3">
+    <DeskRow Gap="DeskSpace.Space2">
+        <span class="meta">Row, Space2 — the default gap.</span>
+        <Tag>One</Tag>
+        <Tag>Two</Tag>
+    </DeskRow>
+
+    <DeskRow Gap="DeskSpace.Space4">
+        <span class="meta">Row, Space4.</span>
+        <Tag>One</Tag>
+        <Tag>Two</Tag>
+    </DeskRow>
+
+    <DeskRow Justify="DeskJustify.End" Gap="DeskSpace.Space2">
+        <DeskButton Emphasis="DeskEmphasis.Plain">Cancel</DeskButton>
+        <DeskButton Emphasis="DeskEmphasis.Filled">Apply</DeskButton>
+    </DeskRow>
+
+    <DeskRow Justify="DeskJustify.Between">
+        <span class="meta">Justify=Between — label left, control right.</span>
+        <Tag>Right</Tag>
+    </DeskRow>
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Panel headings">
+<p class="empty">
+    Every rule on this page is a <code>PanelSection</code>: it renders the rule through
+    <code>PanelHeader</code>, owns the air to the next section, and steps its heading rank
+    down when nested, so no call site writes a margin or a level. <code>PanelHeader</code>
+    on its own is for a rule inside a row that is already spacing it:
+</p>
+
+<DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Baseline">
+    <PanelHeader Tight>Tight — the row is already spacing it</PanelHeader>
+    <Tag State="DeskState.Info">Live</Tag>
+</DeskRow>
+</PanelSection>
+
+@code {
+    // ------------------------------------------------------------- foundation ---
+
+    private static readonly (string Step, string Name, string Px)[] _spaces =
+    [
+        ("1", "--space-1", "4px"),
+        ("2", "--space-2", "8px"),
+        ("3", "--space-3", "12px"),
+        ("4", "--space-4", "16px"),
+        ("6", "--space-6", "24px"),
+        ("8", "--space-8", "32px"),
+        ("12", "--space-12", "48px"),
+        ("16", "--space-16", "64px")
+    ];
+
+    private static readonly Dictionary<string, string> _spaceUse = new()
+    {
+        ["1"] = "a value and its unit",
+        ["2"] = "the desk's default gap",
+        ["3"] = "separate controls",
+        ["4"] = "groups in a section",
+        ["6"] = "sections of a panel",
+        ["8"] = "read at different times",
+        ["12"] = "page-level separation",
+        ["16"] = "any more wants a divider"
+    };
+
+    // The ramp the desk actually ships (the Desk's stylesheet, "The HIG text-style ramp"), at macOS's
+    // density. This list named four tokens, three of which no longer exist — --text-title,
+    // --text-callout and their leadings — so its samples fell back to the body size and taught a
+    // ladder nobody could use. Headline is Body's size and differs by weight, so the sample says so.
+    private static readonly (string Token, string Size, string Leading, string Weight, string Use)[] _typeStyles =
+    [
+        ("--text-title1", "22px", "--leading-title", "--weight-medium", "a figure that leads: a metric, a score"),
+        ("--text-title2", "17px", "--leading-title", "--weight-semibold", "a window's title"),
+        ("--text-title3", "15px", "--leading-title", "--weight-semibold", "a form's title, a person's name"),
+        ("--text-headline", "13px semibold", "--leading-body", "--weight-semibold", "the part of a row that leads it"),
+        ("--text-body", "13px", "--leading-body", "--weight-regular", "the reading size"),
+        ("--text-subheadline", "12px", "--leading-body", "--weight-regular", "section headers, group footers, meta"),
+        ("--text-footnote", "11px", "--leading-body", "--weight-regular", "table headers, figure labels, chart axes"),
+        ("--text-caption", "10px", "--leading-body", "--weight-regular", "legends, and the 10px floor")
+    ];
+}

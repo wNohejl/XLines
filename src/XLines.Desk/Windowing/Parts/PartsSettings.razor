@@ -1,0 +1,191 @@
+@* ==========================================================================
+   Settings
+   ========================================================================== *@
+
+<PanelSection Title="Form group">
+<p class="empty">
+    The grouped form as one spelling, drawn as a section card: one filled group with one hairline
+    edge, its sentence-case name inside it in a header bar (the headline style, with an optional
+    key, count or filter trailing — <span class="mono">Keys</span>), a full-width hairline under
+    the bar, rows divided by inset hairlines from the label's edge, and the sentence that explains
+    the group under the card as its footer — never a box of its own. Each
+    <span class="mono">FormRow</span> leads with its label in the column the whole group shares,
+    so the controls line up down the page; a narrow card stacks each label above its control. A
+    split row (<span class="mono">.wgroup__split</span>) sets two compact controls side by side.
+    Several cards sit in a <span class="mono">.wflow</span> flow: as many columns as the window
+    is wide, never wider cards.
+</p>
+
+<div class="wflow">
+    <FormGroup Title="Delivery" LabelWidth="104px">
+        <Keys>@(_formQuantity ?? 0) @(_formQuantity == 1 ? "parcel" : "parcels")</Keys>
+        <ChildContent>
+            <FormRow Label="Carrier">
+                <DeskSelect TValue="string" Class="wfield--short" aria-label="Carrier" @bind-Value="_formCarrier">
+                    <option value="post">Post</option>
+                    <option value="courier">Courier</option>
+                    <option value="collect">Collect</option>
+                </DeskSelect>
+            </FormRow>
+            <FormRow Label="Quantity">
+                <DeskField TValue="int?" Mono="true" Class="wfield--short" type="number"
+                           aria-label="Quantity" placeholder="1" @bind-Value="_formQuantity" />
+            </FormRow>
+            <FormRow Label="Signature">
+                <DeskSwitch Options="_formSignature" Label="Signature" Size="DeskKeySize.Small" @bind-Value="_formSigned" />
+            </FormRow>
+        </ChildContent>
+        <Footer>Arrives in two working days; a courier needs someone in to sign.</Footer>
+    </FormGroup>
+
+    <FormGroup Title="Packing">
+        <ChildContent>
+            <div class="wgroup__row wgroup__split">
+                <div class="wgroup__cell">
+                    <span class="wgroup__label">Box</span>
+                    <DeskSwitch Options="_formBoxes" Label="Box" Size="DeskKeySize.Small" @bind-Value="_formBox" />
+                </div>
+                <div class="wgroup__cell">
+                    <span class="wgroup__label">Wrap</span>
+                    <DeskSwitch Options="_formWraps" Label="Wrap" Size="DeskKeySize.Small" @bind-Value="_formWrap" />
+                </div>
+            </div>
+            <FormRow Label="Note">
+                <DeskField TValue="string" Class="wfield--fill" aria-label="Packing note" placeholder="Fragile" @bind-Value="_formNote" />
+            </FormRow>
+        </ChildContent>
+        <Footer>A split row stacks its two cells in a card narrower than both.</Footer>
+    </FormGroup>
+</div>
+</PanelSection>
+
+<PanelSection Title="Checkbox">
+<p class="empty">
+    One setting that is on or off, said by the shape of a tick rather than by a key changing
+    weight. It often waits for something else to be applied — a filter, a form — and is
+    announced as a box that is checked; Space and a press on its words both flip it.
+</p>
+
+<DeskRow Gap="DeskSpace.Space4">
+    <DeskCheckbox Label="Only overdue" @bind-Checked="_onlyOverdue" />
+    <DeskCheckbox Label="Include archived" @bind-Checked="_includeArchived" />
+    <DeskCheckbox Label="Disabled" Disabled="true" />
+</DeskRow>
+
+</PanelSection>
+
+<PanelSection Title="Toggle">
+<p class="empty">
+    The checkbox's sibling, for a setting that takes effect the moment it flips — nothing else
+    has to be pressed. The words lead and the switch trails, as in a settings row, and a reader
+    hears a switch that is on or off. A choice that waits for Apply is a checkbox.
+</p>
+
+<DeskStack Gap="DeskSpace.Space1">
+    <DeskToggle Label="Show hidden items" @bind-Checked="_showHidden" />
+    <DeskToggle Label="Notify when done" @bind-Checked="_notify" />
+    <DeskToggle Label="Sync on open" Checked="true" Disabled="true" Title="Set by the host, not here" />
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Chip">
+<p class="empty">
+    A small capsule key beside what it acts on. Under a list it folds the rest and says how many
+    ("More · 3 items", then "Fewer"), reporting expanded and the region it controls; on its own
+    it is one filter, reporting pressed. Pressed is a deeper fill and a heavier word, never a hue.
+</p>
+
+<ul id="parts-chip-list" class="empty">
+    <li>First item</li>
+    <li>Second item</li>
+    @if (_chipOpen)
+    {
+        <li>Third item</li>
+        <li>Fourth item</li>
+        <li>Fifth item</li>
+    }
+</ul>
+
+<DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+    <DeskChip Controls="parts-chip-list" @bind-Pressed="_chipOpen">@(_chipOpen ? "Fewer" : "More · 3 items")</DeskChip>
+    <DeskChip @bind-Pressed="_chipFilter">Only flagged</DeskChip>
+    <DeskChip Disabled="true">Disabled</DeskChip>
+</DeskRow>
+
+</PanelSection>
+
+<PanelSection Title="Stepper">
+<p class="empty">
+    One capsule that nudges a value by a step, always beside the field that shows it: the field
+    is where the number is read and a large change typed, the stepper is for the nudge of one.
+    It is one Tab stop the arrows drive, and a half that would cross a bound dims.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    <DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+        <DeskField TValue="int?" Mono="true" type="number" min="1" max="8" aria-label="Copies"
+                   style="max-width:64px" Value="_copies"
+                   ValueChanged="@((int? n) => _copies = Math.Clamp(n ?? 1, 1, 8))" />
+        <DeskStepper Label="Copies" Min="1" Max="8" @bind-Value="_copies" />
+        <span class="meta">Copies, from 1 to 8</span>
+    </DeskRow>
+    <DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+        <DeskStepper Label="At its lowest" Min="0" Max="8" Value="0" />
+        <span class="meta">At its lowest bound — the half that would cross it dims.</span>
+    </DeskRow>
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Slider">
+<p class="empty">
+    A value whose place between two ends matters more than its exact figure — a share, a level —
+    chosen by dragging, with whatever it governs following the thumb.
+    <span class="mono">Format</span> puts the value in the caller's words for the readout and the
+    reader alike: "45%", not 45. A typed figure is a field; a few fixed steps are a gate.
+</p>
+
+<div class="wgroup">
+    <div class="wgroup__row wgroup__row--form">
+        <span class="wgroup__label">Share</span>
+        <DeskSlider Label="Share of the row" Min="20" Max="80" Step="5" @bind-Value="_share"
+                    Format="@(v => $"{v:0}%")" />
+    </div>
+    <div class="wgroup__row wgroup__row--form">
+        <span class="wgroup__label">Level</span>
+        <DeskSlider Label="Level" @bind-Value="_level" />
+    </div>
+    <div class="wgroup__row wgroup__row--form">
+        <span class="wgroup__label">Disabled</span>
+        <DeskSlider Label="Disabled slider" Value="40" Disabled="true" Format="@(v => $"{v:0}%")" />
+    </div>
+</div>
+</PanelSection>
+
+@code {
+    private string _formCarrier = "post";
+    private int? _formQuantity = 1;
+    private bool _formSigned;
+    private static readonly IReadOnlyList<DeskSwitchOption<bool>> _formSignature =
+        [new(false, "Not needed"), new(true, "Required")];
+    private string _formBox = "small";
+    private string _formWrap = "paper";
+    private string? _formNote;
+    private static readonly IReadOnlyList<DeskSwitchOption<string>> _formBoxes =
+        [new("small", "Small"), new("large", "Large")];
+    private static readonly IReadOnlyList<DeskSwitchOption<string>> _formWraps =
+        [new("paper", "Paper"), new("bubble", "Bubble")];
+
+    // --------------------------------------------------------------- settings ---
+
+    private bool _onlyOverdue = true;
+    private bool _includeArchived;
+    private bool _showHidden = true;
+    private bool _chipOpen;
+    private bool _chipFilter;
+    private bool _notify;
+    private int _copies = 3;
+    private double _share = 45;
+    private double _level = 60;
+}

@@ -1,0 +1,256 @@
+@inject ThemeService Theme
+@implements IDisposable
+
+@* ==========================================================================
+   Gate
+   ========================================================================== *@
+
+<PanelSection Title="Gate">
+<p class="empty">
+    One visible choice among a few — a view, a lookback, a mode. The cap slides to the
+    position you press, and arrows move it from the keyboard. Two to five fixed positions;
+    past that, a select is the honest control, because a segmented gate that scrolls is a
+    select wearing a costume.
+</p>
+
+<DeskRow Gap="DeskSpace.Space3">
+    <DeskSwitch Options="_gateViews" Label="Demo view" @bind-Value="_gateView" />
+    <DeskSwitch Options="GateOptions.LookbackDays" Label="Demo lookback" Mono="true"
+                @bind-Value="_gateDays" />
+</DeskRow>
+
+<p class="empty">
+    <span class="mono">GateOptions.LookbackDays</span> is shared — a lookback window reads
+    "14d / 30d / 90d" in every window, not two spellings of the same question.
+</p>
+
+</PanelSection>
+
+<PanelSection Title="Radio group">
+<p class="empty">
+    The gate's question, for options that need room: a sentence each, or a picture of what
+    choosing it does. Every option is on the panel at once; the group is one Tab stop, arrows
+    move the choice, and Home and End reach the ends. Where the options are short words, the
+    gate is the better control.
+</p>
+
+<DeskRadioGroup TValue="string" Options="_cadences" Label="Reminder" @bind-Value="_cadence" />
+
+<p class="empty">
+    Given an <span class="mono">ItemTemplate</span>, the template paints the whole option and
+    the group keeps the semantics — the role, the state, the Tab stop — so a tile never restates
+    them. Here each tile is a picture of the rhythm it would set.
+</p>
+
+<DeskRadioGroup TValue="string" Options="_densities" Label="Density" Class="swatches" @bind-Value="_density">
+    <ItemTemplate Context="option">
+        <span class="swatch @(option.Value == _density ? "swatch--on" : null)">
+            <span class="swatch__panel" aria-hidden="true" style="gap:@DensityGap(option.Value)">
+                <span class="swatch__ink"></span>
+                <span class="swatch__ink swatch__ink--secondary"></span>
+                <span class="swatch__ink"></span>
+            </span>
+            <span class="swatch__name">@option.Label</span>
+        </span>
+    </ItemTemplate>
+</DeskRadioGroup>
+
+</PanelSection>
+
+<PanelSection Title="Accent picker">
+<p class="empty">
+    A family's accent, chosen: one circle per hue the family offers, in a row. A radio group whose
+    positions are colours — one Tab stop, arrows move the choice and wrap at the ends, Home and
+    End jump — and each circle names itself, because there are no words on it to hear. Every
+    circle is painted by the accent block choosing it would apply, in the appearance showing.
+</p>
+
+<DeskAccentPicker @bind-Value="_accent" IsDark="Theme.IsDark" />
+
+<p class="empty">
+    This one moves nothing but itself. The Window manager's moves the desk, and it offers the
+    showing theme's own list — only while that theme offers more than the accent it was made with.
+</p>
+
+</PanelSection>
+
+<PanelSection Title="Theme picker">
+<p class="empty">
+    Every theme the desk carries, as a tile painted by the theme itself — its ground, a raised
+    panel, two lines of ink and the accent — in one grid that wraps to its width. The catalogue's
+    plain headings are a filter, not shelves: <span class="mono">Group</span> narrows the grid, and
+    <span class="mono">ThemeFilters</span> are the segments for a gate in the card's header bar.
+    One radio group: one Tab stop, the arrows travel the tiles showing in reading order and stop
+    at the ends. The chosen tile wears a ring, a tick and a heavier name.
+</p>
+
+<FormGroup Title="Themes">
+    <Keys>
+        <DeskSwitch Options="DeskThemePicker.ThemeFilters" Label="Show themes" Size="DeskKeySize.Small" @bind-Value="_familyGroup" />
+    </Keys>
+    <ChildContent>
+        <div class="wgroup__row wgroup__row--pad">
+            <DeskThemePicker @bind-Value="_family" Group="@_familyGroup" IsDark="Theme.IsDark" />
+        </div>
+    </ChildContent>
+    <Footer>This one moves nothing but itself; the Window manager's moves the desk.</Footer>
+</FormGroup>
+
+</PanelSection>
+
+<PanelSection Title="Steps">
+<p class="empty">
+    <span class="mono">DeskSteps</span> is a vertical stepper for a form that is a sequence. Only
+    the step to do is open, with a sentence of guidance; a done step folds to its title and what
+    was chosen, which is the link that reopens it; a waiting step is one line saying what it waits for.
+    Reach for it wherever a form has to be done in order.
+</p>
+
+<DeskSteps Label="Example">
+    <DeskStep Number="1" Title="Your item" State="DeskStepState.Done" OnOpen="() => { }">
+        <Summary>Report · North region</Summary>
+    </DeskStep>
+    <DeskStep Number="2" Title="Where it goes" State="DeskStepState.Current"
+              Hint="The folder your item is filed in, and who reviews it there.">
+        <DeskRow Gap="DeskSpace.Space2">
+            <DeskButton Size="DeskKeySize.Small">Archive · Ames</DeskButton>
+            <DeskButton Size="DeskKeySize.Small">Shared · Ruiz</DeskButton>
+        </DeskRow>
+    </DeskStep>
+    <DeskStep Number="3" Title="Schedule" State="DeskStepState.Todo" Waiting="Choose where it goes first." />
+</DeskSteps>
+</PanelSection>
+
+<PanelSection Title="Tabs">
+<p class="empty">
+    The same marble, doing the other job. A gate changes what one reading is made of; tabs
+    change which reading you are looking at, so they are flat — nothing here is pressed
+    down. A section with nothing behind it is never offered, and one section on its own
+    renders with no bar at all.
+</p>
+
+<DeskStack>
+<DeskTabs TValue="string" Tabs="_demoTabs" Label="Demo sections" @bind-Value="_demoTab">
+    <Note>
+        Showing <span class="mono">@context</span>. The third tab is marked unavailable, so
+        it is not on the bar — flip it to see the marble re-measure itself.
+    </Note>
+</DeskTabs>
+
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskButton Size="DeskKeySize.Small" OnClick="() => _thirdTab = !_thirdTab">
+        @(_thirdTab ? "Take the third section away" : "Give the third section content")
+    </DeskButton>
+</DeskRow>
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Badge">
+<p class="empty">
+    A count beside the name of what it counts, never written into it: "Queue · 2" changes the
+    label every time the count moves, so the name a reader or a test finds it by is never the
+    same twice. Nothing to count is no badge. Past the cap the pill says "99+", and a reader
+    still hears the true figure with its noun.
+</p>
+
+<DeskStack Gap="DeskSpace.Space3">
+<DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+    <DeskButton Size="DeskKeySize.Small">
+        Queue <DeskBadge Count="3" Label="items in the queue" One="item in the queue" />
+    </DeskButton>
+    <DeskButton Size="DeskKeySize.Small">
+        Drafts <DeskBadge Count="0" Label="drafts" One="draft" />
+    </DeskButton>
+    <span class="meta">Drafts has nothing to count, so no badge.</span>
+</DeskRow>
+
+<DeskTabs TValue="string" Tabs="_badgeTabs" Label="Counted sections" @bind-Value="_badgeTab">
+    <Note>
+        On a tab the count is the tab's <span class="mono">Count</span>, so its name stays
+        <span class="mono">@context</span> however the count moves.
+    </Note>
+</DeskTabs>
+</DeskStack>
+</PanelSection>
+
+@code {
+    // ------------------------------------------------------------ radio group ---
+
+    private string _cadence = "before";
+
+    // ---------------------------------------------------------- accent picker ---
+
+    private string? _accent;
+
+    private DeskThemeFamily _family = DeskThemeFamily.Standard;
+    private string _familyGroup = string.Empty;
+
+    private static readonly IReadOnlyList<DeskRadioOption<string>> _cadences =
+    [
+        new("never", "Never"),
+        new("before", "Once, the day before"),
+        new("daily", "Daily until it is done")
+    ];
+
+    private string _density = "regular";
+
+    private static readonly IReadOnlyList<DeskRadioOption<string>> _densities =
+    [
+        new("compact", "Compact", "Tighter rows, more of them in a window"),
+        new("regular", "Regular", "The desk's own rhythm"),
+        new("roomy", "Roomy", "More air between rows")
+    ];
+
+    // The tile's picture is the rhythm itself: the same three lines, closer or further apart.
+    private static string DensityGap(string density) => density switch
+    {
+        "compact" => "2px",
+        "roomy" => "9px",
+        _ => "5px"
+    };
+
+    // ------------------------------------------------------------ gate and tabs ---
+
+    private static readonly IReadOnlyList<DeskSwitchOption<string>> _gateViews =
+    [
+        new("list", "List"),
+        new("grid", "Grid"),
+        new("chart", "Chart")
+    ];
+
+    private string _gateView = "list";
+    private int _gateDays = 30;
+
+    private string _demoTab = "Summary";
+    private bool _thirdTab;
+
+    private IReadOnlyList<DeskTab<string>> _demoTabs =>
+    [
+        new("Summary", "Summary"),
+        new("Details", "Details"),
+        new("History", "History", _thirdTab)
+    ];
+
+    // ------------------------------------------------------------------ badge ---
+
+    private string _badgeTab = "Open";
+
+    private static readonly IReadOnlyList<DeskTab<string>> _badgeTabs =
+    [
+        new("Open", "Open", Count: 3),
+        new("Later", "Later", Count: 120),
+        new("Done", "Done")
+    ];
+
+    protected override void OnInitialized()
+    {
+        // The accent picker draws its circles in the appearance showing, and that is not a
+        // parameter of this panel, so nothing else would ask it to look again after a flip.
+        Theme.Changed += OnThemeChanged;
+    }
+
+    private Task OnThemeChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Theme.Changed -= OnThemeChanged;
+}

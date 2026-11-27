@@ -1,0 +1,62 @@
+@* ==========================================================================
+   Fields
+   ========================================================================== *@
+
+<PanelSection Title="Fields">
+<p class="empty">
+    The button's inverse: inset into the panel rather than standing off it. Same height, so
+    a row of mixed controls still lines up. Bare — no <span class="mono">Label</span>, no
+    <span class="mono">Error</span> — each renders as a plain element with no wrapper and
+    sits straight in a row. Bare is not nameless: a placeholder disappears on the first
+    keystroke, so a bare field carries an <span class="mono">aria-label</span>, and in a form it
+    sits beside a label in the grouped row (Anatomy, above).
+</p>
+
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskField TValue="string" placeholder="Name" aria-label="Name" style="max-width:150px" @bind-Value="_text" />
+    <DeskField TValue="decimal?" Mono="true" type="number" placeholder="Amount" aria-label="Amount"
+               style="max-width:100px" @bind-Value="_number" />
+    <DeskSelect TValue="string" aria-label="Stage" @bind-Value="_choice">
+        <option value="draft">Draft</option>
+        <option value="review">Review</option>
+        <option value="final">Final</option>
+    </DeskSelect>
+    <DeskField TValue="string" placeholder="Disabled" aria-label="Disabled field" disabled style="max-width:120px" />
+</DeskRow>
+
+<p class="empty">
+    Given a label, the field grows a frame: a real <code>&lt;label for&gt;</code> that stays put
+    once there is text in the box, the required mark, and — the rule that matters — the error
+    sitting under the control it is about rather than somewhere else on the panel. State lives
+    on the value. <span class="mono">Mono</span> puts tabular figures under a number, so a
+    column of amounts lines up on the digit rather than on the glyph.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+<DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Start">
+    <DeskField TValue="string" Label="Name" Required="true" placeholder="Ames"
+               style="max-width:150px" @bind-Value="_text" />
+    <DeskField TValue="decimal?" Label="Amount" Mono="true" type="number" placeholder="120"
+               style="max-width:100px" @bind-Value="_number"
+               Error="@(_number is null ? "An amount is required to file this." : null)" />
+    <DeskSelect TValue="string" Label="Stage" style="max-width:150px" @bind-Value="_choice">
+        <option value="draft">Draft</option>
+        <option value="review">Review</option>
+        <option value="final">Final</option>
+    </DeskSelect>
+</DeskRow>
+
+<DeskTextArea Label="Why this entry" rows="3"
+              placeholder="Prose, so it commits on blur rather than per keystroke."
+              @bind-Value="_prose" />
+</DeskStack>
+</PanelSection>
+
+@code {
+    // ----------------------------------------------------------------- fields ---
+
+    private string? _text;
+    private decimal? _number;
+    private string _choice = "draft";
+    private string? _prose;
+}

@@ -1,0 +1,34 @@
+@* ==========================================================================
+   Pulse
+   ========================================================================== *@
+
+<PanelSection Title="Pulse">
+<p class="empty">
+    The window chrome's own state channel, and the one a busy button's sweep borrows from.
+    Set it from a panel with <span class="mono">WindowManager.SetPulse(id, PulseState.Active)</span>
+    rather than drawing it yourself.
+</p>
+
+<DeskStack Gap="DeskSpace.Space1">
+    @foreach (var (state, label) in _pulses)
+    {
+        <DeskRow Gap="DeskSpace.Space3" Align="DeskAlign.Center">
+            <div class="pulse @state" style="width:120px; border-radius:1px"></div>
+            <span class="meta">@label</span>
+        </DeskRow>
+    }
+</DeskStack>
+</PanelSection>
+
+@code {
+    // ------------------------------------------------------------------ pulse ---
+
+    private static readonly (string Class, string Label)[] _pulses =
+    [
+        ("pulse--healthy", "Healthy — the source answered, and the numbers moved."),
+        ("pulse--active", "Active — work is genuinely in flight."),
+        ("pulse--warn", "Warn — degraded, or under budget pressure."),
+        ("pulse--critical", "Critical — the one state you must not miss."),
+        ("pulse--idle", "Idle — nothing has run yet.")
+    ];
+}

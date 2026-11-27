@@ -1,0 +1,280 @@
+@inject IDeskAlerts Alerts
+
+@* ==========================================================================
+   Menus and disclosure
+   ========================================================================== *@
+
+<PanelSection Title="Menu">
+<p class="empty">
+    A pull-down is a key that opens commands related to its purpose. Pressing the key does not
+    act — the row chosen from it does — so it stays Tinted and never claims the Filled key. A row
+    that cannot run stays in the menu, dimmed, with its reason where its description would be;
+    a destructive row is red, and still asks before it acts. Related rows sit in a group under a
+    quiet heading, a hairline between groups; the heading is not a row, so the arrows pass over it.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskPullDown Label="Export" Wide="true">
+        <DeskMenuGroup Label="Copy">
+            <DeskMenuItem Label="Copy as text" Description="Every visible row, tab-separated"
+                          OnClick="@(() => _menuChose = "Copy as text")" />
+            <DeskMenuItem Label="Save as CSV" Detail="4 rows"
+                          OnClick="@(() => _menuChose = "Save as CSV")" />
+        </DeskMenuGroup>
+        <DeskMenuGroup Label="Archive">
+            <DeskMenuItem Label="Send to the archive" Disabled="true"
+                          DisabledReason="The archive is read-only until Monday." />
+            <DeskMenuItem Label="Clear the list" Destructive="true" OnClick="ClearAsync" />
+        </DeskMenuGroup>
+    </DeskPullDown>
+</DeskRow>
+
+@if (_menuChose is not null)
+{
+    <div class="meta">
+        Chose <span class="mono">@_menuChose</span> — the menu closed before it ran.
+    </div>
+}
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Pop-up">
+<p class="empty">
+    A pop-up is a key whose face is the current choice: its name, its mark and its figure, then
+    the up-and-down chevron. Open, it lists every option with the same parts in the same places,
+    the figures right-aligned so they compare down the column, a line and a second figure beneath
+    for what qualifies each, the current one checked. A command that is not an option, such as
+    one that leads somewhere to type a value of your own, ends the list behind a hairline. With
+    one option and nothing else to do, it is a statement rather than a key.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+<DeskRow Gap="DeskSpace.Space3">
+    <DeskPopUp TValue="string" Label="Plan" Options="PopUpPlans" @bind-Value="_plan">
+        <Commands>
+            <DeskMenuItem Command="true" Label="Other amount…" Description="Type an amount of your own"
+                          OnClick="@(() => _plan = "custom")" />
+        </Commands>
+    </DeskPopUp>
+    <DeskPopUp TValue="string" Label="Region" Options="PopUpOne" Value="@("eu")" />
+    <DeskPopUp TValue="string" Label="Plan" Options="PopUpPlans" Disabled="true"
+               Placeholder="Plan" DescribedBy="parts-popup-wait" />
+    <span class="meta" id="parts-popup-wait">Choose a region first.</span>
+</DeskRow>
+<div class="meta">Chosen: <span class="mono">@_plan</span></div>
+</DeskStack>
+
+</PanelSection>
+
+<PanelSection Title="Job menu">
+<p class="empty">
+    A pull-down over the application's named runs (<span class="mono">IDeskJobs</span>). Each row
+    says what it costs before it is chosen; one that cannot run here stays, dimmed, with its
+    reason. The key shimmers while a run is under way, and how it went is a toast — green when
+    something arrived, blue when there was nothing to do, amber when part of it failed.
+</p>
+
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskJobMenu Label="Refresh data" Icon="@Icons.Material.Filled.CloudDownload"
+                 Jobs="_demoJobs" Align="DeskPopoverAlign.Start" />
+</DeskRow>
+</PanelSection>
+
+<PanelSection Title="Popover">
+<p class="empty">
+    A panel anchored to the key that opened it, and one at a time: opening another puts this
+    one away, a press outside or Escape closes it, and focus goes back to the key. The owner
+    binds <span class="mono">Open</span>; the key names itself with
+    <span class="mono">data-popover-return</span> and says it opens something. Holding a radio
+    menu, it is the pop-up — the pull-down's sibling, for choosing a value rather than a command.
+</p>
+
+<DeskPopover Open="_popoverOpen" OpenChanged="@((bool open) => _popoverOpen = open)">
+    <Anchor>
+        <DeskButton Emphasis="DeskEmphasis.Tinted" OnClick="@(() => _popoverOpen = !_popoverOpen)"
+                    aria-haspopup="menu" aria-expanded="@(_popoverOpen ? "true" : "false")"
+                    data-popover-return="true">
+            Sort: @_sort
+            <Glyph Icon="@Icons.Material.Filled.ExpandMore" />
+        </DeskButton>
+    </Anchor>
+    <ChildContent>
+        <DeskMenu Label="Sort by" Radio="true">
+            @foreach (var sort in _sorts)
+            {
+                <DeskMenuItem Label="@sort" Checked="@(sort == _sort)" OnClick="@(() => _sort = sort)" />
+            }
+        </DeskMenu>
+    </ChildContent>
+</DeskPopover>
+
+</PanelSection>
+
+<PanelSection Title="Disclosure">
+<p class="empty">
+    Details behind a label until they are wanted. The triangle leads, pointing at the label
+    while the details are hidden and turning down once they show; the label says what is
+    inside, and the details indent to it, so the two read as one column.
+</p>
+
+<DeskStack Gap="DeskSpace.Space1">
+    <DeskDisclosure Label="Why this item is overdue">
+        <p class="empty">It was due Friday, and nobody has reviewed it since it was filed.</p>
+    </DeskDisclosure>
+    <DeskDisclosure Label="Open from the start" Open="true">
+        <p class="empty">
+            Unbound, <span class="mono">Open</span> is where it starts; bind it with
+            <span class="mono">OpenChanged</span> to own the state.
+        </p>
+    </DeskDisclosure>
+</DeskStack>
+</PanelSection>
+
+<PanelSection Title="Key row">
+<p class="empty">
+    The keys that close a form, in the one order every window uses: the secondary keys, then
+    the sentence saying why the primary waits, then the one Filled key, last. The sentence is
+    text on the row because a disabled key's tooltip never shows — it takes no pointer — and
+    the primary is pointed at it, so a screen reader hears it with the key.
+    <span class="mono">Primary</span>'s context is the sentence's id; write it as
+    <span class="mono">aria-describedby</span>. With no reason it is null, and nothing is written.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    <KeyRow Reason="@(_keyOwner is null ? "Pick an owner to file this item." : null)">
+        <Secondary>
+            <DeskButton>Cancel</DeskButton>
+            <DeskButton Emphasis="DeskEmphasis.Tinted" OnClick="@(() => _keyOwner = _keyOwner is null ? "ames" : null)">
+                @(_keyOwner is null ? "Pick an owner" : "Clear the owner")
+            </DeskButton>
+        </Secondary>
+        <Primary Context="described">
+            <DeskButton Emphasis="DeskEmphasis.Filled" Disabled="@(_keyOwner is null)"
+                        aria-describedby="@described">File item</DeskButton>
+        </Primary>
+    </KeyRow>
+
+    <KeyRow>
+        <Secondary>
+            <DeskButton>Cancel</DeskButton>
+        </Secondary>
+        <Primary Context="described">
+            <DeskButton Emphasis="DeskEmphasis.Filled" aria-describedby="@described">Save</DeskButton>
+        </Primary>
+    </KeyRow>
+
+    <KeyRow Justify="DeskJustify.Start" Reason="Runs every item in the list again.">
+        <Primary Context="described">
+            <DeskButton Emphasis="DeskEmphasis.Tinted" aria-describedby="@described">Run again</DeskButton>
+        </Primary>
+    </KeyRow>
+</DeskStack>
+</PanelSection>
+
+<PanelSection Title="Inline confirm">
+<p class="empty">
+    A question asked where the thing it is about already is, for a step cheap enough that an
+    alert would be too much. Cancel first, the confirm last; the confirm is Tinted, and a
+    destructive one takes the destructive role, never Filled. The group is named by its
+    question, and Escape answers Cancel.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    <InlineConfirm ConfirmLabel="Archive"
+                   OnConfirm="@(() => _confirmOutcome = "Archived")"
+                   OnCancel="@(() => _confirmOutcome = "Kept")">
+        Archive the three reviewed items?
+    </InlineConfirm>
+
+    <InlineConfirm ConfirmLabel="Delete" Destructive="true"
+                   ConfirmIcon="@Icons.Material.Filled.DeleteOutline"
+                   OnConfirm="@(() => _confirmOutcome = "Deleted")"
+                   OnCancel="@(() => _confirmOutcome = "Kept")">
+        Delete this draft? It cannot be brought back.
+    </InlineConfirm>
+
+    @if (_confirmOutcome is not null)
+    {
+        <p class="empty">Last answer: @_confirmOutcome</p>
+    }
+</DeskStack>
+</PanelSection>
+
+@code {
+    // ------------------------------------------------------ menus and popovers ---
+
+    /// <summary>The last row chosen from the pull-down, so the demo says it was heard.</summary>
+    private string? _menuChose;
+
+    /// <summary>The pop-up's choice: the likeliest first, the one figure each is compared by.</summary>
+    private string? _plan = "studio";
+
+    private static readonly IReadOnlyList<DeskPopUpOption<string>> PopUpPlans =
+    [
+        new("studio", "Studio") { Figure = "$24", Mark = "Best", Detail = "Per seat, billed yearly", DetailFigure = "−20%", DetailFigureState = DeskState.Positive },
+        new("solo", "Personal") { Figure = "$12", Detail = "One seat" },
+        new("month", "Monthly") { Figure = "$30", Detail = "Billed each month, 9 days stale", DetailFigure = "+0%" },
+        new("legacy", "Legacy") { Figure = "$18", Disabled = true, DisabledReason = "Closed to new accounts." }
+    ];
+
+    private static readonly IReadOnlyList<DeskPopUpOption<string>> PopUpOne =
+    [
+        new("eu", "Frankfurt") { Figure = "18 ms" }
+    ];
+
+    // ---------------------------------------------------------------- job menu ---
+
+    private readonly DemoJobs _demoJobs = new();
+
+    /// <summary>
+    /// The gallery's runs: two that can run, one that cannot and says why, and one that finds
+    /// nothing to do. Each takes a moment so the busy key can be seen.
+    /// </summary>
+    private sealed class DemoJobs : IDeskJobs
+    {
+        private static readonly IReadOnlyList<DeskJob> All =
+        [
+            new("index", "Refresh the index", "Reads every record again", "4 credits", true, null),
+            new("recent", "Fetch what is new", "Only the records changed since the last run", "~2 req", true, null),
+            new("archive", "Copy to the archive", "Keeps a copy somewhere else", "1 credit", false,
+                "No archive is configured on this desk."),
+            new("tidy", "Tidy up", "Clears what has expired", "no requests", true, null)
+        ];
+
+        public Task<IReadOnlyList<DeskJob>> DescribeAsync(CancellationToken ct = default) => Task.FromResult(All);
+
+        public async Task<DeskJobOutcome> RunAsync(string key, CancellationToken ct = default)
+        {
+            await Task.Delay(900, ct);
+
+            return key switch
+            {
+                "index" => new(DeskJobResult.Done, "Refresh the index: 1,204 records."),
+                "recent" => new(DeskJobResult.Done, "Fetch what is new: 12 records."),
+                _ => new(DeskJobResult.Nothing, "Tidy up: nothing had expired.")
+            };
+        }
+    }
+
+    private bool _popoverOpen;
+    private string _sort = "Newest";
+    private static readonly string[] _sorts = ["Newest", "Oldest", "Owner"];
+
+    /// <summary>A destructive row still confirms: the menu closes, then the alert asks.</summary>
+    private async Task ClearAsync()
+    {
+        var confirmed = await Alerts.ConfirmAsync(
+            "Clear the list?",
+            message: "A demonstration — nothing is removed.",
+            confirmLabel: "Clear the list",
+            cancelLabel: "Keep it",
+            destructive: true);
+
+        _menuChose = confirmed ? "Clear the list — confirmed" : "Clear the list — kept";
+    }
+
+    private string? _confirmOutcome;
+    private string? _keyOwner;
+}

@@ -1,0 +1,107 @@
+@* ==========================================================================
+   Anatomy
+   ========================================================================== *@
+
+<PanelSection Title="Anatomy">
+    <p class="empty">
+        Every window body renders its parts in one order — title, toolbar, note, metrics,
+        sections, forms — and each part owns the air beneath it, so a panel never writes a
+        margin. Below, every slot once, in that order.
+    </p>
+
+    <PanelTitle>
+        <ChildContent>Quarterly review</ChildContent>
+        <Tags>
+            <Tag State="DeskState.Positive">Complete</Tag>
+            <Tag State="DeskState.Info">2026</Tag>
+        </Tags>
+        <Detail>Sat Oct 24 · 7:10 PM · <span class="ptitle__em">Ames</span> and <span class="ptitle__em">Ruiz</span></Detail>
+        <Keys>
+            <DeskSwitch Options="_anatomyYears" Label="Year" Mono="true" @bind-Value="_anatomyYear" />
+        </Keys>
+    </PanelTitle>
+
+    <PanelToolbar Message="3 updated">
+        <ChildContent>
+            @* The toolbar every list window draws: a fixed set of kinds is a segment, and a filter
+               that searches is a search field that names its scope. *@
+            <DeskSwitch Options="_anatomyKinds" Label="Kind" Size="DeskKeySize.Small" @bind-Value="_anatomyKind" />
+            <DeskSearch Placeholder="Search items" Label="Items" @bind-Value="_anatomySearch" />
+        </ChildContent>
+        <Actions>
+            <DeskButton Icon="@Icons.Material.Filled.Refresh">Refresh</DeskButton>
+            <DeskButton Emphasis="DeskEmphasis.Filled" Icon="@Icons.Material.Filled.Sync">Sync now</DeskButton>
+        </Actions>
+    </PanelToolbar>
+
+    <MetricRow>
+        <Metric Label="Sources in SLO" Value="2/2" State="DeskState.Positive" />
+        <Metric Label="Rows today" Value="16,835" />
+    </MetricRow>
+
+    <PanelSection Title="Recent items">
+        <Keys>
+            <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted">Mine</DeskButton>
+            <DeskButton Size="DeskKeySize.Small">Shared</DeskButton>
+        </Keys>
+        <Detail>
+            <span class="mono">12-9</span>
+            <span>8 overdue</span>
+            <span class="psection__aside">14 of 21 reviewed</span>
+        </Detail>
+        <ChildContent>
+            <EmptyState Kind="EmptyStateKind.Filtered">No items match this filter.</EmptyState>
+        </ChildContent>
+    </PanelSection>
+
+    @* A form in a window is the grouped form (apple-hig-components, forms.md): pform--grouped
+       draws no card of its own, because the group is the fill and a frame around it would be a
+       box inside a box. Each row's label leads in one column and its control trails; a field's
+       width matches what goes in it. Every edit form on the desk is this, row for row. *@
+    <PanelForm Title="Edit entry" Class="pform--grouped">
+        <Detail>Item 42 · added Oct 26</Detail>
+        <ChildContent>
+            <div class="wgroup">
+                <FormRow Label="Owner">
+                    <DeskSelect TValue="string" Class="wfield--short" aria-label="Owner" @bind-Value="_anatomyOwner">
+                        <option value="ames">Ames</option>
+                        <option value="ruiz">Ruiz</option>
+                        <option value="chen">Chen</option>
+                    </DeskSelect>
+                </FormRow>
+                <FormRow Label="Amount">
+                    <DeskField TValue="int?" Mono="true" Class="wfield--short" type="number"
+                               aria-label="Amount" placeholder="120" @bind-Value="_anatomyAmount" />
+                </FormRow>
+                <FormRow Label="Note">
+                    <DeskField TValue="string" Class="wfield--fill" aria-label="Note" placeholder="Optional"
+                               @bind-Value="_anatomyNote" />
+                </FormRow>
+            </div>
+        </ChildContent>
+        <Destructive>
+            <DeskButton Role="DeskRole.Destructive">Delete</DeskButton>
+        </Destructive>
+        <Footer>
+            <DeskButton>Cancel</DeskButton>
+            <DeskButton Emphasis="DeskEmphasis.Filled">Save changes</DeskButton>
+        </Footer>
+    </PanelForm>
+</PanelSection>
+
+@code {
+    private int _anatomyYear = 2026;
+
+    private static readonly IReadOnlyList<DeskSwitchOption<int>> _anatomyYears =
+        [new(2026, "2026"), new(2025, "2025")];
+
+    private string _anatomyKind = "";
+    private string _anatomySearch = "";
+
+    private static readonly IReadOnlyList<DeskSwitchOption<string>> _anatomyKinds =
+        [new("", "All", "Every kind"), new("open", "Open"), new("closed", "Closed")];
+
+    private string _anatomyOwner = "ames";
+    private int? _anatomyAmount = 120;
+    private string? _anatomyNote;
+}

@@ -1,0 +1,201 @@
+@inject IDeskAlerts Alerts
+@inject IDeskSheets Sheets
+
+@* ==========================================================================
+   Modality
+   ========================================================================== *@
+
+<PanelSection Title="Modality">
+<p class="empty">
+    Three live examples. Open each one; the decision rule underneath is easier to believe
+    once you have felt the difference between a surface that lets you keep working and one
+    that does not.
+</p>
+
+<DeskStack Gap="DeskSpace.Space3">
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@Icons.Material.Filled.OpenInNew"
+                OnClick="@(() => _dialogOpen = true)">
+        Floating dialog
+    </DeskButton>
+
+    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@Icons.Material.Filled.VerticalAlignBottom"
+                OnClick="OpenSheetAsync">
+        Modal sheet
+    </DeskButton>
+
+    <DeskButton Emphasis="DeskEmphasis.Tinted" Role="DeskRole.Destructive"
+                Icon="@Icons.Material.Filled.DeleteOutline"
+                OnClick="AskAsync">
+        Destructive alert
+    </DeskButton>
+</DeskRow>
+
+@if (_sheetOutcome is not null || _alertOutcome is not null)
+{
+    <DeskStack Gap="DeskSpace.Space1">
+        @if (_sheetOutcome is not null)
+        {
+            <div class="meta">
+                Sheet returned <span class="mono">@_sheetOutcome</span>
+            </div>
+        }
+        @if (_alertOutcome is not null)
+        {
+            <div class="meta">
+                Alert returned <span class="mono">@_alertOutcome</span>
+            </div>
+        }
+    </DeskStack>
+}
+</DeskStack>
+
+<Note>
+    <strong>The rule, in full.</strong> Use a <span class="mono">DeskSheet</span> when the
+    task is self-contained and completing it is the only goal — a form that must complete or
+    cancel, a multi-step configuration. Use a <span class="mono">DeskDialog</span> when the
+    operator needs to see or compare other things while working; it floats, several can be
+    open at once, and it never takes the desk hostage.
+    <span class="mono">Alerts.ConfirmAsync</span> is the narrowest tier and the only one
+    allowed to interrupt: a decision that must be made before anything else happens, and
+    nothing else. <strong>Comparison is never modal. If you are unsure, do not be modal.</strong>
+</Note>
+
+<p class="empty">
+    Two details the demos above are here to pin, both found the hard way. <strong>Read the
+    <span class="mono">DialogResult</span>, never <span class="mono">OnCancel</span>.</strong>
+    Escape and backdrop dismissal go through MudBlazor's own cancel path and never raise the
+    component's callback, so a sheet that only listened to <span class="mono">OnCancel</span>
+    would treat a dismissed task as an unanswered one forever. The pattern is
+    <span class="mono">result is { Canceled: false, Data: … }</span> — an unanswered question
+    is a "no", which is also why this sheet can afford
+    <span class="mono">BackdropClick = true</span> on a form with a required field: a stray
+    click outside costs the operator the draft, not a bad write. An alert does the opposite
+    (<span class="mono">DeskAlerts</span> sets it false) because a decision must not be
+    dismissed by missing it. And a destructive confirm is <em>never</em> the default: the
+    alert focuses Cancel on open, so Enter backs out — unless there is no Cancel to focus, in
+    which case a one-button acknowledgement gives the default back to its only button rather
+    than leaving Enter to answer the page behind it. Tab once to reach the red button, which
+    is exactly as much friction as deleting something deserves.
+</p>
+
+@if (_dialogOpen)
+{
+    <DeskDialog Title="Floating dialog"
+                Subtitle="Drag the bar — the desk stays usable behind it"
+                Width="420px"
+                OnClose="@(() => _dialogOpen = false)">
+        <p class="empty">
+            Not modal, on purpose. There is no scrim, the panels behind still scroll and
+            accept clicks, and several of these can be open at once — because the workflow
+            this serves is comparing things, and a modal would force you to finish with one
+            record before looking at the next.
+        </p>
+        <p class="empty">
+            It borrows the window's own chrome — same title bar height, same controls, same
+            shadow — so it reads as a member of the desk rather than a web dialog that
+            wandered in.
+        </p>
+    </DeskDialog>
+}
+</PanelSection>
+
+@code {
+    // --------------------------------------------------------------- modality ---
+
+    private bool _dialogOpen;
+    private string? _sheetOutcome;
+
+    private string? _alertOutcome;
+    private IDeskSheetHandle? _sheet;
+    private string? _noteTitle;
+    private string? _noteBody;
+
+    /// <summary>
+    /// The sheet, opened the way every call site should open one: through
+    /// <see cref="IDeskSheets"/>, which holds the dialog options, so the caller states only the
+    /// sheet and what goes in it.
+    ///
+    /// <para>
+    /// The outcome is read off the awaited <see cref="DialogResult"/>, never off
+    /// <c>OnCancel</c>. Escape and backdrop dismissal go through MudBlazor's own cancel path
+    /// and never reach the component's callbacks, so a caller listening to <c>OnCancel</c>
+    /// would sit waiting on a sheet the operator already dismissed. The shape below —
+    /// <c>result is { Canceled: false, Data: … }</c> — treats every route out that is not an
+    /// explicit completion as a "no", which is the only reading that is safe.
+    /// </para>
+    /// </summary>
+    private async Task OpenSheetAsync()
+    {
+        _sheetOutcome = null;
+        _noteTitle = null;
+        _noteBody = null;
+
+        var parameters = new DialogParameters<DeskSheet>
+        {
+            { x => x.Title, "Add a note" },
+            { x => x.Subtitle, "A demonstration — nothing is written" },
+            { x => x.ChildContent, SheetBody },
+            { x => x.Footer, SheetFooter }
+        };
+
+        _sheet = await Sheets.ShowAsync(parameters);
+
+        var result = await _sheet.Result;
+
+        _sheetOutcome = result is { Canceled: false, Data: string outcome }
+            ? $"\"{outcome}\" — completed"
+            : "cancelled (Escape, backdrop, or the way out)";
+
+        StateHasChanged();
+    }
+
+    // One grouped form, as every form in a window is (the Anatomy's, above): labels leading in
+    // one column, bare fields trailing, each named for a screen reader since the label beside
+    // it is not its <label>.
+    private RenderFragment SheetBody => @<div>
+        <p class="empty">
+            Modal, on purpose. The scrim is the statement: this task is self-contained, and
+            completing or cancelling it is the only thing on offer until it is done.
+        </p>
+        <div class="wgroup">
+            <div class="wgroup__row wgroup__row--form">
+                <span class="wgroup__label">Title</span>
+                <DeskField TValue="string" Class="wfield--fill" aria-label="Title" placeholder="Required"
+                           @bind-Value="_noteTitle" />
+            </div>
+            <div class="wgroup__row wgroup__row--form">
+                <span class="wgroup__label">Note</span>
+                <DeskTextArea Class="wfield--fill" aria-label="Note" rows="3" placeholder="Optional"
+                              @bind-Value="_noteBody" />
+            </div>
+        </div>
+    </div>;
+
+    private RenderFragment SheetFooter => @<DeskRow Justify="DeskJustify.End" Gap="DeskSpace.Space2">
+        <DeskButton Emphasis="DeskEmphasis.Plain"
+                    OnClick="@(() => _sheet?.Close())">
+            Cancel
+        </DeskButton>
+        <DeskButton Emphasis="DeskEmphasis.Filled"
+                    OnClick="@(() => _sheet?.Close(DialogResult.Ok(string.IsNullOrWhiteSpace(_noteTitle) ? "Untitled" : _noteTitle)))">
+            Add note
+        </DeskButton>
+    </DeskRow>;
+
+    /// <summary>
+    /// The destructive alert. One await is the whole point — if guarding a dangerous action
+    /// cost six lines of DialogParameters, call sites would quietly skip the guard.
+    /// </summary>
+    private async Task AskAsync()
+    {
+        var confirmed = await Alerts.ConfirmAsync(
+            "Delete this run?",
+            message: "The imported rows stay; only the run record goes.",
+            confirmLabel: "Delete run",
+            cancelLabel: "Keep it",
+            destructive: true);
+
+        _alertOutcome = confirmed ? "true — confirmed" : "false — kept";
+    }
+}

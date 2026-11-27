@@ -1,0 +1,170 @@
+@inject DeskToasts Toasts
+
+@* ==========================================================================
+   Notices
+   ========================================================================== *@
+
+<PanelSection Title="Notices">
+<p class="empty">
+    <span class="mono">&lt;Note&gt;</span> is the ambient tier: it sits beside the thing it
+    describes and stays as long as the thing is true. No dismiss control, no timer — if it
+    needs acknowledging it is an alert, and if it should vanish it is a toast.
+</p>
+
+<DeskStack Gap="DeskSpace.Space2">
+    <Note>
+        A note carries context the operator needs but did not ask for.
+    </Note>
+    <Note State="DeskState.Warning">
+        A warning carries a cost. State what it is, and what to do instead.
+    </Note>
+</DeskStack>
+
+<p class="empty">
+    Only <span class="mono">DeskState.Warning</span> changes the skin, because a cost is the
+    one thing an operator has to act on. ADR 0016's rule holds inside the box too: the hue
+    never carries the message on its own — the sentence says what the cost is, and the wash
+    only makes it findable.
+</p>
+
+<DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+    <span class="meta">At word scale, inside a row or cell:</span>
+    <span class="mono">
+        <Note Inline State="DeskState.Warning">62%</Note>
+    </span>
+</DeskRow>
+
+</PanelSection>
+
+<PanelSection Title="Tooltip">
+<p class="empty">
+    A sentence of explanation beside the thing it explains, raised by hover and by keyboard focus
+    alike after a short pause — for what a <code>title</code> cannot carry, such as two lines.
+    Where one short phrase will do, <code>title</code> stays. It describes its trigger and never
+    renames it: the link below is still announced by its own name.
+</p>
+
+<DeskRow Gap="DeskSpace.Space6" Align="DeskAlign.Center">
+    <DeskTooltip Text="@_linkTip">
+        <DeskLink Destination="details" OnClick="@(() => { })">North region</DeskLink>
+    </DeskTooltip>
+    <DeskTooltip Text="@_textTip" Placement="DeskTooltipPlacement.Bottom">
+        <span class="meta">14 of 21 reviewed</span>
+    </DeskTooltip>
+</DeskRow>
+
+<p class="empty">
+    On plain text it is the pointer's alone — text takes no focus — so it may add to what the
+    text says, never be the only place a thing is said.
+</p>
+
+<p class="empty">
+    When the explanation is a small table rather than a sentence, it takes the structured shape:
+    a semibold <code>Title</code>, a <code>Caption</code> held to a measure, <code>Rows</code> of
+    label and value in tabular numerals with a quiet qualifier, the row it is about by weight, and
+    a <code>Footnote</code> saying where the rest are — it cannot be clicked into. A screen reader
+    hears <code>Text</code>, or the parts as plain lines.
+</p>
+
+<DeskRow Gap="DeskSpace.Space6" Align="DeskAlign.Center">
+    <DeskTooltip Title="Highest reading" Caption="@_tableTipCaption" Rows="@_tableTipRows"
+                 Footnote="+4 more in Regions">
+        <span class="meta" tabindex="0">North 412</span>
+    </DeskTooltip>
+</DeskRow>
+
+</PanelSection>
+
+<PanelSection Title="Checks">
+<p class="empty">
+    Advisory facts before a step is taken, as a grouped section: a mark, one sentence, and the
+    remedy key on the row where there is one. The mark's hue is the second channel; the
+    sentence carries the meaning, so the list still reads with the colour taken away.
+</p>
+
+<CheckList Items="_checks" Title="Before you send" />
+
+</PanelSection>
+
+<PanelSection Title="Toasts">
+<p class="empty">
+    The transient tier. A toast reports that something finished while you were looking
+    somewhere else. A success, an info or a neutral notice goes after five seconds, a warning
+    after eight; a failure, and anything with a key, stays until it is pressed or dismissed. The
+    header's <span class="mono">DeskToastStack</span> draws them in the bar's free stretch, as
+    one capsule: the count's key, the newest in front cut to one line, the rest as edges stepped
+    out to its right; pointing, focusing or pressing the count drops the whole list beneath it.
+    Where the stretch is narrow it is the key alone. The operator reads the stack as Activities —
+    press a key below and watch the header. Panels take <span class="mono">DeskToasts</span>, never
+    <span class="mono">ISnackbar</span>.
+</p>
+
+<DeskRow Gap="DeskSpace.Space2">
+    <DeskButton Size="DeskKeySize.Small"
+                OnClick="@(() => Toasts.Success("Evaluated — every source inside its SLO."))">
+        Success
+    </DeskButton>
+    <DeskButton Size="DeskKeySize.Small"
+                OnClick="@(() => Toasts.Info("Layout saved to this browser."))">
+        Info
+    </DeskButton>
+    <DeskButton Size="DeskKeySize.Small"
+                OnClick="@(() => Toasts.Warn("Pull finished — 12 pulls left in today's allowance."))">
+        Warn
+    </DeskButton>
+    <DeskButton Size="DeskKeySize.Small"
+                OnClick="@(() => Toasts.Fail("Scheduled pull failed — the provider timed out."))">
+        Fail
+    </DeskButton>
+    <DeskButton Size="DeskKeySize.Small"
+                OnClick="@(() => Toasts.Show("Nothing to report."))">
+        Neutral
+    </DeskButton>
+    <DeskButton Size="DeskKeySize.Small"
+                OnClick="@(() => Toasts.Added("Added a row to the list.", "Show", () => { }))">
+        With a key
+    </DeskButton>
+    <DeskButton Size="DeskKeySize.Small"
+                OnClick="RaiseSeveral">
+        Several at once
+    </DeskButton>
+</DeskRow>
+</PanelSection>
+
+@code {
+    /// <summary>Four notices in a burst, so the stack's layering and its count can be seen.</summary>
+    private void RaiseSeveral()
+    {
+        Toasts.Info("Layout saved to this browser.");
+        Toasts.Success("Evaluated — every source inside its SLO.");
+        Toasts.Warn("Finished, with two sources slow.");
+        Toasts.Fail("A scheduled run failed — the provider timed out.");
+    }
+
+    // ---------------------------------------------------------------- tooltip ---
+
+    private const string _linkTip = "Opens the region's details.\nIts history is one tab over.";
+    private const string _textTip = "Reviewed means someone other than the owner has read it.";
+    private const string _tableTipCaption = "The latest count, taken 40 minutes ago.\nTarget 380 · set for the quarter";
+
+    private static readonly DeskTooltipRow[] _tableTipRows =
+    [
+        new("North", "412", "+8.4%", Emphasis: true),
+        new("East", "398", "+4.7%"),
+        new("West", "371", "−2.4%"),
+        new("South", "366", "−3.7%"),
+    ];
+
+    // ----------------------------------------------------------------- checks ---
+
+    private IReadOnlyList<Check> _checks =>
+    [
+        new(DeskState.Positive, "Every item has an owner."),
+        new(DeskState.Warning, "Two items have no due date.", "Set dates", () =>
+        {
+            Toasts.Info("A remedy opens where the fix is made.");
+            return Task.CompletedTask;
+        }),
+        new(DeskState.Negative, "One item is over its limit, so it cannot be sent as it is.")
+    ];
+}

@@ -26,8 +26,15 @@ public class PartsPanelTests : DeskTestContext
         Services.AddSingleton<IDeskSheets>(_sheets);
     }
 
-    private static string Source() => File.ReadAllText(
-        Path.Combine(Repo.Root(), "src", "XLines.Desk", "Windowing", "PartsPanel.razor"));
+    /// <summary>The gallery's source: the panel and the one component per group it composes, under Parts.</summary>
+    private static string Source()
+    {
+        var windowing = Path.Combine(Repo.Root(), "src", "XLines.Desk", "Windowing");
+        var files = new[] { Path.Combine(windowing, "PartsPanel.razor") }
+            .Concat(Directory.EnumerateFiles(Path.Combine(windowing, "Parts"), "*.razor").Order(StringComparer.Ordinal));
+
+        return string.Join("\n", files.Select(File.ReadAllText));
+    }
 
     /// <summary>The anatomy's form is the grouped form: labelled rows in a fill, not a field in a box.</summary>
     [Fact]
