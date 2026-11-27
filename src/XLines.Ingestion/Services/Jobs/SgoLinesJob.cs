@@ -15,7 +15,11 @@ internal sealed class SgoLinesJob(
 {
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key.StartsWith(IngestionJobs.SgoLinesPrefix, StringComparison.Ordinal);
+    /// <summary>Where the second source's key goes, in the words a refusal uses (ADR 0033).</summary>
+    public const string NoSportsGameOddsKey =
+        "Needs your own free SportsGameOdds key: set SPORTSGAMEODDS_API_KEY in .env, or Ingestion:SportsGameOdds:ApiKey for a host run.";
+
+    public bool Matches(string key) => key.StartsWith(JobKeys.SgoLinesPrefix, StringComparison.Ordinal);
 
     /// <summary>The second source's pulls, only where its key is held (ADR 0033): one a league it covers.</summary>
     public async ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
@@ -37,7 +41,7 @@ internal sealed class SgoLinesJob(
     /// <summary>On request only, never with a closing-scan day: a closing scan of this key is no job at all.</summary>
     public Task<JobOutcome> RunAsync(JobRun run, CancellationToken ct)
         => run.ClosingScanDay is null
-            ? RunSgoAsync(run.Key[IngestionJobs.SgoLinesPrefix.Length..], ct)
+            ? RunSgoAsync(run.Key[JobKeys.SgoLinesPrefix.Length..], ct)
             : Task.FromResult(JobSupport.Unknown(run.Key));
 
     /// <summary>
@@ -68,7 +72,7 @@ internal sealed class SgoLinesJob(
             .Select(b => b == "williamhill_us" ? "Caesars" : b));
 
         return new IngestionJob(
-            Key: IngestionJobs.SgoLinesPrefix + sport,
+            Key: JobKeys.SgoLinesPrefix + sport,
             Label: $"Pull {books} — {league}",
             Description: $"Moneyline, spread and total from {books} for {league} games in the next "
                          + $"{_options.SportsGameOdds.LookAhead.TotalDays:N0} days, from SportsGameOdds on your own key.",
@@ -95,14 +99,14 @@ internal sealed class SgoLinesJob(
     /// </summary>
     private async Task<JobOutcome> RunSgoAsync(string sportKey, CancellationToken ct)
     {
-        var jobKey = IngestionJobs.SgoLinesPrefix + sportKey;
+        var jobKey = JobKeys.SgoLinesPrefix + sportKey;
 
         await using var scope = scopeFactory.CreateAsyncScope();
         var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
 
         if (registry.SportsGameOdds is not { } source
             || scope.ServiceProvider.GetService<SportsGameOddsBudget>() is not { } budget)
-            return new JobOutcome(jobKey, false, 0, 0, IngestionJobs.NoSportsGameOddsKey);
+            return new JobOutcome(jobKey, false, 0, 0, NoSportsGameOddsKey);
 
         var sport = _options.EffectiveSports.FirstOrDefault(s => string.Equals(s, sportKey, StringComparison.OrdinalIgnoreCase));
         if (sport is null)

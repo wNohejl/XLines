@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace XLines.Ingestion.Services.Jobs;
 
-/// <summary>Play-by-play owed, <see cref="IngestionJobs.EspnGamecastBackport"/>: one batch of the gamecast backport a run.</summary>
+/// <summary>Play-by-play owed, <see cref="JobKeys.EspnGamecastBackport"/>: one batch of the gamecast backport a run.</summary>
 internal sealed class EspnGamecastBackportJob(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
@@ -14,7 +14,7 @@ internal sealed class EspnGamecastBackportJob(
 {
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key == IngestionJobs.EspnGamecastBackport;
+    public bool Matches(string key) => key == JobKeys.EspnGamecastBackport;
 
     public async ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
     {
@@ -31,7 +31,7 @@ internal sealed class EspnGamecastBackportJob(
         return
         [
             new IngestionJob(
-                Key: IngestionJobs.EspnGamecastBackport,
+                Key: JobKeys.EspnGamecastBackport,
                 Label: "Play-by-play owed",
                 Description: "Plays, drives and win, spread and total probabilities for finished games that have none, "
                              + $"newest first, {batch} games a press at two requests each. A game ESPN has no plays for "
@@ -58,13 +58,13 @@ internal sealed class EspnGamecastBackportJob(
 
         // A game with no plays is set aside, not failed; only a batch that came away with none
         // because every request threw is.
-        return new JobOutcome(IngestionJobs.EspnGamecastBackport, outcome.Status != RunStatus.Failed, outcome.Rows,
+        return new JobOutcome(JobKeys.EspnGamecastBackport, outcome.Status != RunStatus.Failed, outcome.Rows,
             outcome.Status == RunStatus.Failed ? outcome.Misses : 0, outcome.Detail,
             More: outcome.RunId != 0 && outcome.StillOwed > 0);
     }
 }
 
-/// <summary>Fighter profiles owed, <see cref="IngestionJobs.EspnFighters"/> (ADR 0021).</summary>
+/// <summary>Fighter profiles owed, <see cref="JobKeys.EspnFighters"/> (ADR 0021).</summary>
 internal sealed class EspnFightersJob(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options) : IIngestionJob
@@ -72,9 +72,12 @@ internal sealed class EspnFightersJob(
     /// <summary>Fighters one press describes: two full cards' worth, a few minutes at ESPN's pace.</summary>
     private const int FightersPerRun = 60;
 
+    /// <summary>Requests one fighter's profile costs: athlete page, stat sheets, career rates, record.</summary>
+    public const int RequestsPerFighter = 4;
+
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key == IngestionJobs.EspnFighters;
+    public bool Matches(string key) => key == JobKeys.EspnFighters;
 
     public async ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
     {
@@ -91,12 +94,12 @@ internal sealed class EspnFightersJob(
         return
         [
             new IngestionJob(
-                Key: IngestionJobs.EspnFighters,
+                Key: JobKeys.EspnFighters,
                 Label: "Fighter profiles owed",
                 Description: "Bio, career rates and every recorded fight with ESPN's stat sheet, for fighters on a card "
-                             + $"ahead or who have fought since theirs was taken — {IngestionJobs.RequestsPerFighter} requests a fighter, "
+                             + $"ahead or who have fought since theirs was taken — {RequestsPerFighter} requests a fighter, "
                              + $"{FightersPerRun} fighters a press.",
-                EstimatedRequests: Math.Min(owedFighters, FightersPerRun) * IngestionJobs.RequestsPerFighter,
+                EstimatedRequests: Math.Min(owedFighters, FightersPerRun) * RequestsPerFighter,
                 Available: menu.Stats > 0,
                 Unavailable: menu.Stats > 0 ? null : "No stats source registered.",
                 Group: JobGroups.CatchUp)
@@ -123,7 +126,7 @@ internal sealed class EspnFightersJob(
             await using var scope = scopeFactory.CreateAsyncScope();
             var fighters = scope.ServiceProvider.GetRequiredService<FighterProfileService>();
 
-            var outcome = await fighters.RefreshAsync(sportKey, IngestionJobs.EspnFighters, limit, ct);
+            var outcome = await fighters.RefreshAsync(sportKey, JobKeys.EspnFighters, limit, ct);
             rows += outcome.RowsIngested;
 
             if (outcome.Status == RunStatus.Failed)
@@ -132,7 +135,7 @@ internal sealed class EspnFightersJob(
             stillOwed += await fighters.OwedCountAsync(sportKey, ct);
         }
 
-        return new JobOutcome(IngestionJobs.EspnFighters, failures == 0, rows, failures,
+        return new JobOutcome(JobKeys.EspnFighters, failures == 0, rows, failures,
             $"{rows:N0} fighter {(rows == 1 ? "profile" : "profiles")} taken"
             + (stillOwed > 0 ? $"; {stillOwed:N0} still owed." : "."));
     }

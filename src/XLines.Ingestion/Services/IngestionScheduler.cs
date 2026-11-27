@@ -106,7 +106,7 @@ public class IngestionScheduler(
         // billed it repeatedly. Its own summary said "runs every job once", which it never did:
         // it ran exactly the one that costs money.
         if (_options.RunOnStartup)
-            await RunJobAsync(IngestionJobs.EspnSlate, stoppingToken);
+            await RunJobAsync(JobKeys.EspnSlate, stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -158,7 +158,7 @@ public class IngestionScheduler(
             await using var scope = scopeFactory.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
 
-            return await IngestionJobs.InPlay(db, now, _options.EffectiveSports).AnyAsync(ct)
+            return await Jobs.EspnLiveJob.InPlay(db, now, _options.EffectiveSports).AnyAsync(ct)
                 ? TimeSpan.FromTicks(Math.Min(TickInterval.Ticks, LivePoll.Ticks))
                 : TickInterval;
         }
@@ -210,13 +210,13 @@ public class IngestionScheduler(
         {
             if (await SlateIsDueAsync(now, ct))
             {
-                await RunJobAsync(IngestionJobs.EspnSlate, ct);
+                await RunJobAsync(JobKeys.EspnSlate, ct);
                 _lastSlateRefresh = now;
             }
 
             if (await LivePollIsDueAsync(now, ct))
             {
-                await RunJobAsync(IngestionJobs.EspnLive, ct);
+                await RunJobAsync(JobKeys.EspnLive, ct);
                 _lastLivePoll = now;
             }
         }
@@ -231,7 +231,7 @@ public class IngestionScheduler(
 
         if (defaultSource && (FixturesAreDue(now) || await FixturesAreDueForStartAsync(now, ct)))
         {
-            await RunJobAsync(IngestionJobs.OddsFixtures, ct);
+            await RunJobAsync(JobKeys.OddsFixtures, ct);
             _lastFixtures = now;
         }
 
@@ -252,18 +252,18 @@ public class IngestionScheduler(
         if (_options.GamePasses.Enabled
             && Due(_lastResultsSweep, _options.GamePasses.ResultsRetry, now) && await ResultsAreOwedAsync(ct))
         {
-            await RunJobAsync(IngestionJobs.EspnResults, ct);
+            await RunJobAsync(JobKeys.EspnResults, ct);
 
             // Results are what settlement grades against, so settle in the same breath
             // rather than leaving graded-able entries waiting for a separate cadence.
-            await RunJobAsync(IngestionJobs.Settle, ct);
+            await RunJobAsync(JobKeys.Settle, ct);
             _lastResultsSweep = now;
         }
 
         if (defaultSource && Due(_lastScoresCheck, ScoresCheck, now))
         {
             _lastScoresCheck = now;
-            await RunJobAsync(IngestionJobs.OddsScores, ct);
+            await RunJobAsync(JobKeys.OddsScores, ct);
         }
 
         if (_options.GamePasses.Enabled)
@@ -309,10 +309,10 @@ public class IngestionScheduler(
 
         _longPasses = Task.Run(async () =>
         {
-            if (fighters && await RunLongPassAsync(IngestionJobs.EspnFighters, ct))
+            if (fighters && await RunLongPassAsync(JobKeys.EspnFighters, ct))
                 _lastFighterPass = now;
 
-            if (backport && await RunLongPassAsync(IngestionJobs.EspnGamecastBackport, ct))
+            if (backport && await RunLongPassAsync(JobKeys.EspnGamecastBackport, ct))
                 _lastBackport = now;
         }, CancellationToken.None);
     }
@@ -416,7 +416,7 @@ public class IngestionScheduler(
     private static readonly TimeSpan FighterPass = TimeSpan.FromHours(1);
 
     /// <summary>
-    /// Live is due when a game is in play (<see cref="IngestionJobs.InPlay"/>) and the last live
+    /// Live is due when a game is in play (<see cref="Jobs.EspnLiveJob.InPlay"/>) and the last live
     /// poll is stale. The same predicate sets the tick (<see cref="NextDelayAsync"/>), so the
     /// scheduler never ticks fast for a game the live job would not fetch.
     /// </summary>
@@ -428,7 +428,7 @@ public class IngestionScheduler(
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
 
-        return await IngestionJobs.InPlay(db, now, _options.EffectiveSports).AnyAsync(ct);
+        return await Jobs.EspnLiveJob.InPlay(db, now, _options.EffectiveSports).AnyAsync(ct);
     }
 
     /// <summary>

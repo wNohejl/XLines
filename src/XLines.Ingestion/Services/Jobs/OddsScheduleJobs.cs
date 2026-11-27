@@ -11,14 +11,14 @@ using ScoresOwed = XLines.Ingestion.Services.IngestionJobs.ScoresOwed;
 
 namespace XLines.Ingestion.Services.Jobs;
 
-/// <summary>The default stats source's fixtures (ADR 0026), <see cref="IngestionJobs.OddsFixtures"/>: free.</summary>
+/// <summary>The default stats source's fixtures (ADR 0026), <see cref="JobKeys.OddsFixtures"/>: free.</summary>
 internal sealed class OddsFixturesJob(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options) : IIngestionJob
 {
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key == IngestionJobs.OddsFixtures;
+    public bool Matches(string key) => key == JobKeys.OddsFixtures;
 
     /// <summary>Fixtures, free, under Today, on a desk whose menu is the default source's. Without a key it says where to enter one.</summary>
     public ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
@@ -30,7 +30,7 @@ internal sealed class OddsFixturesJob(
         var scheduled = menu.Sports.Where(s => !FightSports.IsFight(s)).Select(s => s.ToUpperInvariant()).ToList();
 
         return JobSupport.Describe(new IngestionJob(
-            Key: IngestionJobs.OddsFixtures,
+            Key: JobKeys.OddsFixtures,
             Label: "Fixtures",
             Description: $"The schedule for the next eight days in {string.Join(", ", scheduled)} from The Odds API. "
                          + "No scores: those are their own pull.",
@@ -60,10 +60,10 @@ internal sealed class OddsFixturesJob(
             var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
 
             if (registry.FindStats(Adapters.TheOddsApiScheduleAdapter.SourceKey) is not { } source)
-                return new JobOutcome(IngestionJobs.OddsFixtures, false, 0, 0, JobSupport.NoScheduleSource(registry));
+                return new JobOutcome(JobKeys.OddsFixtures, false, 0, 0, JobSupport.NoScheduleSource(registry));
 
             var outcome = await scope.ServiceProvider.GetRequiredService<StatsIngestionService>()
-                .IngestFixturesAsync(source, sportKey, IngestionJobs.OddsFixtures, LeagueClock.Today(), ct);
+                .IngestFixturesAsync(source, sportKey, JobKeys.OddsFixtures, LeagueClock.Today(), ct);
 
             rows += outcome.RowsIngested;
             leagues++;
@@ -72,13 +72,13 @@ internal sealed class OddsFixturesJob(
                 failures++;
         }
 
-        return new JobOutcome(IngestionJobs.OddsFixtures, failures == 0, rows, failures,
+        return new JobOutcome(JobKeys.OddsFixtures, failures == 0, rows, failures,
             $"Fixtures for {leagues} {(leagues == 1 ? "league" : "leagues")}, eight days ahead: {rows:N0} games read. No credits spent.");
     }
 }
 
 /// <summary>
-/// The default stats source's final scores (ADR 0026): unattended, <see cref="IngestionJobs.OddsScores"/>,
+/// The default stats source's final scores (ADR 0026): unattended, <see cref="JobKeys.OddsScores"/>,
 /// and one league on request, <c>odds:scores:{sport}</c>.
 /// </summary>
 internal sealed class OddsScoresJob(
@@ -90,7 +90,7 @@ internal sealed class OddsScoresJob(
     private readonly IngestionOptions _options = options.Value;
 
     public bool Matches(string key)
-        => key == IngestionJobs.OddsScores || key.StartsWith(IngestionJobs.OddsScoresPrefix, StringComparison.Ordinal);
+        => key == JobKeys.OddsScores || key.StartsWith(JobKeys.OddsScoresPrefix, StringComparison.Ordinal);
 
     /// <summary>One scores pull per league, metered, beside the lines. Without a key each says where to enter one.</summary>
     public ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
@@ -110,7 +110,7 @@ internal sealed class OddsScoresJob(
             var check = menu.Allowance?.Check(credits) ?? CreditCheck.Go;
 
             jobs.Add(new IngestionJob(
-                Key: IngestionJobs.OddsScoresPrefix + sport,
+                Key: JobKeys.OddsScoresPrefix + sport,
                 Label: $"Pull scores — {league}",
                 Description: $"Final scores for {league} games completed in the last three days, then settles the journal. "
                              + "Older finals are beyond what The Odds API returns.",
@@ -134,16 +134,16 @@ internal sealed class OddsScoresJob(
     }
 
     public Task<JobOutcome> RunAsync(JobRun run, CancellationToken ct)
-        => run.Key == IngestionJobs.OddsScores
+        => run.Key == JobKeys.OddsScores
             ? RunScoresAsync(null, unattended: true, ct)
-            : RunScoresAsync(run.Key[IngestionJobs.OddsScoresPrefix.Length..], unattended: false, ct);
+            : RunScoresAsync(run.Key[JobKeys.OddsScoresPrefix.Length..], unattended: false, ct);
 
     /// <summary>
     /// Final scores from the default source (ADR 0026), at two credits a league a call.
     ///
     /// <para>
     /// On request (<paramref name="onlySport"/>): that league, whatever is owed — the person pressing
-    /// it saw the price. Unattended (<see cref="IngestionJobs.OddsScores"/>): only when automatic scanning is chosen,
+    /// it saw the price. Unattended (<see cref="JobKeys.OddsScores"/>): only when automatic scanning is chosen,
     /// only the leagues <see cref="ScoresDueAsync"/> names, and only while the month affords the call
     /// above the reserve held for pulls on request — so the scheduler never spends what an operator
     /// might want. Settles afterwards when a final arrived.
@@ -151,7 +151,7 @@ internal sealed class OddsScoresJob(
     /// </summary>
     private async Task<JobOutcome> RunScoresAsync(string? onlySport, bool unattended, CancellationToken ct)
     {
-        var jobKey = onlySport is null ? IngestionJobs.OddsScores : IngestionJobs.OddsScoresPrefix + onlySport;
+        var jobKey = onlySport is null ? JobKeys.OddsScores : JobKeys.OddsScoresPrefix + onlySport;
 
         IScoreSource? source;
         AllowanceState? allowance;
@@ -222,7 +222,7 @@ internal sealed class OddsScoresJob(
                 break;
 
             var outcome = await scope.ServiceProvider.GetRequiredService<StatsIngestionService>()
-                .IngestScoresAsync(scores, sportKey, IngestionJobs.OddsScoresPrefix + sportKey, ct);
+                .IngestScoresAsync(scores, sportKey, JobKeys.OddsScoresPrefix + sportKey, ct);
 
             rows += outcome.RowsIngested;
             if (outcome.Status == RunStatus.Failed)
@@ -233,7 +233,7 @@ internal sealed class OddsScoresJob(
         }
 
         if (rows > 0)
-            await settle.RunAsync(new JobRun(IngestionJobs.Settle), ct);
+            await settle.RunAsync(new JobRun(JobKeys.Settle), ct);
 
         var detail = $"{string.Join(", ", sports.Select(s => s.ToUpperInvariant()).Except(held))}: {rows:N0} games read, {spent:N0} credits spent"
                      + (rows > 0 ? ", then settled" : "")
@@ -255,7 +255,12 @@ internal sealed class OddsScoresJob(
             : $" {owed.Unrecoverable:N0} {(owed.Unrecoverable == 1 ? "game" : "games")} started more than three days ago "
               + $"{(owed.Unrecoverable == 1 ? "has" : "have")} no final and cannot get one from The Odds API.";
 
-    /// <summary>The leagues' scores standing (<see cref="IngestionJobs.ScoresOwedAsync"/>).</summary>
+    /// <summary>
+    /// Per league, the games a scores call could finish now — started at least
+    /// <paramref name="afterStart"/> ago, within the provider's reach, and neither final nor postponed;
+    /// the games still being played; and, across leagues, the games beyond the reach that never went
+    /// final here, which no call can finish (they are counted for the desk to say so, never asked for).
+    /// </summary>
     public static async Task<ScoresOwed> ScoresOwedAsync(
         XLinesDbContext db, IReadOnlyList<string> sports, DateTimeOffset now, TimeSpan afterStart, int reachDays,
         CancellationToken ct = default)
@@ -283,19 +288,23 @@ internal sealed class OddsScoresJob(
         return new ScoresOwed(byLeague, open.Count(g => g.StartsAt <= reach));
     }
 
-    /// <summary>The leagues an unattended scores call is due for (<see cref="IngestionJobs.ScoresDueAsync"/>).</summary>
+    /// <summary>
+    /// The leagues an unattended scores call is due for: owed a final, none of its games still being
+    /// played (so one call takes the whole night's slate), and not yet asked on this league day — at
+    /// most one call a league a day, manual pulls included.
+    /// </summary>
     public static async Task<IReadOnlyList<string>> ScoresDueAsync(
         XLinesDbContext db, ScoresOwed owed, DateTimeOffset now, CancellationToken ct = default)
     {
         var dayStart = LeagueClock.StartOf(LeagueClock.DateOf(now));
-        var keys = owed.Leagues.Keys.Select(s => IngestionJobs.OddsScoresPrefix + s).ToList();
+        var keys = owed.Leagues.Keys.Select(s => JobKeys.OddsScoresPrefix + s).ToList();
 
         var askedToday = (await db.IngestionRuns
                 .Where(r => keys.Contains(r.JobKey) && r.StartedAt >= dayStart)
                 .Select(r => r.JobKey)
                 .Distinct()
                 .ToListAsync(ct))
-            .Select(k => k[IngestionJobs.OddsScoresPrefix.Length..])
+            .Select(k => k[JobKeys.OddsScoresPrefix.Length..])
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         return owed.Leagues

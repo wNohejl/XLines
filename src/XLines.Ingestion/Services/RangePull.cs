@@ -13,7 +13,7 @@ namespace XLines.Ingestion.Services;
 
 /// <summary>
 /// A league's games over a range of days the operator names — NFL 1–30 September 2024, MLB
-/// April 2025 — with each final's box score and its closing line (<see cref="IngestionJobs.EspnRange"/>).
+/// April 2025 — with each final's box score and its closing line (<see cref="JobKeys.EspnRange"/>).
 ///
 /// <para>
 /// For the history the backfill seasons do not reach, and for re-pulling a range that came in
@@ -118,7 +118,7 @@ public class RangePull(
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             if (scope.ServiceProvider.GetService<SourceRegistry>() is { Espn: null })
-                refusal = EspnOptIn.Refusal(IngestionJobs.EspnRange) + " " + WithoutEspn;
+                refusal = EspnOptIn.Refusal(JobKeys.EspnRange) + " " + WithoutEspn;
         }
 
         if (refusal is not null)
@@ -191,7 +191,7 @@ public class RangePull(
                 var closesBefore = await ClosesOnAsync(db, sport, day, ct);
 
                 var outcome = await stats.IngestRangeDayAsync(
-                    source, sport, IngestionJobs.EspnRange, day, schedulesOnly: day >= today, ct);
+                    source, sport, JobKeys.EspnRange, day, schedulesOnly: day >= today, ct);
 
                 var run = outcome.RunId == 0
                     ? null
@@ -360,6 +360,6 @@ public sealed record RangePullSummary(
 
     /// <summary>As the catalogue's runs report: succeeded unless refused or a day failed.</summary>
     public JobOutcome ToOutcome()
-        => new(IngestionJobs.EspnRange, Refused is null && Failures == 0, Games + StatRows + ClosingLines,
+        => new(JobKeys.EspnRange, Refused is null && Failures == 0, Games + StatRows + ClosingLines,
             Failures, Sentence);
 }

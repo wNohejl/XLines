@@ -241,7 +241,7 @@ public class LinePollPlanner(
     public async Task<Dictionary<string, DateTimeOffset>> LastScansAsync(CancellationToken ct = default)
     {
         var leagues = Priced;
-        var keys = leagues.Select(s => IngestionJobs.OddsLinesPrefix + s).Append(IngestionJobs.OddsLines).ToList();
+        var keys = leagues.Select(s => JobKeys.OddsLinesPrefix + s).Append(JobKeys.OddsLines).ToList();
 
         var latest = await db.IngestionRuns
             .Where(r => keys.Contains(r.JobKey))
@@ -336,7 +336,7 @@ public class LinePollPlanner(
     /// </summary>
     public async Task<int> ClosingScansTakenAsync(string sport, DateOnly leagueDay, CancellationToken ct = default)
     {
-        var jobKey = IngestionJobs.OddsLinesPrefix + sport;
+        var jobKey = JobKeys.OddsLinesPrefix + sport;
 
         var bySource = await db.IngestionRuns
             .Where(r => r.JobKey == jobKey && r.ClosingScanDay == leagueDay)

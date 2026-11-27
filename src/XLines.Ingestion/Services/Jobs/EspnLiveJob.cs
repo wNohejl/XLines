@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace XLines.Ingestion.Services.Jobs;
 
-/// <summary>Games in play, <see cref="IngestionJobs.EspnLive"/>: the scoreboard for each league-day with a game on.</summary>
+/// <summary>Games in play, <see cref="JobKeys.EspnLive"/>: the scoreboard for each league-day with a game on.</summary>
 internal sealed class EspnLiveJob(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
@@ -16,7 +16,26 @@ internal sealed class EspnLiveJob(
 {
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key == IngestionJobs.EspnLive;
+    /// <summary>
+    /// Games in play: started within the last day and neither final nor postponed here, in a
+    /// configured league. The one definition of "a game is on", shared by the live job (which
+    /// league-days to fetch) and the scheduler (whether it is due, and how fast to tick).
+    ///
+    /// <para>
+    /// Keyed on start time having passed rather than on <see cref="GameStatus.Live"/>, because a
+    /// game that just started is not yet marked live here — finding that out is what the next
+    /// poll is for. Bounded to the last day so a stuck fixture cannot pin the fast cadence on for
+    /// ever, and to configured leagues because a league nobody polls cannot be refreshed by it.
+    /// </para>
+    /// </summary>
+    public static IQueryable<Game> InPlay(XLinesDbContext db, DateTimeOffset now, IReadOnlyList<string> sports)
+        => db.Games.Where(g => g.StartsAt <= now
+                               && g.StartsAt >= now.AddDays(-1)
+                               && g.Status != GameStatus.Final
+                               && g.Status != GameStatus.Postponed
+                               && sports.Contains(g.Sport!.Key));
+
+    public bool Matches(string key) => key == JobKeys.EspnLive;
 
     public async ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
     {
@@ -26,7 +45,7 @@ internal sealed class EspnLiveJob(
         return
         [
             new IngestionJob(
-                Key: IngestionJobs.EspnLive,
+                Key: JobKeys.EspnLive,
                 Label: "Games in play",
                 Description: "Live scores and status for games under way, and the final for any that have just finished. "
                              + "Nothing is fetched when no game is on.",
@@ -44,7 +63,7 @@ internal sealed class EspnLiveJob(
     {
         var sports = _options.EffectiveSports;
 
-        var inPlay = await IngestionJobs.InPlay(db, now, sports)
+        var inPlay = await EspnLiveJob.InPlay(db, now, sports)
             .Select(g => new { Sport = g.Sport!.Key, g.StartsAt })
             .ToListAsync(ct);
 
@@ -78,7 +97,7 @@ internal sealed class EspnLiveJob(
                 scope.ServiceProvider.GetRequiredService<XLinesDbContext>(), clock.GetUtcNow(), ct);
 
         if (leagueDays.Count == 0)
-            return new JobOutcome(IngestionJobs.EspnLive, true, 0, 0, "No game in play.");
+            return new JobOutcome(JobKeys.EspnLive, true, 0, 0, "No game in play.");
 
         var rows = 0;
         var failures = 0;
@@ -95,7 +114,7 @@ internal sealed class EspnLiveJob(
 
             foreach (var source in registry.StatsSources)
             {
-                var outcome = await stats.IngestLiveAsync(source, sportKey, IngestionJobs.EspnLive, day, ct);
+                var outcome = await stats.IngestLiveAsync(source, sportKey, JobKeys.EspnLive, day, ct);
                 rows += outcome.RowsIngested;
 
                 if (outcome.Status == RunStatus.Failed)
@@ -103,7 +122,7 @@ internal sealed class EspnLiveJob(
             }
         }
 
-        return new JobOutcome(IngestionJobs.EspnLive, failures == 0, rows, failures,
+        return new JobOutcome(JobKeys.EspnLive, failures == 0, rows, failures,
             $"{leagueDays.Count} {(leagueDays.Count == 1 ? "league-day" : "league-days")} in play, {rows:N0} rows.");
     }
 }

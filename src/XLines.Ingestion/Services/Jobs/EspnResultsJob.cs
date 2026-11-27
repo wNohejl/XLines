@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace XLines.Ingestion.Services.Jobs;
 
-/// <summary>Results owed, <see cref="IngestionJobs.EspnResults"/>: box scores for every day still missing them.</summary>
+/// <summary>Results owed, <see cref="JobKeys.EspnResults"/>: box scores for every day still missing them.</summary>
 internal sealed class EspnResultsJob(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
@@ -16,13 +16,13 @@ internal sealed class EspnResultsJob(
 {
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key == IngestionJobs.EspnResults;
+    public bool Matches(string key) => key == JobKeys.EspnResults;
 
     public ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
         => !menu.Espn
             ? JobSupport.Nothing()
             : JobSupport.Describe(new IngestionJob(
-                Key: IngestionJobs.EspnResults,
+                Key: JobKeys.EspnResults,
                 Label: "Results owed",
                 Description: "Final scores and box scores for every day still missing them.",
                 // A results pass is one scoreboard call per sport plus one per finished game,
@@ -74,7 +74,7 @@ internal sealed class EspnResultsJob(
             if (ct.IsCancellationRequested)
                 break;
 
-            var outcome = await JobSupport.RunStatsAsync(scopeFactory, _options, IngestionJobs.EspnResults, date, schedulesOnly: false, ct);
+            var outcome = await JobSupport.RunStatsAsync(scopeFactory, _options, JobKeys.EspnResults, date, schedulesOnly: false, ct);
 
             rows += outcome.Rows;
             failures += outcome.Failures;
@@ -101,7 +101,7 @@ internal sealed class EspnResultsJob(
         var deferred = owed.Count - due.Count;
 
         return new JobOutcome(
-            IngestionJobs.EspnResults, failures == 0, rows, failures,
+            JobKeys.EspnResults, failures == 0, rows, failures,
             $"{due.Count} {(due.Count == 1 ? "day" : "days")} swept, {rows:N0} rows"
             + (deferred > 0 ? $", {deferred} still owed and backing off." : "."));
     }
@@ -109,7 +109,19 @@ internal sealed class EspnResultsJob(
     /// <summary>Dates swept without healing, and when each is worth trying again.</summary>
     private readonly System.Collections.Concurrent.ConcurrentDictionary<DateOnly, (int Attempts, DateTimeOffset NextTry)> _sweptDates = new();
 
-    /// <summary>The days still owed results (<see cref="IngestionJobs.DatesAwaitingResultsAsync"/>).</summary>
+    /// <summary>
+    /// Days we are still owed results for: a game that has started and is not final here, or a
+    /// final in a sport we ingest that has no box score.
+    ///
+    /// <para>
+    /// The second half is the one that was missing. The live poll reads the scoreboard, which
+    /// carries the score and the final status but not the box score; a game it saw go final was
+    /// never owed again, so the results sweep never fetched its stats. All fifteen games of
+    /// 22 September 2026 sat final without a stat line until this — the data-quality alert
+    /// named them and nothing healed them. A final ESPN never gives a box score for is retried on
+    /// the sweep's own back-off, not every tick.
+    /// </para>
+    /// </summary>
     public async Task<IReadOnlyList<DateOnly>> DatesAwaitingResultsAsync(
         TimeSpan settleAfter, CancellationToken ct = default)
     {
@@ -119,7 +131,7 @@ internal sealed class EspnResultsJob(
         var cutoff = clock.GetUtcNow() - settleAfter;
         var sports = _options.EffectiveSports;
 
-        var statsOwed = IngestionJobs.StatsOwed(db, sports);
+        var statsOwed = StatsOwed(db, sports);
 
         var starts = await db.Games
             .Where(g => g.StartsAt <= cutoff
@@ -135,4 +147,18 @@ internal sealed class EspnResultsJob(
             .OrderBy(d => d)
             .ToList();
     }
+
+    /// <summary>
+    /// Finals in a configured league still owed their stats: no stat line from a run other than
+    /// the live box's (<see cref="JobKeys.EspnGamecastLive"/>). A mid-game box is not a final's, so a game
+    /// whose final box never came stays owed until the sweep's or the feed's final write lands —
+    /// and that write re-stamps every line it touches, unchanged ones included, so it settles the
+    /// debt (<see cref="StatsIngestionService"/>). Any window is the caller's.
+    /// </summary>
+    public static IQueryable<Game> StatsOwed(XLinesDbContext db, IReadOnlyList<string> sports)
+        => db.Games.Where(g => g.Status == GameStatus.Final
+                               && sports.Contains(g.Sport!.Key)
+                               && !db.PlayerGameStats.Any(s => s.GameId == g.Id
+                                   && !db.IngestionRuns.Any(r => r.Id == s.IngestionRunId
+                                                                 && r.JobKey == JobKeys.EspnGamecastLive)));
 }

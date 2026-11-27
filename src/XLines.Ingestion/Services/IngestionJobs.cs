@@ -32,156 +32,30 @@ namespace XLines.Ingestion.Services;
 /// handlers: automatic and manual paths cannot drift, and a job fixed for one is fixed for both.
 /// </para>
 /// </summary>
-public class IngestionJobs
+public partial class IngestionJobs
 {
-    public const string EspnSlate = "espn:slate";
+    // The keys, forwarded from JobKeys for the projects that name them here (the desk, the
+    // Worker, the reliability layer and the tests). New code names JobKeys.
+    public const string EspnSlate = JobKeys.EspnSlate;
+    public const string EspnLive = JobKeys.EspnLive;
+    public const string EspnResults = JobKeys.EspnResults;
+    public const string EspnGamecastLive = JobKeys.EspnGamecastLive;
+    public const string EspnGamecastBackport = JobKeys.EspnGamecastBackport;
+    public const string EspnRange = JobKeys.EspnRange;
+    public const string EspnClosingLines = JobKeys.EspnClosingLines;
+    public const string EspnFighters = JobKeys.EspnFighters;
+    public const string OddsLines = JobKeys.OddsLines;
+    public const string OddsLinesPrefix = JobKeys.OddsLinesPrefix;
+    public const string OddsFixtures = JobKeys.OddsFixtures;
+    public const string OddsScores = JobKeys.OddsScores;
+    public const string OddsScoresPrefix = JobKeys.OddsScoresPrefix;
+    public const string SgoLinesPrefix = JobKeys.SgoLinesPrefix;
+    public const string Settle = JobKeys.Settle;
 
-    /// <summary>
-    /// The scoreboard for games being played (spec 2026-10-24 §5.2). Its own job rather than the
-    /// slate run more often: the slate resolves every event on the day, refreshes every team's
-    /// identity and syncs MLB's spine, which is right twice an hour and wasteful every fifteen
-    /// seconds.
-    /// </summary>
-    public const string EspnLive = "espn:live";
-
-    /// <summary>
-    /// Games in play: started within the last day and neither final nor postponed here, in a
-    /// configured league. The one definition of "a game is on", shared by the live job (which
-    /// league-days to fetch) and the scheduler (whether it is due, and how fast to tick).
-    ///
-    /// <para>
-    /// Keyed on start time having passed rather than on <see cref="GameStatus.Live"/>, because a
-    /// game that just started is not yet marked live here — finding that out is what the next
-    /// poll is for. Bounded to the last day so a stuck fixture cannot pin the fast cadence on for
-    /// ever, and to configured leagues because a league nobody polls cannot be refreshed by it.
-    /// </para>
-    /// </summary>
-    public static IQueryable<Game> InPlay(XLinesDbContext db, DateTimeOffset now, IReadOnlyList<string> sports)
-        => db.Games.Where(g => g.StartsAt <= now
-                               && g.StartsAt >= now.AddDays(-1)
-                               && g.Status != GameStatus.Final
-                               && g.Status != GameStatus.Postponed
-                               && sports.Contains(g.Sport!.Key));
-
-    public const string EspnResults = "espn:results";
-
-    /// <summary>
-    /// A game in play's box score as it stands, written by the gamecast feed every
-    /// <see cref="GamecastOptions.BoxPoll"/> (spec 2026-10-24 §6.1). Its own job, apart from the
-    /// feed's final box (<see cref="GamecastFeed.JobKey"/>), because a line from it is not a
-    /// final's stats: a final holding nothing newer is still owed (<see cref="StatsOwed"/>), or a
-    /// final box that never came would leave the last mid-game box standing for good. The
-    /// reliability layer's data rule names the same key (<c>DataQuality.LiveBoxJobKey</c>).
-    /// </summary>
-    public const string EspnGamecastLive = "espn:gamecast:live";
-
-    /// <summary>
-    /// Plays, drives and probabilities for finished games that have none — the games that ended
-    /// before the feed existed — a batch a run, newest first (<see cref="GamecastBackport"/>).
-    /// </summary>
-    public const string EspnGamecastBackport = "espn:gamecast:backport";
-
-    /// <summary>
-    /// A league's games over a range of days the operator names, with each final's box score and
-    /// its close (<see cref="RangePull"/>): history the backfill seasons do not reach, or a range
-    /// that came in incomplete. Not in the catalogue the menu lists, since it cannot run without a
-    /// league and dates; the desk asks for them in a sheet, the Worker as <c>--sport --from --to</c>.
-    /// </summary>
-    public const string EspnRange = "espn:range";
-    public const string OddsLines = "odds:lines";
-    public const string Settle = "settle";
-
-    /// <summary>
-    /// The default stats source's schedule (ADR 0026): The Odds API's <c>/events</c> for every league
-    /// it schedules, eight days ahead. Free — the call does not count against the quota — so it runs
-    /// on the schedule as ESPN's slate does. Never scores: those are <see cref="OddsScores"/>.
-    /// </summary>
-    public const string OddsFixtures = "odds:fixtures";
-
-    /// <summary>
-    /// The default stats source's final scores, automatically: each league owed one, at most one
-    /// metered call a league a day, and only when the operator chose automatic scanning
-    /// (<see cref="ScoresDueAsync"/>). Two credits a league a call.
-    /// </summary>
-    public const string OddsScores = "odds:scores";
-
-    /// <summary>One league's scores on request, e.g. <c>odds:scores:nfl</c>: two credits, stated before the press.</summary>
-    public const string OddsScoresPrefix = "odds:scores:";
-
-    /// <summary>
-    /// The closing lines a finished game is still owed, asked of ESPN's odds endpoint one game at
-    /// a time. The backport for a season walked while the summary carried no odds block.
-    /// </summary>
-    public const string EspnClosingLines = "espn:closing-lines";
-
-
-    /// <summary>
-    /// Fighter profiles owed (ADR 0021): fighters on a card ahead, and fighters who have fought
-    /// since theirs was taken. Four requests a fighter, against ESPN's athlete pages.
-    /// </summary>
-    public const string EspnFighters = "espn:fighters";
-
-
-    /// <summary>Requests one fighter's profile costs: athlete page, stat sheets, career rates, record.</summary>
-    public const int RequestsPerFighter = 4;
-
-    /// <summary>
-    /// Prefix for a lines pull narrowed to one sport, e.g. <c>odds:lines:mlb</c>.
-    ///
-    /// A credit-billed provider charges per sport per call, so "fetch lines" is not one price —
-    /// it is one price per league in season. Naming the sport in the job is what lets the menu
-    /// quote a real cost and lets an operator spend on the league they are actually working.
-    /// </summary>
-    public const string OddsLinesPrefix = "odds:lines:";
-
-    /// <summary>
-    /// One league's prices from the second source, SportsGameOdds (ADR 0033), e.g.
-    /// <c>sgo:lines:nfl</c>: the books The Odds API's free plan lacks (Caesars). Its own job, never
-    /// part of <see cref="OddsLinesPrefix"/>'s loop over the odds sources and never run by the
-    /// scheduler, because it spends a different allowance on a different key — objects, one per
-    /// game returned — and is pulled only when someone presses it with the price in front of them.
-    /// </summary>
-    public const string SgoLinesPrefix = "sgo:lines:";
-
-    /// <summary>
-    /// The league an on-call drill should exercise: the one actually in play.
-    ///
-    /// <para>
-    /// A drill with no fault injected performs a real pull against a metered provider, so the
-    /// rows it buys should be rows somebody is about to read. Naming a league in the code
-    /// instead meant the drill bought fixtures weeks away while the slate on screen went
-    /// unpriced, and the volume it wrote was measured against pulls for a different sport.
-    /// </para>
-    ///
-    /// <para>
-    /// A league nobody configured is never chosen however busy it looks, which is the rule
-    /// <see cref="OddsLinesJob"/> already applies to a named sport: quietly scanning a league
-    /// the operator did not ask for is what a credit budget cannot absorb.
-    /// </para>
-    /// </summary>
-    /// <param name="upcomingBySport">Games inside the movement window, keyed by sport slug.</param>
-    /// <param name="configured">The configured leagues, in preference order.</param>
-    /// <returns>The league to drill, or null when none is configured.</returns>
+    /// <inheritdoc cref="OddsLinesJob.DrillSport"/>
     public static string? DrillSport(
         IReadOnlyDictionary<string, int> upcomingBySport, IReadOnlyList<string> configured)
-    {
-        if (configured.Count == 0)
-            return null;
-
-        var busiest = upcomingBySport
-            .Where(kv => kv.Value > 0
-                         && configured.Contains(kv.Key, StringComparer.OrdinalIgnoreCase))
-            .OrderByDescending(kv => kv.Value)
-            .ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(kv => kv.Key)
-            .FirstOrDefault();
-
-        // Match the configured spelling rather than whatever case the games table holds, so the
-        // key handed to an adapter is the one config named.
-        return busiest is null
-            ? configured[0]
-            : configured.First(s => string.Equals(s, busiest, StringComparison.OrdinalIgnoreCase));
-    }
+        => OddsLinesJob.DrillSport(upcomingBySport, configured);
 
     private readonly IReadOnlyList<IIngestionJob> _handlers;
     private readonly OddsLinesJob _lines;
@@ -291,10 +165,6 @@ public class IngestionJobs
     public const string NoOddsKey =
         "Needs a The Odds API key: enter yours under Ops → Odds feeds (or set THE_ODDS_API_KEY in .env).";
 
-    /// <summary>Where the second source's key goes, in the words a refusal uses (ADR 0033).</summary>
-    public const string NoSportsGameOddsKey =
-        "Needs your own free SportsGameOdds key: set SPORTSGAMEODDS_API_KEY in .env, or Ingestion:SportsGameOdds:ApiKey for a host run.";
-
     /// <summary>Whether anything serves ESPN's jobs: a stats source or a gamecast source.</summary>
     private async Task<bool> HasEspnAsync()
     {
@@ -396,66 +266,23 @@ public class IngestionJobs
     internal static string ClosingLinesSentence(int rows, int asked, int closed, OwedCloses after)
         => EspnClosingLinesJob.Sentence(rows, asked, closed, after);
 
-    /// <summary>
-    /// Finals without the close they are owed; how many of them a press would ask now (within a
-    /// run's ceiling); and how many are set aside until their retry date.
-    /// </summary>
-    internal readonly record struct OwedCloses(int WithoutClose, int ToAsk, int SetAside = 0);
-
-    /// <summary>
-    /// Per league, the games a scores call could finish now — started at least
-    /// <paramref name="afterStart"/> ago, within the provider's reach, and neither final nor postponed;
-    /// the games still being played; and, across leagues, the games beyond the reach that never went
-    /// final here, which no call can finish (they are counted for the desk to say so, never asked for).
-    /// </summary>
+    /// <inheritdoc cref="OddsScoresJob.ScoresOwedAsync"/>
     public static Task<ScoresOwed> ScoresOwedAsync(
         XLinesDbContext db, IReadOnlyList<string> sports, DateTimeOffset now, TimeSpan afterStart, int reachDays,
         CancellationToken ct = default)
         => OddsScoresJob.ScoresOwedAsync(db, sports, now, afterStart, reachDays, ct);
 
-    /// <summary>
-    /// The leagues an unattended scores call is due for: owed a final, none of its games still being
-    /// played (so one call takes the whole night's slate), and not yet asked on this league day — at
-    /// most one call a league a day, manual pulls included.
-    /// </summary>
+    /// <inheritdoc cref="OddsScoresJob.ScoresDueAsync"/>
     public static Task<IReadOnlyList<string>> ScoresDueAsync(
         XLinesDbContext db, ScoresOwed owed, DateTimeOffset now, CancellationToken ct = default)
         => OddsScoresJob.ScoresDueAsync(db, owed, now, ct);
 
-    /// <summary>Each league's scores standing, and the games across them no scores call can finish.</summary>
-    public sealed record ScoresOwed(IReadOnlyDictionary<string, LeagueScores> Leagues, int Unrecoverable);
-
-    /// <summary>Games a scores call could finish now, and games still being played.</summary>
-    public readonly record struct LeagueScores(int Owed, int Playing);
-
-    /// <summary>
-    /// Days we are still owed results for: a game that has started and is not final here, or a
-    /// final in a sport we ingest that has no box score.
-    ///
-    /// <para>
-    /// The second half is the one that was missing. The live poll reads the scoreboard, which
-    /// carries the score and the final status but not the box score; a game it saw go final was
-    /// never owed again, so the results sweep never fetched its stats. All fifteen games of
-    /// 22 September 2026 sat final without a stat line until this — the data-quality alert
-    /// named them and nothing healed them. A final ESPN never gives a box score for is retried on
-    /// the sweep's own back-off, not every tick.
-    /// </para>
-    /// </summary>
+    /// <inheritdoc cref="EspnResultsJob.DatesAwaitingResultsAsync"/>
     public Task<IReadOnlyList<DateOnly>> DatesAwaitingResultsAsync(
         TimeSpan settleAfter, CancellationToken ct = default)
         => _results.DatesAwaitingResultsAsync(settleAfter, ct);
 
-    /// <summary>
-    /// Finals in a configured league still owed their stats: no stat line from a run other than
-    /// the live box's (<see cref="EspnGamecastLive"/>). A mid-game box is not a final's, so a game
-    /// whose final box never came stays owed until the sweep's or the feed's final write lands —
-    /// and that write re-stamps every line it touches, unchanged ones included, so it settles the
-    /// debt (<see cref="StatsIngestionService"/>). Any window is the caller's.
-    /// </summary>
+    /// <inheritdoc cref="EspnResultsJob.StatsOwed"/>
     public static IQueryable<Game> StatsOwed(XLinesDbContext db, IReadOnlyList<string> sports)
-        => db.Games.Where(g => g.Status == GameStatus.Final
-                               && sports.Contains(g.Sport!.Key)
-                               && !db.PlayerGameStats.Any(s => s.GameId == g.Id
-                                   && !db.IngestionRuns.Any(r => r.Id == s.IngestionRunId
-                                                                 && r.JobKey == EspnGamecastLive)));
+        => EspnResultsJob.StatsOwed(db, sports);
 }

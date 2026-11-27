@@ -64,13 +64,13 @@ public static class LinePacing
     public static Dictionary<string, DateTimeOffset> LastScans(
         IEnumerable<string> leagues, IReadOnlyDictionary<string, DateTimeOffset> latestByJobKey)
     {
-        latestByJobKey.TryGetValue(IngestionJobs.OddsLines, out var all);
+        latestByJobKey.TryGetValue(JobKeys.OddsLines, out var all);
 
         var scans = new Dictionary<string, DateTimeOffset>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var league in leagues)
         {
-            var own = latestByJobKey.TryGetValue(IngestionJobs.OddsLinesPrefix + league, out var at) ? at : default;
+            var own = latestByJobKey.TryGetValue(JobKeys.OddsLinesPrefix + league, out var at) ? at : default;
             var latest = own > all ? own : all;
 
             if (latest != default)

@@ -24,7 +24,7 @@ public record GamecastBackportOutcome(
 
 /// <summary>
 /// Fills the play store for games that finished before the gamecast feed existed
-/// (<see cref="IngestionJobs.EspnGamecastBackport"/>).
+/// (<see cref="JobKeys.EspnGamecastBackport"/>).
 ///
 /// <para>
 /// The feed writes a game's plays while it is being played, so every final from before it — a
@@ -62,7 +62,7 @@ public record GamecastBackportOutcome(
 /// </para>
 ///
 /// <para>
-/// <b>When.</b> Never while a game is in play in any configured league (<see cref="IngestionJobs.InPlay"/>):
+/// <b>When.</b> Never while a game is in play in any configured league (<see cref="Jobs.EspnLiveJob.InPlay"/>):
 /// ESPN's patience is the live passes' first. Its requests wait at the process's one
 /// <see cref="Adapters.EspnPacer"/> as every other ESPN request does, behind any watched game's,
 /// and a scope per game for the writes, so one game's change tracker never carries into
@@ -172,7 +172,7 @@ public class GamecastBackport(
 
         var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
 
-        if (await IngestionJobs.InPlay(db, now, LiveSports).AnyAsync(ct))
+        if (await Jobs.EspnLiveJob.InPlay(db, now, LiveSports).AnyAsync(ct))
             return false;
 
         return (await EligibleAsync(db, source.Key, now, 1, ct)).Count > 0;
@@ -180,7 +180,7 @@ public class GamecastBackport(
 
     /// <summary>
     /// One batch: up to <see cref="GamecastOptions.BackportBatch"/> games read and written, recorded
-    /// as one run under <see cref="IngestionJobs.EspnGamecastBackport"/>. Nothing is asked, and no
+    /// as one run under <see cref="JobKeys.EspnGamecastBackport"/>. Nothing is asked, and no
     /// run written, while a game is in play or when nothing is owed.
     /// </summary>
     public async Task<GamecastBackportOutcome> RunAsync(DateTimeOffset now, CancellationToken ct)
@@ -199,7 +199,7 @@ public class GamecastBackport(
 
         var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
 
-        if (await IngestionJobs.InPlay(db, now, LiveSports).AnyAsync(ct))
+        if (await Jobs.EspnLiveJob.InPlay(db, now, LiveSports).AnyAsync(ct))
             return Nothing(0, "A game is in play; the backport waits for it to finish.");
 
         var picked = await EligibleAsync(db, source.Key, now, Gamecast.BackportBatch, ct);
@@ -212,7 +212,7 @@ public class GamecastBackport(
         var run = new IngestionRun
         {
             SourceId = sourceRow.Id,
-            JobKey = IngestionJobs.EspnGamecastBackport,
+            JobKey = JobKeys.EspnGamecastBackport,
             StartedAt = clock.GetUtcNow(),
             Status = RunStatus.Running
         };

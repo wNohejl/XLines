@@ -40,6 +40,14 @@ public static class IngestionServiceCollectionExtensions
         // someone typed by hand, which the binder would otherwise send straight to the wire.
         services.PostConfigure<IngestionOptions>(Normalise);
 
+        // What the services take for granted about the section (IngestionOptionsValidator): a zero
+        // cadence, a pacing floor above its ceiling or a reserve beyond its allowance is
+        // refused by name rather than worked around — at host start, not at the first pull that reads
+        // them. Both shipped appsettings.json pass it (IngestionOptionsValidatorTests).
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<IngestionOptions>, IngestionOptionsValidator>());
+        services.AddOptions<IngestionOptions>().ValidateOnStart();
+
         // The reliability layer cannot see the ingestion options, and should not be configured
         // twice by hand to agree with them: when odds are pulled only on request, an odds feed
         // that has not run today is idle, and its freshness rule stands down.

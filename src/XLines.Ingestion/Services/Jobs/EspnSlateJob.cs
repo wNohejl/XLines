@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace XLines.Ingestion.Services.Jobs;
 
-/// <summary>Today's games, <see cref="IngestionJobs.EspnSlate"/>: the scoreboard, MLB's spine and the injury report.</summary>
+/// <summary>Today's games, <see cref="JobKeys.EspnSlate"/>: the scoreboard, MLB's spine and the injury report.</summary>
 internal sealed class EspnSlateJob(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
@@ -18,13 +18,13 @@ internal sealed class EspnSlateJob(
 {
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key == IngestionJobs.EspnSlate;
+    public bool Matches(string key) => key == JobKeys.EspnSlate;
 
     public ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
         => !menu.Espn
             ? JobSupport.Nothing()
             : JobSupport.Describe(new IngestionJob(
-                Key: IngestionJobs.EspnSlate,
+                Key: JobKeys.EspnSlate,
                 Label: "Today's games",
                 Description: "Schedules, start times and live scores for every sport in play.",
                 EstimatedRequests: menu.Stats * menu.Sports.Length,
@@ -67,7 +67,7 @@ internal sealed class EspnSlateJob(
 
         foreach (var day in days)
         {
-            var outcome = await JobSupport.RunStatsAsync(scopeFactory, _options, IngestionJobs.EspnSlate, day, schedulesOnly: true, ct);
+            var outcome = await JobSupport.RunStatsAsync(scopeFactory, _options, JobKeys.EspnSlate, day, schedulesOnly: true, ct);
             rows += outcome.Rows;
             failures += outcome.Failures;
         }
@@ -75,7 +75,7 @@ internal sealed class EspnSlateJob(
         await SyncSpineAsync(ct);
         await SyncInjuriesAsync(ct);
 
-        return new JobOutcome(IngestionJobs.EspnSlate, failures == 0, rows, failures, null);
+        return new JobOutcome(JobKeys.EspnSlate, failures == 0, rows, failures, null);
     }
 
     /// <summary>When MLB's schedule was last read. Probable pitchers do not change often, and one

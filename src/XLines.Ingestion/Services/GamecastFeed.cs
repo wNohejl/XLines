@@ -18,7 +18,7 @@ namespace XLines.Ingestion.Services;
 ///
 /// <para>
 /// Every <see cref="GamecastOptions.Poll"/> it asks which games are on — the scheduler's own
-/// question, <see cref="IngestionJobs.InPlay"/>, so the feed never follows a game the live pass
+/// question, <see cref="Jobs.EspnLiveJob.InPlay"/>, so the feed never follows a game the live pass
 /// would not refresh — and for each reads ESPN's summary and writes it through
 /// <see cref="GamecastWriter"/>. A write that changed something raises <c>plays:{gameId}</c>, and
 /// a Gamecast window watching that appends the plays; a poll that saw nothing new writes nothing
@@ -32,7 +32,7 @@ namespace XLines.Ingestion.Services;
 /// The box score is live too (§6.1), and costs no request: every
 /// <see cref="GamecastOptions.BoxPoll"/> the summary being read anyway is also parsed for its box,
 /// by the results pass's own parse, and the players' lines are written through the results
-/// pass's path under <see cref="IngestionJobs.EspnGamecastLive"/>, a job apart from the final
+/// pass's path under <see cref="JobKeys.EspnGamecastLive"/>, a job apart from the final
 /// box's, because a mid-game line is not a final's stats. Only the lines and the players they need — never the
 /// game, whose status and score are the scoreboard pass's — and a box that moved no line writes
 /// no run and raises no notice.
@@ -286,7 +286,7 @@ public class GamecastFeed(
 
         var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
 
-        var inPlay = (await IngestionJobs.InPlay(db, now, _options.EffectiveSports)
+        var inPlay = (await Jobs.EspnLiveJob.InPlay(db, now, _options.EffectiveSports)
                 .OrderBy(g => g.StartsAt)
                 .ThenBy(g => g.Id)
                 .Select(g => new { g.Id, Sport = g.Sport!.Key, g.StartsAt, g.ExternalIds })
@@ -669,7 +669,7 @@ public class GamecastFeed(
 
     /// <summary>
     /// The box score as it stands, from the summary just read, written through the results pass's
-    /// path under <see cref="IngestionJobs.EspnGamecastLive"/> — its own job, so a final holding
+    /// path under <see cref="JobKeys.EspnGamecastLive"/> — its own job, so a final holding
     /// only these lines is still owed its stats. The players and their lines only — the game's status and
     /// score stay the scoreboard pass's — and quietly: a box that moved no line writes no run. A
     /// failure is logged and waits the cadence out; it does not cost the game its plays.
@@ -686,7 +686,7 @@ public class GamecastFeed(
         {
             await using var scope = scopeFactory.CreateAsyncScope();
             var stats = scope.ServiceProvider.GetRequiredService<StatsIngestionService>();
-            var outcome = await stats.IngestLiveBoxScoreAsync(source.Key, game.Sport, IngestionJobs.EspnGamecastLive, box, ct);
+            var outcome = await stats.IngestLiveBoxScoreAsync(source.Key, game.Sport, JobKeys.EspnGamecastLive, box, ct);
 
             if (outcome.RunId != 0)
                 logger.LogDebug("Gamecast {GameId}: live box score {Status}, {Rows} rows", gameId, outcome.Status, outcome.RowsIngested);

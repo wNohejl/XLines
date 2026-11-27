@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 namespace XLines.Ingestion.Services.Jobs;
 
 /// <summary>
-/// Price scans: every configured league, <see cref="IngestionJobs.OddsLines"/>, or one,
+/// Price scans: every configured league, <see cref="JobKeys.OddsLines"/>, or one,
 /// <c>odds:lines:{sport}</c> — the entry the menu lists per league.
 /// </summary>
 internal sealed class OddsLinesJob(
@@ -18,8 +18,48 @@ internal sealed class OddsLinesJob(
 {
     private readonly IngestionOptions _options = options.Value;
 
+    /// <summary>
+    /// The league an on-call drill should exercise: the one actually in play.
+    ///
+    /// <para>
+    /// A drill with no fault injected performs a real pull against a metered provider, so the
+    /// rows it buys should be rows somebody is about to read. Naming a league in the code
+    /// instead meant the drill bought fixtures weeks away while the slate on screen went
+    /// unpriced, and the volume it wrote was measured against pulls for a different sport.
+    /// </para>
+    ///
+    /// <para>
+    /// A league nobody configured is never chosen however busy it looks, which is the rule
+    /// <see cref="OddsLinesJob"/> already applies to a named sport: quietly scanning a league
+    /// the operator did not ask for is what a credit budget cannot absorb.
+    /// </para>
+    /// </summary>
+    /// <param name="upcomingBySport">Games inside the movement window, keyed by sport slug.</param>
+    /// <param name="configured">The configured leagues, in preference order.</param>
+    /// <returns>The league to drill, or null when none is configured.</returns>
+    public static string? DrillSport(
+        IReadOnlyDictionary<string, int> upcomingBySport, IReadOnlyList<string> configured)
+    {
+        if (configured.Count == 0)
+            return null;
+
+        var busiest = upcomingBySport
+            .Where(kv => kv.Value > 0
+                         && configured.Contains(kv.Key, StringComparer.OrdinalIgnoreCase))
+            .OrderByDescending(kv => kv.Value)
+            .ThenBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(kv => kv.Key)
+            .FirstOrDefault();
+
+        // Match the configured spelling rather than whatever case the games table holds, so the
+        // key handed to an adapter is the one config named.
+        return busiest is null
+            ? configured[0]
+            : configured.First(s => string.Equals(s, busiest, StringComparison.OrdinalIgnoreCase));
+    }
+
     public bool Matches(string key)
-        => key == IngestionJobs.OddsLines || key.StartsWith(IngestionJobs.OddsLinesPrefix, StringComparison.Ordinal);
+        => key == JobKeys.OddsLines || key.StartsWith(JobKeys.OddsLinesPrefix, StringComparison.Ordinal);
 
     /// <summary>
     /// One entry per sport rather than one for all of them.
@@ -34,9 +74,9 @@ internal sealed class OddsLinesJob(
             menu.Sports.Select(sport => LinesJob(sport, menu.Registry, menu.Allowance)).ToList());
 
     public Task<JobOutcome> RunAsync(JobRun run, CancellationToken ct)
-        => run.Key == IngestionJobs.OddsLines
+        => run.Key == JobKeys.OddsLines
             ? RunOddsAsync(null, ct)
-            : RunOddsAsync(run.Key[IngestionJobs.OddsLinesPrefix.Length..], ct, run.ClosingScanDay);
+            : RunOddsAsync(run.Key[JobKeys.OddsLinesPrefix.Length..], ct, run.ClosingScanDay);
 
     /// <summary>The one definition of a league's lines entry, shared by the menu and the single read.</summary>
     public IngestionJob LinesJob(string sport, SourceRegistry registry, AllowanceState? allowance)
@@ -62,7 +102,7 @@ internal sealed class OddsLinesJob(
         var league = sport.ToUpperInvariant();
 
         return new IngestionJob(
-            Key: IngestionJobs.OddsLinesPrefix + sport,
+            Key: JobKeys.OddsLinesPrefix + sport,
             Label: $"Pull lines — {league}",
             Description: $"{markets} across every book for {league} "
                          + "games that have not started.",
@@ -106,7 +146,7 @@ internal sealed class OddsLinesJob(
     /// <param name="closingScanDay">The league day a closing scan counts against; null for any other scan.</param>
     private async Task<JobOutcome> RunOddsAsync(string? onlySport, CancellationToken ct, DateOnly? closingScanDay = null)
     {
-        var jobKey = onlySport is null ? IngestionJobs.OddsLines : IngestionJobs.OddsLinesPrefix + onlySport;
+        var jobKey = onlySport is null ? JobKeys.OddsLines : JobKeys.OddsLinesPrefix + onlySport;
 
         // The leagues a scan can price: every configured one with ESPN on, as always; without ESPN a
         // fought league is left out, since its fights attach only to bouts ESPN holds (ADR 0026).

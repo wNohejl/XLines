@@ -8,7 +8,7 @@ using OwedCloses = XLines.Ingestion.Services.IngestionJobs.OwedCloses;
 
 namespace XLines.Ingestion.Services.Jobs;
 
-/// <summary>Closing lines owed, <see cref="IngestionJobs.EspnClosingLines"/>, asked of ESPN one game at a time.</summary>
+/// <summary>Closing lines owed, <see cref="JobKeys.EspnClosingLines"/>, asked of ESPN one game at a time.</summary>
 internal sealed class EspnClosingLinesJob(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
@@ -20,7 +20,7 @@ internal sealed class EspnClosingLinesJob(
 
     private readonly IngestionOptions _options = options.Value;
 
-    public bool Matches(string key) => key == IngestionJobs.EspnClosingLines;
+    public bool Matches(string key) => key == JobKeys.EspnClosingLines;
 
     public async ValueTask<IReadOnlyList<IngestionJob>> DescribeAsync(JobMenu menu, CancellationToken ct)
         => !menu.Espn
@@ -57,7 +57,7 @@ internal sealed class EspnClosingLinesJob(
 
             foreach (var source in registry.StatsSources.OfType<Core.Contracts.IClosingLineSource>())
             {
-                var outcome = await stats.RefillClosingLinesAsync(source, sportKey, IngestionJobs.EspnClosingLines, ClosingLinesPerRun, ct);
+                var outcome = await stats.RefillClosingLinesAsync(source, sportKey, JobKeys.EspnClosingLines, ClosingLinesPerRun, ct);
                 rows += outcome.RowsIngested;
                 asked += await db.IngestionRuns.Where(r => r.Id == outcome.RunId).Select(r => r.RequestsMade).FirstOrDefaultAsync(ct);
 
@@ -67,13 +67,13 @@ internal sealed class EspnClosingLinesJob(
         }
 
         if (rows > 0)
-            await settle.RunAsync(new JobRun(IngestionJobs.Settle), ct);
+            await settle.RunAsync(new JobRun(JobKeys.Settle), ct);
 
         OwedCloses after;
         await using (var scope = scopeFactory.CreateAsyncScope())
             after = await OwedClosesAsync(scope.ServiceProvider, _options.EffectiveSports, clock.GetUtcNow(), ct);
 
-        return new JobOutcome(IngestionJobs.EspnClosingLines, failures == 0, rows, failures,
+        return new JobOutcome(JobKeys.EspnClosingLines, failures == 0, rows, failures,
             Sentence(rows, asked, before.WithoutClose - after.WithoutClose, after));
     }
 
@@ -102,7 +102,7 @@ internal sealed class EspnClosingLinesJob(
         var owed = closers > 0 ? await OwedClosesAsync(provider, sports, now, ct) : new OwedCloses(0, 0);
 
         return new IngestionJob(
-            Key: IngestionJobs.EspnClosingLines,
+            Key: JobKeys.EspnClosingLines,
             Label: "Closing lines owed",
             Description: "ESPN's closing moneyline, spread and total for finished games without the close they are owed "
                          + "(a fight's moneyline, a game's total), one request per game. Where ESPN has no line, none is "
