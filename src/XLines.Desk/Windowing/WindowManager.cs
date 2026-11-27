@@ -439,7 +439,48 @@ public class WindowManager
     /// <summary>The row, left to right, each column with its tabs most recently shown first.</summary>
     public IReadOnlyList<WindowColumn> Columns => BuildColumns();
 
+    // The last row built, and the state it was built from: each window in list order with its
+    // column, recency and sequence — everything the grouping and both sorts read. The manager has
+    // no single point every change passes through (a window's fields are written in dozens of
+    // places, some between two reads in one operation), so the cache is not invalidated by the
+    // writers; it is checked on every read against the state it was built from, and rebuilt the
+    // moment any of it differs. Checking is one pass over a handful of windows with no allocation,
+    // where building is a grouping, two sorts and a list per column — and a stale row can never
+    // be served, because the row is a function of exactly what is compared.
+    private List<WindowColumn>? _columns;
+    private (WindowInstance Window, string ColumnId, long Recency, long Sequence)[] _columnsBuiltFrom = [];
+
     private List<WindowColumn> BuildColumns()
+    {
+        if (_columns is not null && ColumnsStillHold())
+            return _columns;
+
+        _columns = ComposeColumns();
+        _columnsBuiltFrom = _windows.Select(w => (w, w.ColumnId, w.Recency, w.Sequence)).ToArray();
+        return _columns;
+    }
+
+    private bool ColumnsStillHold()
+    {
+        if (_columnsBuiltFrom.Length != _windows.Count)
+            return false;
+
+        for (var i = 0; i < _windows.Count; i++)
+        {
+            var window = _windows[i];
+            var (built, columnId, recency, sequence) = _columnsBuiltFrom[i];
+
+            if (!ReferenceEquals(window, built)
+                || !string.Equals(window.ColumnId, columnId, StringComparison.Ordinal)
+                || window.Recency != recency
+                || window.Sequence != sequence)
+                return false;
+        }
+
+        return true;
+    }
+
+    private List<WindowColumn> ComposeColumns()
     {
         var columns = _windows
             .GroupBy(w => w.ColumnId)
@@ -951,6 +992,39 @@ public class WindowManager
             Relayout();
         else
             Notify();
+    }
+
+    /// <summary>
+    /// <see cref="Focus"/>, unless the window is already in and focusing it would change nothing:
+    /// what a press inside a window calls, since a window takes focus on every pointerdown and a
+    /// full focus redraws the desk's chrome and saves the layout each time.
+    /// </summary>
+    /// <remarks>
+    /// Not folded into <see cref="Focus"/> itself: callers re-aim a window (its parameters, its
+    /// title) and then focus it to have it redrawn with what it was aimed at — <see cref="Open"/>
+    /// on a re-aimed singleton, the Line watch — and an early return there would leave it showing
+    /// what it showed before.
+    /// </remarks>
+    public void EnsureFocused(string id)
+    {
+        if (!IsAlreadyIn(id))
+            Focus(id);
+    }
+
+    /// <summary>
+    /// Focused, the tab its column shows, nothing in its column collapsed, no other column holding
+    /// the row, and the last window brought forward by count and by clock — so a focus would move
+    /// neither the tab order, nor what a close falls back to, nor anything drawn.
+    /// </summary>
+    private bool IsAlreadyIn(string id)
+    {
+        if (FocusedId != id || Find(id) is not { } window || ColumnOf(id) is not { } column)
+            return false;
+
+        return column.Showing == window
+               && column.Tabs.All(t => !t.Minimised)
+               && !_windows.Any(w => w.Maximised && w.ColumnId != window.ColumnId)
+               && _windows.All(w => w == window || (w.Recency < window.Recency && w.LastFocusedAt <= window.LastFocusedAt));
     }
 
     private static int IndexIn(WindowColumn column, WindowInstance window)

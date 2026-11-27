@@ -361,11 +361,12 @@
 
     // Pointer-down anywhere makes this the window the operator is in — the column the next window
     // will not be tabbed into. Pointerdown rather than click, so the bookkeeping happens before a
-    // drag even starts. A tab behind takes no pointer, but the guard says so in code too.
+    // drag even starts. A tab behind takes no pointer, but the guard says so in code too. Every
+    // press inside a window lands here, so one already in changes nothing and redraws nothing.
     private void OnPointerDown()
     {
         if (!_behind)
-            Manager.Focus(Window.Id);
+            Manager.EnsureFocused(Window.Id);
     }
 
     // A collapsed tab has no controls to click — the whole bar is "expand".

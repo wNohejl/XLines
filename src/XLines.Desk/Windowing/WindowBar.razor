@@ -162,6 +162,72 @@
     {
         Manager.Changed += OnChanged;
         Manager.WindowChanged += OnWindowChanged;
+
+        // What the first render is about to draw; set here rather than in OnParametersSet, which
+        // a re-render from outside runs again before ShouldRender asks.
+        _drawn = Signature();
+    }
+
+    /// <summary>The signature of what the bar last drew. See <see cref="ShouldRender"/>.</summary>
+    private string? _drawn;
+
+    /// <summary>
+    /// Both signals reach the bar for every change on the desk — a divider dragged, a workspace
+    /// saved, any window's status — and most move nothing it draws. It draws again only when
+    /// <see cref="Signature"/> differs from the last it drew, or when a key is waiting to take
+    /// keyboard focus after the render (which needs that render to happen).
+    /// </summary>
+    protected override bool ShouldRender()
+    {
+        var signature = Signature();
+
+        if (_focusAfterRender is null && signature == _drawn)
+            return false;
+
+        _drawn = signature;
+        return true;
+    }
+
+    /// <summary>
+    /// Every value the markup above reads, read the way it reads it: from the same catalogue walk,
+    /// so a value the bar draws cannot be left out of the comparison without being left out of
+    /// the bar. Per key: its definition's group, icon, title and description; the window open on
+    /// it — id, collapsed, pulse, status line, and whether it shows in its column or waits behind
+    /// which window; whether it is current. Then the drawer pinned open. Nothing else is drawn:
+    /// the group key's tip, pulse and wash are functions of these.
+    /// </summary>
+    private string Signature()
+    {
+        var text = new System.Text.StringBuilder();
+
+        foreach (var group in CatalogueGroups)
+        {
+            text.Append('\u001d');
+
+            foreach (var item in group)
+            {
+                text.Append('\u001e')
+                    .Append(item.Definition?.Group).Append('\u001f')
+                    .Append(item.Icon).Append('\u001f')
+                    .Append(item.Title).Append('\u001f')
+                    .Append(item.Definition?.Description).Append('\u001f')
+                    .Append(item.IsCurrent ? '1' : '0');
+
+                if (item.Open is { } open)
+                {
+                    var showing = Manager.ColumnOf(open.Id)?.Showing;
+
+                    text.Append('\u001f').Append(open.Id)
+                        .Append('\u001f').Append(open.Minimised ? '1' : '0')
+                        .Append('\u001f').Append((int)open.Pulse)
+                        .Append('\u001f').Append(open.StatusText)
+                        .Append('\u001f').Append(Manager.IsShowing(open) ? '1' : '0')
+                        .Append('\u001f').Append(showing == open ? null : showing?.Title);
+                }
+            }
+        }
+
+        return text.Append('\u001d').Append(_pinned).ToString();
     }
 
     private void OnChanged() => InvokeAsync(StateHasChanged);
