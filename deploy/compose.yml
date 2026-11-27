@@ -48,7 +48,9 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     depends_on:
-      - web
+      web:
+        # Started once the desk answers, so the first visitor after a deploy gets the desk, not a 502.
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -106,6 +108,16 @@ services:
       Ingestion__Espn__Enabled: ${ESPN_ENABLED:-false}
     volumes:
       - web-keys:/keys
+    # The app probes itself (HealthProbe.cs): the image has no curl. /health, the process, not
+    # /ready, the database — a database that flaps must not keep Caddy from starting a desk that
+    # would show its own error. start_period covers the migration that runs before the app listens.
+    healthcheck:
+      test: ["CMD", "dotnet", "XLines.Web.dll", "--health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
     <<: *hardening
     deploy:
       resources:

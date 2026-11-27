@@ -106,6 +106,9 @@ per-attempt timeout) on every HttpClient.
 ## Observability & health
 
 - `/health` — liveness (no checks, process-up only); `/ready` — readiness (database).
+- The web container's healthcheck is the app probing itself, `dotnet XLines.Web.dll --health`
+  (`HealthProbe`; the image has no curl): one GET to its own `/health` on loopback, not `/ready`,
+  so a flapping database never marks the desk unhealthy. Hosted, Caddy starts only once it passes.
 - OpenTelemetry traces/metrics/logs over OTLP when the telemetry overlay runs; Npgsql's
   ActivitySource is enabled via `Npgsql.OpenTelemetry`.
 - The bespoke reliability layer (KPIs, alerts, incidents, runbook) is the operational

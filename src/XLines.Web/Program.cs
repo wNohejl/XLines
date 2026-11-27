@@ -10,6 +10,13 @@ using XLines.Web.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
+// The container's healthcheck: one GET to this container's own /health, before anything is built.
+if (XLines.Web.HealthProbe.IsRequested(args))
+{
+    Environment.ExitCode = await XLines.Web.HealthProbe.RunAsync();
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Local overrides, last so they win. This is where provider API keys live: the file is

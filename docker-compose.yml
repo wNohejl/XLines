@@ -109,6 +109,16 @@ services:
       Ingestion__RunOnStartup: "true"
 
       <<: *providers
+    # The app probes itself (HealthProbe.cs): the image has no curl. /health, the process, not
+    # /ready, the database — a database that flaps leaves the desk up to show its own error.
+    # start_period covers the migration that runs before the app listens.
+    healthcheck:
+      test: ["CMD", "dotnet", "XLines.Web.dll", "--health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+      start_interval: 2s
     ports:
       # 127.0.0.1 prefix is the important part — loopback only, not the LAN.
       - "127.0.0.1:${HTTPS_PORT:-9443}:9443"
