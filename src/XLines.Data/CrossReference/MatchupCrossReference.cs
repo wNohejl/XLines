@@ -34,10 +34,13 @@ namespace XLines.Data.CrossReference;
 /// only one of them belongs on screen.
 /// </para>
 /// </summary>
-public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null)
+public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null, TimeProvider? clock = null)
 {
     /// <summary>Who is reading, by tier (ADR 0024). Unregistered means a desk with one person at it.</summary>
     private IDataTier Tier { get; } = tier ?? FullDataTier.Instance;
+
+    /// <summary>The one clock this reader reads; the system's unless a host or test passes another.</summary>
+    private TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 
     /// <summary>
     /// Recent form for both sides of a game.
@@ -147,7 +150,7 @@ public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null)
         if (team is null)
             return null;
 
-        var now = DateTimeOffset.UtcNow;
+        var now = Clock.GetUtcNow();
         var since = now - window;
 
         var played = db.Games

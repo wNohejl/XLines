@@ -31,7 +31,7 @@ namespace XLines.Data.Gamecast;
 /// its header and its plays at once, and one scoped context would refuse the second.
 /// </para>
 /// </summary>
-public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines.Core.Contracts.IDataTier? tier = null)
+public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines.Core.Contracts.IDataTier? tier = null, TimeProvider? clock = null)
 {
     /// <summary>
     /// Who is reading, by tier (ADR 0024): the close on the header is the board's, read for the
@@ -57,7 +57,7 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
     {
         await using var db = await contexts.CreateDbContextAsync(ct);
 
-        var row = await new BoardService(db, Tier).GetRowAsync(gameId, ct);
+        var row = await new BoardService(db, Tier, clock).GetRowAsync(gameId, ct);
 
         if (row is null)
             return null;

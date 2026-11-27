@@ -15,7 +15,7 @@ namespace XLines.Tests.Reliability;
 public class JournalServiceTests(PostgresFixture fixture)
 {
     private static JournalService Service(XLinesDbContext db)
-        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System));
+        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System), TimeProvider.System);
 
     private static async Task<(Game Game, Team Home, Team Away)> FinalGameAsync(
         XLinesDbContext db, int home, int away, string? homeName = null, string? awayName = null)

@@ -37,6 +37,9 @@ public static class ServiceCollectionExtensions
         // reading — the web host does, the Worker and the tests do not.
         services.TryAddSingleton<XLines.Core.Contracts.IDataTier>(XLines.Core.Contracts.FullDataTier.Instance);
 
+        // The readers' clock (architecture review §4): the system's, unless a host or test registered one first.
+        services.TryAddSingleton(TimeProvider.System);
+
         // Against another machine's database the initializer migrates nothing unless told to by
         // name (ADR 0023): the machine that owns the database is the one that migrates it.
         services.AddSingleton(new MigrationPlacementOptions(

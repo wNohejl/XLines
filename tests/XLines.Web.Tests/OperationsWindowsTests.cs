@@ -27,6 +27,7 @@ public class OperationsWindowsTests : DeskTestContext
     {
         Services.AddScoped<DeskToasts>();
         Services.AddSingleton<IDbContextFactory<XLinesDbContext>>(new HangingDbFactory());
+        Services.AddSingleton(TimeProvider.System);
         Services.AddSingleton<HistoryBackfillService>();
         Services.AddSingleton<BackfillCoordinator>();
     }

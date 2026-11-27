@@ -21,10 +21,13 @@ namespace XLines.Data.CrossReference;
 /// true until the next scan and a cached board is a board that lies quietly.
 /// </para>
 /// </summary>
-public class BoardService(XLinesDbContext db, IDataTier? tier = null)
+public class BoardService(XLinesDbContext db, IDataTier? tier = null, TimeProvider? clock = null)
 {
     /// <summary>Who is reading, by tier (ADR 0024). Unregistered means a desk with one person at it.</summary>
     private IDataTier Tier { get; } = tier ?? FullDataTier.Instance;
+
+    /// <summary>The one clock this reader reads; the system's unless a host or test passes another.</summary>
+    private TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 
     /// <summary>
     /// Games inside the window, with the best available price on each market.
@@ -42,7 +45,7 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
         TimeSpan? lookback = null,
         CancellationToken ct = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = Clock.GetUtcNow();
         var horizon = now + window;
         var floor = now - (lookback ?? DefaultLookback);
 
@@ -329,7 +332,8 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
             PricesAreClosing: isClosing,
             Unpriced: prices.Count > 0 ? null : ExplainGap(game, lastScanInLeague, now))
         {
-            LastPulled = prices.Count > 0 ? null : lastScanInLeague
+            LastPulled = prices.Count > 0 ? null : lastScanInLeague,
+            ReadAt = now
         };
     }
 
@@ -424,7 +428,7 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
             ? null
             : (await LastPullBySportAsync([game.Sport!], ct)).TryGetValue(game.SportId, out var at) ? at : null;
 
-        return Compose(game, live, closing, scanned, DateTimeOffset.UtcNow) with
+        return Compose(game, live, closing, scanned, Clock.GetUtcNow()) with
         {
             Bout = (await db.Bouts.AsNoTracking().FirstOrDefaultAsync(b => b.GameId == gameId, ct)).ForTier(Tier)
         };
@@ -620,7 +624,13 @@ public record BoardRow(
     /// would send an operator chasing a number that is already final.
     /// </summary>
     public TimeSpan? Age
-        => PricesAreClosing || PricedAt is not { } at ? null : DateTimeOffset.UtcNow - at;
+        => PricesAreClosing || PricedAt is not { } at || ReadAt is not { } read ? null : read - at;
+
+    /// <summary>
+    /// When the row was read, by the reader's clock: what <see cref="Age"/> is measured to, so the row
+    /// reads no clock of its own. Null on a row built by hand, which then states no age.
+    /// </summary>
+    public DateTimeOffset? ReadAt { get; init; }
 
     /// <summary>Whether the game has a result to show, however partial.</summary>
     public bool HasScore => Scoreline.Has(Game);

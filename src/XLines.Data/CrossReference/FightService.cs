@@ -25,9 +25,12 @@ namespace XLines.Data.CrossReference;
 /// says neither has a profile, which is the state it is already in before the profiles are read.
 /// </para>
 /// </summary>
-public class FightService(XLinesDbContext db, IDataTier? tier = null)
+public class FightService(XLinesDbContext db, IDataTier? tier = null, TimeProvider? clock = null)
 {
     private IDataTier Tier { get; } = tier ?? FullDataTier.Instance;
+
+    /// <summary>The one clock this reader reads; the system's unless a host or test passes another.</summary>
+    private TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 
     /// <summary>How many of each fighter's fights the tape lists.</summary>
     public const int RecentFights = 5;
@@ -62,7 +65,7 @@ public class FightService(XLinesDbContext db, IDataTier? tier = null)
         var profile = Tier.CanSeePersonalUseSources
             ? await db.FighterProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.TeamId == teamId, ct)
             : null;
-        return Card(team, profile, null);
+        return Card(team, profile, null, Clock.GetUtcNow());
     }
 
     /// <summary>
@@ -80,8 +83,8 @@ public class FightService(XLinesDbContext db, IDataTier? tier = null)
                 .ToDictionaryAsync(p => p.TeamId, ct)
             : [];
 
-        var red = Card(game.HomeTeam!, profiles.GetValueOrDefault(game.HomeTeamId), bout.HomeRecord, game.StartsAt);
-        var blue = Card(game.AwayTeam!, profiles.GetValueOrDefault(game.AwayTeamId), bout.AwayRecord, game.StartsAt);
+        var red = Card(game.HomeTeam!, profiles.GetValueOrDefault(game.HomeTeamId), bout.HomeRecord, Clock.GetUtcNow(), game.StartsAt);
+        var blue = Card(game.AwayTeam!, profiles.GetValueOrDefault(game.AwayTeamId), bout.AwayRecord, Clock.GetUtcNow(), game.StartsAt);
 
         return new FightTape(game, bout, red, blue,
             Physical(red, blue), Career(red, blue), PerFight(red, blue), Common(red, blue));
@@ -91,14 +94,14 @@ public class FightService(XLinesDbContext db, IDataTier? tier = null)
     /// A fighter as the tape reads them. History is cut at <paramref name="before"/> when given —
     /// a past bout's tape compares the fighters as they came into it, not as they are now.
     /// </summary>
-    private static FighterCard Card(Team team, FighterProfile? profile, string? recordGoingIn, DateTimeOffset? before = null)
+    private static FighterCard Card(Team team, FighterProfile? profile, string? recordGoingIn, DateTimeOffset readAt, DateTimeOffset? before = null)
     {
         var career = FighterPayload.ReadCareer(profile?.Career);
         var history = FighterPayload.ReadHistory(profile?.History)
             .Where(f => before is null || f.Date is null || f.Date < before.Value.AddHours(-12))
             .ToList();
 
-        return new FighterCard(team, profile, career, history, recordGoingIn ?? profile?.Record, before);
+        return new FighterCard(team, profile, career, history, recordGoingIn ?? profile?.Record, before) { ReadAt = readAt };
     }
 
     // ---- Rows ------------------------------------------------------------------------------
@@ -273,9 +276,12 @@ public sealed record FighterCard(
     string? Record,
     DateTimeOffset? AsOf)
 {
-    /// <summary>Age at the bout, or today for a fighter on their own.</summary>
-    public double? Age => Profile?.BornOn is { } born
-        ? Math.Floor(((AsOf ?? DateTimeOffset.UtcNow).Date - born.ToDateTime(TimeOnly.MinValue)).TotalDays / 365.2425)
+    /// <summary>When the card was read, by the reader's clock: the day a fighter on their own is aged to.</summary>
+    public DateTimeOffset? ReadAt { get; init; }
+
+    /// <summary>Age at the bout, or on the day read for a fighter on their own; null with neither.</summary>
+    public double? Age => Profile?.BornOn is { } born && (AsOf ?? ReadAt) is { } on
+        ? Math.Floor((on.Date - born.ToDateTime(TimeOnly.MinValue)).TotalDays / 365.2425)
         : null;
 
     /// <summary>The stat sheets ESPN kept, one per fight that has one — UFC fights, in practice.</summary>

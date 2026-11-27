@@ -54,6 +54,12 @@ namespace XLines.Ingestion.Services;
 /// inside a tick is logged and the loop continues — a crashed scheduler would take the whole
 /// platform silent, which is worse than one failed run.
 /// </para>
+///
+/// <para>
+/// The tick runs the passes with a deadline first — the live poll, the line and closing scans —
+/// and never awaits the ones that run for minutes, fighter profiles and the gamecast backport,
+/// which run on a task of their own, one at a time (<see cref="TickAsync"/>).
+/// </para>
 /// </summary>
 public class IngestionScheduler(
     IServiceScopeFactory scopeFactory,
@@ -119,6 +125,9 @@ public class IngestionScheduler(
             }
         }
 
+        // A fighter or backport pass in flight sees the same token and stops at its next request.
+        await _longPasses;
+
         logger.LogInformation("Ingestion scheduler stopped");
     }
 
@@ -174,13 +183,23 @@ public class IngestionScheduler(
     private static TimeSpan Positive(TimeSpan configured, TimeSpan fallback)
         => configured > TimeSpan.Zero ? configured : fallback;
 
-    private async Task TickAsync(CancellationToken ct)
+    /// <summary>
+    /// One tick. The passes with a deadline run first and in turn: the slate (a start time that
+    /// moved is what a closing scan keys off), the live poll, the default source's fixtures, then
+    /// the line and closing scans. The ones that can wait come after them: results and the
+    /// settlement that grades against them, and the default source's scores. The passes that can
+    /// run for minutes — fighter profiles and the gamecast backport — are not awaited here at all
+    /// (<see cref="StartLongPassesAsync"/>), so a closing scan never misses its lead, and a live
+    /// score never stalls, behind sixty fighters at ESPN's pace.
+    /// </summary>
+    internal async Task TickAsync(CancellationToken ct)
     {
         var now = clock.GetUtcNow();
 
         // Retention first: what makes a game promotable is its start time passing, which
         // happens whether or not anything was polled. Tying this to a poll would leave a
-        // late-night slate unpromoted until the next one.
+        // late-night slate unpromoted until the next one. It writes the snapshots the line scans
+        // write, so it stays on the tick, before them, rather than beside them.
         if (_options.OddsRetention.Enabled && Due(_lastRetentionRun, _options.OddsRetention.Interval, now))
         {
             await RunRetentionAsync(ct);
@@ -200,65 +219,126 @@ public class IngestionScheduler(
                 await RunJobAsync(IngestionJobs.EspnLive, ct);
                 _lastLivePoll = now;
             }
-
-            if (Due(_lastResultsSweep, _options.GamePasses.ResultsRetry, now) && await ResultsAreOwedAsync(ct))
-            {
-                await RunJobAsync(IngestionJobs.EspnResults, ct);
-
-                // Results are what settlement grades against, so settle in the same breath
-                // rather than leaving graded-able entries waiting for a separate cadence.
-                await RunJobAsync(IngestionJobs.Settle, ct);
-                _lastResultsSweep = now;
-            }
-
-            // Fighters on a card ahead, and fighters who have just fought, are owed a profile
-            // (ADR 0021). Free to ask, and nothing is fetched when nobody is owed one.
-            if (_options.EffectiveSports.Any(Core.Analytics.FightSports.IsFight) && Due(_lastFighterPass, FighterPass, now))
-            {
-                await RunJobAsync(IngestionJobs.EspnFighters, ct);
-                _lastFighterPass = now;
-            }
-
-            // Plays for the finals from before the feed, a batch every BackportInterval while any
-            // are owed, and never while a game is in play: the live passes have first call on ESPN.
-            if (_options.Gamecast.Enabled && Due(_lastBackport, BackportInterval, now) && await BackportIsDueAsync(now, ct))
-            {
-                await RunJobAsync(IngestionJobs.EspnGamecastBackport, ct);
-                _lastBackport = now;
-            }
         }
 
         // ESPN off: the default stats source (ADR 0026), if a key is held. Its fixtures are free and
         // keep the schedule as the slate did; its scores are metered, so they run only when the
         // operator chose automatic scanning, at most once a league a day, never into the reserve —
         // the job decides each of those (IngestionJobs.RunScoresAsync), this only asks it often
-        // enough to notice a slate that has finished. With ESPN on, none of this runs.
-        if (!_options.Espn.Enabled && _options.GamePasses.Enabled && await HasScheduleSourceAsync(ct))
-        {
-            if (FixturesAreDue(now) || await FixturesAreDueForStartAsync(now, ct))
-            {
-                await RunJobAsync(IngestionJobs.OddsFixtures, ct);
-                _lastFixtures = now;
-            }
+        // enough to notice a slate that has finished. With ESPN on, none of this runs. The fixtures
+        // come before the lines, whose games they are; the scores after.
+        var defaultSource = !_options.Espn.Enabled && _options.GamePasses.Enabled && await HasScheduleSourceAsync(ct);
 
-            if (Due(_lastScoresCheck, ScoresCheck, now))
-            {
-                _lastScoresCheck = now;
-                await RunJobAsync(IngestionJobs.OddsScores, ct);
-            }
+        if (defaultSource && (FixturesAreDue(now) || await FixturesAreDueForStartAsync(now, ct)))
+        {
+            await RunJobAsync(IngestionJobs.OddsFixtures, ct);
+            _lastFixtures = now;
         }
 
         // Lines are the one thing the scheduler will not fetch on its own initiative unless
-        // explicitly told it may. Everything above this line is free; this is not.
+        // explicitly told it may. Everything else on the tick is free, or the scores' own rule
+        // decides it; this is not.
         //
         // Asked of the data rather than of configuration, so a switch made in Ops reaches this
         // host and the worker alike without a restart — and switching back stops the spending
         // at the next tick.
         //
         // Asked every tick, league by league: each league keeps its own cadence and a closing scan
-        // has a ten-minute window to land in, so neither can wait on one shared interval.
+        // has a ten-minute window to land in, so neither can wait on one shared interval — nor on
+        // a results sweep catching up a missed day's box scores, which is why that comes after.
         if (await LinesRunUnattendedAsync(ct))
             await ScanLinesAsync(now, ct);
+
+        if (_options.GamePasses.Enabled
+            && Due(_lastResultsSweep, _options.GamePasses.ResultsRetry, now) && await ResultsAreOwedAsync(ct))
+        {
+            await RunJobAsync(IngestionJobs.EspnResults, ct);
+
+            // Results are what settlement grades against, so settle in the same breath
+            // rather than leaving graded-able entries waiting for a separate cadence.
+            await RunJobAsync(IngestionJobs.Settle, ct);
+            _lastResultsSweep = now;
+        }
+
+        if (defaultSource && Due(_lastScoresCheck, ScoresCheck, now))
+        {
+            _lastScoresCheck = now;
+            await RunJobAsync(IngestionJobs.OddsScores, ct);
+        }
+
+        if (_options.GamePasses.Enabled)
+            await StartLongPassesAsync(now, ct);
+    }
+
+    /// <summary>
+    /// The passes that run for minutes, on a task of their own the tick does not await: fighter
+    /// profiles (sixty fighters at four paced requests each) and a gamecast backport batch, one after
+    /// the other, as they ran on the tick. Started only when the last one has finished, so neither
+    /// ever overlaps itself or the other; a tick that finds them still running leaves them to it,
+    /// and asks again on the next.
+    ///
+    /// <para>
+    /// They write only what nothing on the tick writes: fighter profiles, and the plays, drives and
+    /// header of games already final, which the results pass (games not yet final) does not touch.
+    /// A pass is marked done when it finishes, so one that throws is asked for again on the next
+    /// tick, as before; the throw is logged and never reaches the loop.
+    /// </para>
+    /// </summary>
+    private async Task StartLongPassesAsync(DateTimeOffset now, CancellationToken ct)
+    {
+        // ESPN off: both are ESPN's, and neither would run (RunJobAsync).
+        if (!_options.Espn.Enabled)
+            return;
+
+        if (!_longPasses.IsCompleted)
+        {
+            logger.LogDebug("Fighter or backport pass still running; not started again this tick");
+            return;
+        }
+
+        // Fighters on a card ahead, and fighters who have just fought, are owed a profile
+        // (ADR 0021). Free to ask, and nothing is fetched when nobody is owed one.
+        var fighters = _options.EffectiveSports.Any(Core.Analytics.FightSports.IsFight) && Due(_lastFighterPass, FighterPass, now);
+
+        // Plays for the finals from before the feed, a batch every BackportInterval while any
+        // are owed, and never while a game is in play: the live passes have first call on ESPN.
+        var backport = _options.Gamecast.Enabled && Due(_lastBackport, BackportInterval, now) && await BackportIsDueAsync(now, ct);
+
+        if (!fighters && !backport)
+            return;
+
+        _longPasses = Task.Run(async () =>
+        {
+            if (fighters && await RunLongPassAsync(IngestionJobs.EspnFighters, ct))
+                _lastFighterPass = now;
+
+            if (backport && await RunLongPassAsync(IngestionJobs.EspnGamecastBackport, ct))
+                _lastBackport = now;
+        }, CancellationToken.None);
+    }
+
+    /// <summary>The fighter and backport passes in flight, or a completed task; awaited on shutdown.</summary>
+    internal Task LongPasses => _longPasses;
+
+    private Task _longPasses = Task.CompletedTask;
+
+    /// <summary>One long pass, its failure logged as a tick's would be. True when it ran to the end.</summary>
+    private async Task<bool> RunLongPassAsync(string key, CancellationToken ct)
+    {
+        try
+        {
+            await RunJobAsync(key, ct);
+            return true;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Scheduler pass {Job} failed; continuing", key);
+            return false;
+        }
     }
 
     private DateTimeOffset? _lastFixtures;

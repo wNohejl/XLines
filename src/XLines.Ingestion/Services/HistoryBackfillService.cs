@@ -42,7 +42,8 @@ namespace XLines.Ingestion.Services;
 public class HistoryBackfillService(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
-    ILogger<HistoryBackfillService> logger)
+    ILogger<HistoryBackfillService> logger,
+    TimeProvider clock)
 {
     public const string JobKey = "stats:backfill";
 
@@ -105,7 +106,7 @@ public class HistoryBackfillService(
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
 
-        var today = LeagueClock.Today();
+        var today = LeagueClock.Today(clock);
         var sports = EffectiveSports();
 
         // Each sport reaches back to its own season start, so "earliest" is the earliest of
@@ -173,7 +174,7 @@ public class HistoryBackfillService(
     /// </summary>
     private int EffectiveDays()
     {
-        var today = LeagueClock.Today();
+        var today = LeagueClock.Today(clock);
 
         return EffectiveSports()
             .Select(s => DaysFor(s, today))
@@ -252,7 +253,7 @@ public class HistoryBackfillService(
             await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>()
                 .EnsurePartitionsAsync(ct);
 
-        var today = LeagueClock.Today();
+        var today = LeagueClock.Today(clock);
         var sports = range is null
             ? EffectiveSports()
             : EffectiveSports().Where(s => range.Sports.Contains(s, StringComparer.OrdinalIgnoreCase)).ToList();
@@ -438,7 +439,7 @@ public class HistoryBackfillService(
     public IReadOnlyList<string> Sports => EffectiveSports();
 
     /// <summary>Where a sport's season walk starts — the From a range defaults to.</summary>
-    public DateOnly SeasonStart(string sportKey) => StartFor(sportKey, LeagueClock.Today());
+    public DateOnly SeasonStart(string sportKey) => StartFor(sportKey, LeagueClock.Today(clock));
 
     /// <summary>
     /// A range's days, newest first, as the season walk orders them. Today is allowed — a
@@ -455,7 +456,7 @@ public class HistoryBackfillService(
         return days;
     }
 
-    private static async Task<DayOutcome> WalkDayAsync(
+    private async Task<DayOutcome> WalkDayAsync(
         XLinesDbContext db,
         StatsIngestionService stats,
         IStatsSource source,
@@ -495,7 +496,7 @@ public class HistoryBackfillService(
             Date = date
         };
 
-        checkpoint.CompletedAt = DateTimeOffset.UtcNow;
+        checkpoint.CompletedAt = clock.GetUtcNow();
         checkpoint.RowsIngested = result.RowsIngested;
         checkpoint.RequestsMade = run?.RequestsMade ?? 0;
         checkpoint.Error = ColumnText.Fit(error, 512);

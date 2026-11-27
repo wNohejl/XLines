@@ -26,7 +26,8 @@ namespace XLines.Ingestion.Services;
 public class BackfillCoordinator(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
-    ILogger<BackfillCoordinator> logger) : BackgroundService
+    ILogger<BackfillCoordinator> logger,
+    TimeProvider clock) : BackgroundService
 {
     private readonly Lock _gate = new();
 
@@ -59,7 +60,7 @@ public class BackfillCoordinator(
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(hostToken);
             IsRunning = true;
-            StartedAt = DateTimeOffset.UtcNow;
+            StartedAt = clock.GetUtcNow();
             FinishedAt = null;
             Progress = null;
             LastReport = null;
@@ -120,7 +121,7 @@ public class BackfillCoordinator(
             lock (_gate)
             {
                 IsRunning = false;
-                FinishedAt = DateTimeOffset.UtcNow;
+                FinishedAt = clock.GetUtcNow();
                 _cts?.Dispose();
                 _cts = null;
             }

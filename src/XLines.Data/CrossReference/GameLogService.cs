@@ -30,10 +30,13 @@ namespace XLines.Data.CrossReference;
 /// dropping them would silently understate a record, which is the failure ADR 0003 is about.
 /// </para>
 /// </summary>
-public class GameLogService(XLinesDbContext db, IDataTier? tier = null)
+public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProvider? clock = null)
 {
     /// <summary>Who is reading, by tier (ADR 0024). Unregistered means a desk with one person at it.</summary>
     private IDataTier Tier { get; } = tier ?? FullDataTier.Instance;
+
+    /// <summary>The one clock this reader reads; the system's unless a host or test passes another.</summary>
+    private TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 
     /// <summary>
     /// One team's games inside a window, newest first, each graded against the closing line
@@ -45,7 +48,7 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null)
         int? seasonYear = null,
         CancellationToken ct = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = Clock.GetUtcNow();
         var since = now - window;
 
         var played = db.Games
@@ -80,7 +83,7 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null)
     /// </summary>
     public async Task<IReadOnlyList<int>> SeasonsForTeamAsync(int teamId, CancellationToken ct = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = Clock.GetUtcNow();
 
         return await db.Games
             .Where(g => (g.HomeTeamId == teamId || g.AwayTeamId == teamId) && g.StartsAt <= now)

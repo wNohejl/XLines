@@ -41,7 +41,7 @@ public class JournalTransferTests(PostgresFixture fixture)
         => new(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(cs).Options);
 
     private static JournalService Journal(XLinesDbContext db)
-        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System));
+        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System), TimeProvider.System);
 
     /// <summary>
     /// The NFL, its two sides and the one game, with <paramref name="fillers"/> other games added

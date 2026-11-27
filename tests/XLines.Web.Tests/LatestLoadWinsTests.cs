@@ -116,7 +116,7 @@ public class PerformanceLoadTests : DeskTestContext
 
     public PerformanceLoadTests() => Services.AddSingleton<JournalService>(_journal);
 
-    private sealed class HeldJournal() : JournalService(null!, null!)
+    private sealed class HeldJournal() : JournalService(null!, null!, TimeProvider.System)
     {
         public ConcurrentQueue<CancellationToken> Reads { get; } = new();
 

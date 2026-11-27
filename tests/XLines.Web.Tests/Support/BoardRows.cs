@@ -66,6 +66,10 @@ public static class BoardRows
             BookCount: 2,
             PricedAt: DateTimeOffset.UtcNow - ageOf,
             PricesAreClosing: closing,
-            Unpriced: null);
+            Unpriced: null)
+        {
+            // As the board reads it: the row's age is measured to when it was read.
+            ReadAt = DateTimeOffset.UtcNow
+        };
     }
 }

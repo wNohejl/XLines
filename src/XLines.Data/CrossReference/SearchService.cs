@@ -16,9 +16,12 @@ namespace XLines.Data.CrossReference;
 /// not come back through the search.
 /// </para>
 /// </summary>
-public class SearchService(XLinesDbContext db, IDataTier? tier = null)
+public class SearchService(XLinesDbContext db, IDataTier? tier = null, TimeProvider? clock = null)
 {
     private IDataTier Tier { get; } = tier ?? FullDataTier.Instance;
+
+    /// <summary>The one clock this reader reads; the system's unless a host or test passes another.</summary>
+    private TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 
     public async Task<IReadOnlyList<Team>> TeamsAsync(string text, int take = 6, CancellationToken ct = default)
     {
@@ -70,7 +73,7 @@ public class SearchService(XLinesDbContext db, IDataTier? tier = null)
         if (patterns.Count == 0)
             return [];
 
-        var now = DateTimeOffset.UtcNow;
+        var now = Clock.GetUtcNow();
         var query = db.Games.AsNoTracking()
             .Include(g => g.HomeTeam).Include(g => g.AwayTeam).Include(g => g.Sport)
             .Where(g => g.Sport!.Enabled
@@ -96,7 +99,7 @@ public class SearchService(XLinesDbContext db, IDataTier? tier = null)
 
         if (fromToday)
         {
-            var today = LeagueClock.StartOf(LeagueClock.Today());
+            var today = LeagueClock.StartOf(LeagueClock.Today(Clock));
 
             return found.Where(g => g.StartsAt >= today).OrderBy(g => g.StartsAt)
                 .Concat(found.Where(g => g.StartsAt < today))

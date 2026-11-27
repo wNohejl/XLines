@@ -788,6 +788,48 @@ public class BoardServiceTests(PostgresFixture fixture)
         Assert.Contains("No lines pulled in 3 days", byId!.Unpriced!);
     }
 
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>
+    /// The board reads "now" from its clock, not the machine's (architecture review §4): pinned to
+    /// an afternoon in June, a game that evening is on the board and its league's pull thirty hours
+    /// earlier is stale, though by the wall clock the game is months past and off the board entirely.
+    /// </summary>
+    [Fact]
+    public async Task AtAPinnedInstantTheBoardSaysHowStaleTheLeaguesLastPullIs()
+    {
+        var pinned = new DateTimeOffset(2026, 6, 1, 18, 0, 0, TimeSpan.Zero);
+
+        await using var db = fixture.CreateContext();
+        var s = await SeedAsync(db);
+        s.Game.StartsAt = pinned.AddHours(4);
+
+        db.IngestionRuns.Add(new IngestionRun
+        {
+            SourceId = s.Source.Id,
+            JobKey = BoardService.OddsLinesJobPrefix + s.Sport.Key,
+            StartedAt = pinned.AddHours(-30),
+            FinishedAt = pinned.AddHours(-30),
+            Status = RunStatus.Success
+        });
+        await db.SaveChangesAsync();
+
+        var board = new BoardService(db, clock: new FixedClock(pinned));
+
+        var listed = Assert.Single(await board.GetAsync(s.Sport.Key, TimeSpan.FromHours(24)));
+        var byId = await board.GetRowAsync(s.Game.Id);
+
+        Assert.Equal("No lines pulled in 30 hours. Pull data → Pull lines.", listed.Unpriced);
+        Assert.Equal(listed.Unpriced, byId!.Unpriced);
+        Assert.Equal(pinned, listed.ReadAt);
+
+        // By the machine's clock the same game is long started, and off a day's board.
+        Assert.Empty(await new BoardService(db).GetAsync(s.Sport.Key, TimeSpan.FromHours(24)));
+    }
+
     [Fact]
     public async Task ARowsBestValueIsReadAcrossEveryBookNotOnlyTheBestPrice()
     {

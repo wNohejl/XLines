@@ -67,7 +67,7 @@ public sealed record PerformanceSet(IReadOnlyList<JournalEntry> Ledger, IReadOnl
 /// A result the operator set by hand on a market nothing grades is theirs and is kept.
 /// </para>
 /// </summary>
-public class JournalService(XLinesDbContext db, SettlementService settlement)
+public class JournalService(XLinesDbContext db, SettlementService settlement, TimeProvider clock)
 {
     /// <summary>Books every desk knows, before any has been seen in the data.</summary>
     public static readonly IReadOnlyList<string> CommonBooks =
@@ -243,7 +243,7 @@ public class JournalService(XLinesDbContext db, SettlementService settlement)
         }
         else
         {
-            entry = new JournalEntry { PlacedAt = DateTimeOffset.UtcNow, Result = EntryResult.Pending };
+            entry = new JournalEntry { PlacedAt = clock.GetUtcNow(), Result = EntryResult.Pending };
             db.JournalEntries.Add(entry);
         }
 
@@ -266,7 +266,7 @@ public class JournalService(XLinesDbContext db, SettlementService settlement)
         if (draft.Legs.Count < 2)
             throw new InvalidOperationException("A parlay has at least two legs.");
 
-        var placed = DateTimeOffset.UtcNow;
+        var placed = clock.GetUtcNow();
         var parlay = new Parlay
         {
             Book = Normalise(draft.Book),
@@ -299,7 +299,7 @@ public class JournalService(XLinesDbContext db, SettlementService settlement)
         if (drafts.Count == 0)
             return [];
 
-        var placed = DateTimeOffset.UtcNow;
+        var placed = clock.GetUtcNow();
         var entries = new List<JournalEntry>(drafts.Count);
 
         foreach (var draft in drafts)
@@ -537,7 +537,7 @@ public class JournalService(XLinesDbContext db, SettlementService settlement)
 
     /// <summary>Games to log a bet against, found by team across the season (see <see cref="SearchService.GamesAsync"/>).</summary>
     public Task<IReadOnlyList<Game>> SearchGamesAsync(string text, int take = 20, bool fromToday = false, CancellationToken ct = default)
-        => new SearchService(db).GamesAsync(text, take, fromToday, ct);
+        => new SearchService(db, clock: clock).GamesAsync(text, take, fromToday, ct);
 
     /// <summary>
     /// Writes the draft onto the entry. Returns true when a field the grade depends on changed on

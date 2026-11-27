@@ -251,7 +251,7 @@ public class PerformancePanelTests : DeskTestContext
     /// A journal held in memory that counts what Performance asks of it. Built on no database:
     /// the two reads the window makes are the ones overridden here, and anything else throws.
     /// </summary>
-    private sealed class CountedJournal() : JournalService(null!, null!)
+    private sealed class CountedJournal() : JournalService(null!, null!, TimeProvider.System)
     {
         public List<PerformanceFilter> Reads { get; } = [];
 
