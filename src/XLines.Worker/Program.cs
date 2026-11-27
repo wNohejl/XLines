@@ -95,77 +95,109 @@ if (job is null)
 
 var host = builder.Build();
 
-// Every run initialises, a single `--job` included, so a press from this machine against another
-// machine's database follows the same rule as a desk (ADR 0023): no migration there, and a
-// refusal when the schema is not the one this code was built for.
-await using (var scope = host.Services.CreateAsyncScope())
-{
-    var initialiser = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
-    try
+// A single `--job` runs outside the host's lifetime (no RunAsync), so nothing stopped it on Ctrl+C
+// or `docker stop` but killing the process mid-write. Both cancel this token instead, which every
+// callee below takes, and the run ends at its next check. The schedule (no `--job`) keeps the
+// host's own console lifetime, so nothing is registered for it.
+using var cancel = new CancellationTokenSource();
+using var sigterm = job is null ? null : System.Runtime.InteropServices.PosixSignalRegistration.Create(
+    System.Runtime.InteropServices.PosixSignal.SIGTERM, signal =>
     {
-        await initialiser.InitialiseAsync();
-    }
-    catch (XLines.Data.Placement.RemoteDatabaseRefusedException refused)
-    {
-        Console.Error.WriteLine(refused.Message);
-        return 4;
-    }
-}
-
-if (range is not null)
-{
-    var summary = await host.Services.GetRequiredService<RangePull>().RunAsync(
-        range, new ConsoleProgress<RangePullProgress>(p =>
-            Console.WriteLine($"{p.Sport} {p.Day:yyyy-MM-dd} ({p.Done + 1} of {p.Of})")),
-        CancellationToken.None);
-
-    var ranged = summary.ToOutcome();
-    Console.WriteLine($"{ranged.Key}: {(ranged.Succeeded ? "succeeded" : "failed")}. {ranged.Detail}");
-
-    return ranged.Succeeded ? 0 : 1;
-}
-
-if (job is JournalTransfer.ExportJob or JournalTransfer.ImportJob)
-{
-    await using var scope = host.Services.CreateAsyncScope();
-    var transfer = scope.ServiceProvider.GetRequiredService<JournalTransfer>();
-
-    try
-    {
-        if (job == JournalTransfer.ExportJob)
-        {
-            Console.WriteLine($"{job}: succeeded. {await transfer.ExportAsync(journalOut!)}");
-            return 0;
-        }
-
-        var plan = await transfer.ImportAsync(journalIn!, dryRun);
-        Console.WriteLine($"{job}{(dryRun ? " (dry run, nothing written)" : "")}: succeeded. {Path.GetFullPath(journalIn!)}");
-        foreach (var line in plan.Lines())
-            Console.WriteLine($"  {line}");
-
-        return 0;
-    }
-    catch (Exception ex) when (ex is InvalidOperationException or FormatException or IOException or System.Text.Json.JsonException)
-    {
-        Console.Error.WriteLine($"{job}: failed. {ex.Message}");
-        return 1;
-    }
-}
+        signal.Cancel = true;
+        cancel.Cancel();
+    });
 
 if (job is not null)
 {
-    var jobs = host.Services.GetRequiredService<IngestionJobs>();
-    JobOutcome outcome;
-
-    do
+    Console.CancelKeyPress += (_, e) =>
     {
-        outcome = await jobs.RunAsync(job);
-        Console.WriteLine($"{outcome.Key}: {(outcome.Succeeded ? "succeeded" : "failed")}, {outcome.Rows:N0} rows, "
-                          + $"{outcome.Failures} failures. {outcome.Detail}");
-    }
-    while (untilDone && outcome.Succeeded && outcome.More);
+        e.Cancel = true;
+        cancel.Cancel();
+    };
+}
 
-    return outcome.Succeeded ? 0 : 1;
+var ct = cancel.Token;
+
+try
+{
+    // Every run initialises, a single `--job` included, so a press from this machine against another
+    // machine's database follows the same rule as a desk (ADR 0023): no migration there, and a
+    // refusal when the schema is not the one this code was built for.
+    await using (var scope = host.Services.CreateAsyncScope())
+    {
+        var initialiser = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+        try
+        {
+            await initialiser.InitialiseAsync(ct);
+        }
+        catch (XLines.Data.Placement.RemoteDatabaseRefusedException refused)
+        {
+            Console.Error.WriteLine(refused.Message);
+            return 4;
+        }
+    }
+
+    if (range is not null)
+    {
+        var summary = await host.Services.GetRequiredService<RangePull>().RunAsync(
+            range, new ConsoleProgress<RangePullProgress>(p =>
+                Console.WriteLine($"{p.Sport} {p.Day:yyyy-MM-dd} ({p.Done + 1} of {p.Of})")),
+            ct);
+
+        var ranged = summary.ToOutcome();
+        Console.WriteLine($"{ranged.Key}: {(ranged.Succeeded ? "succeeded" : "failed")}. {ranged.Detail}");
+
+        return ranged.Succeeded ? 0 : 1;
+    }
+
+    if (job is JournalTransfer.ExportJob or JournalTransfer.ImportJob)
+    {
+        await using var scope = host.Services.CreateAsyncScope();
+        var transfer = scope.ServiceProvider.GetRequiredService<JournalTransfer>();
+
+        try
+        {
+            if (job == JournalTransfer.ExportJob)
+            {
+                Console.WriteLine($"{job}: succeeded. {await transfer.ExportAsync(journalOut!, ct)}");
+                return 0;
+            }
+
+            var plan = await transfer.ImportAsync(journalIn!, dryRun, ct);
+            Console.WriteLine($"{job}{(dryRun ? " (dry run, nothing written)" : "")}: succeeded. {Path.GetFullPath(journalIn!)}");
+            foreach (var line in plan.Lines())
+                Console.WriteLine($"  {line}");
+
+            return 0;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FormatException or IOException or System.Text.Json.JsonException)
+        {
+            Console.Error.WriteLine($"{job}: failed. {ex.Message}");
+            return 1;
+        }
+    }
+
+    if (job is not null)
+    {
+        var jobs = host.Services.GetRequiredService<IngestionJobs>();
+        JobOutcome outcome;
+
+        do
+        {
+            outcome = await jobs.RunAsync(job, ct);
+            Console.WriteLine($"{outcome.Key}: {(outcome.Succeeded ? "succeeded" : "failed")}, {outcome.Rows:N0} rows, "
+                              + $"{outcome.Failures} failures. {outcome.Detail}");
+        }
+        while (untilDone && outcome.Succeeded && outcome.More && !ct.IsCancellationRequested);
+
+        return outcome.Succeeded ? 0 : 1;
+    }
+}
+catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+{
+    // Stopped by the operator: a failed run, said as one, with the code a failed job exits with.
+    Console.Error.WriteLine($"{job}: cancelled.");
+    return 1;
 }
 
 await host.RunAsync();

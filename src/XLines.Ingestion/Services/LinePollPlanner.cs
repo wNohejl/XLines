@@ -164,7 +164,13 @@ public class LinePollPlanner(
         // or compressed by its own next start.
         var budgeted = Clamp(interval, settings);
 
-        var leagues = watchable
+        // No scan left above the reserve (LinePacing.Budget holds the reserve back): no league is
+        // watched, so the scheduler spends nothing unattended — neither paced nor closing scans —
+        // rather than scanning at the maximum interval into what is kept for pulls on request.
+        // The plan is still priced, so Ops can say what a press would cost.
+        var exhausted = scansLeft == 0;
+
+        var leagues = (exhausted ? Array.Empty<string>() : watchable)
             .Select(sport =>
             {
                 var start = nextStarts[sport];

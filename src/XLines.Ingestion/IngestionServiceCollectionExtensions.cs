@@ -140,7 +140,7 @@ public static class IngestionServiceCollectionExtensions
 
         if (options.OddsApiIo.Enabled && !string.IsNullOrWhiteSpace(options.OddsApiIo.ApiKey))
         {
-            AddProviderClient<OddsApiIoAdapter>(services, "https://api.odds-api.io/v3/");
+            AddProviderClient<OddsApiIoAdapter>(services, "https://api.odds-api.io/v3/", metered: true);
 
             services.AddScoped<IOddsSource>(sp => sp.GetRequiredService<OddsApiIoAdapter>());
         }
@@ -159,7 +159,7 @@ public static class IngestionServiceCollectionExtensions
         // or pacing sum that spends The Odds API's credits can reach it; its job asks for it by name.
         if (options.SportsGameOdds.HasKey)
         {
-            AddProviderClient<SportsGameOddsAdapter>(services, SportsGameOddsAdapter.BaseUrl);
+            AddProviderClient<SportsGameOddsAdapter>(services, SportsGameOddsAdapter.BaseUrl, metered: true);
             services.AddScoped<SportsGameOddsBudget>();
         }
 
@@ -202,12 +202,21 @@ public static class IngestionServiceCollectionExtensions
     /// Registers a provider's typed client the one way every provider is registered: its base
     /// address, a 30-second timeout, the shared <see cref="ProviderHandler"/>, and the standard
     /// resilience handler — retry with jittered backoff, a circuit breaker that trips on sustained
-    /// failure, and per-attempt timeouts. A tripped breaker is what the reliability layer surfaces
+    /// failure, and per-attempt timeouts; a metered provider keeps all but the retry. A tripped breaker is what the reliability layer surfaces
     /// as a degraded source. One method, so five registrations cannot drift apart.
     /// </summary>
     /// <param name="extra">Anything one provider needs beyond that, such as ESPN's User-Agent.</param>
+    /// <param name="metered">
+    /// The provider bills each call (credits, requests or objects against a quota). Such a client
+    /// keeps the timeouts and the circuit breaker but is never retried automatically: a call that
+    /// failed or timed out may still have been billed, and the cost is read from the final
+    /// response's headers only (The Odds API's <c>x-requests-last</c>), so a retry could be billed
+    /// twice and recorded once. A metered call that fails is the run's failure, stated; the
+    /// operator or the next paced scan decides whether to spend again.
+    /// </param>
     private static IHttpClientBuilder AddProviderClient<T>(
-        IServiceCollection services, string baseUrl, Action<IServiceProvider, HttpClient>? extra = null)
+        IServiceCollection services, string baseUrl, Action<IServiceProvider, HttpClient>? extra = null,
+        bool metered = false)
         where T : class
     {
         var builder = services.AddHttpClient<T>((sp, client) =>
@@ -218,13 +227,25 @@ public static class IngestionServiceCollectionExtensions
             })
             .ConfigurePrimaryHttpMessageHandler(ProviderHandler);
 
-        builder.AddStandardResilienceHandler();
+        if (metered)
+            builder.AddStandardResilienceHandler(NoRetry);
+        else
+            builder.AddStandardResilienceHandler();
+
         return builder;
     }
 
+    /// <summary>
+    /// The standard handler with its retry handling nothing, so nothing is re-sent. Retry's
+    /// <c>MaxRetryAttempts</c> is validated to be at least one, so the retry is switched off by
+    /// its predicate rather than by its count; the total and attempt timeouts and the breaker stay.
+    /// </summary>
+    internal static void NoRetry(Microsoft.Extensions.Http.Resilience.HttpStandardResilienceOptions options)
+        => options.Retry.ShouldHandle = static _ => ValueTask.FromResult(false);
+
     private static void AddTheOddsApi(IServiceCollection services)
     {
-        AddProviderClient<TheOddsApiAdapter>(services, TheOddsApiBaseUrl);
+        AddProviderClient<TheOddsApiAdapter>(services, TheOddsApiBaseUrl, metered: true);
 
         services.AddScoped<IOddsSource>(sp => sp.GetRequiredService<TheOddsApiAdapter>());
     }
@@ -232,7 +253,7 @@ public static class IngestionServiceCollectionExtensions
     /// <summary>The fixtures-and-scores adapter, as the stats port and the score port, on the odds key's client settings.</summary>
     private static void AddTheOddsApiSchedule(IServiceCollection services)
     {
-        AddProviderClient<TheOddsApiScheduleAdapter>(services, TheOddsApiBaseUrl);
+        AddProviderClient<TheOddsApiScheduleAdapter>(services, TheOddsApiBaseUrl, metered: true);
 
         services.AddScoped<IStatsSource>(sp => sp.GetRequiredService<TheOddsApiScheduleAdapter>());
         services.AddScoped<IScoreSource>(sp => sp.GetRequiredService<TheOddsApiScheduleAdapter>());

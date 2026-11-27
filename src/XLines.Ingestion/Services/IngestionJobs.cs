@@ -332,8 +332,7 @@ public class IngestionJobs(
         // because that is how it is charged and how it is now spent.
         // The adapters say, per sport, from the markets they will actually ask for; the
         // configured figure stands in only for a source that declares nothing.
-        var declared = registry.OddsSources.Sum(s => s.CreditsPerScan(sport));
-        var credits = declared > 0 ? declared : odds * _options.LinePolling.CreditsPerSportPerScan;
+        var credits = LineCredits(sport, registry);
 
         var names = registry.OddsSources.SelectMany(s => s.MarketsFor(sport)).Distinct()
             .Select(m => m switch { Markets.Moneyline => "moneyline", Markets.Spread => "spread", Markets.Total => "total", _ => m })
@@ -366,6 +365,16 @@ public class IngestionJobs(
             CreditsLeft: billsCredits ? left : null,
             Metered: true,
             NeedsKey: odds == 0);
+    }
+
+    /// <summary>
+    /// What one league's lines bill, in credits: the adapters' own forecast from the markets they
+    /// ask for, and the configured per-sport figure only for a source that declares nothing.
+    /// </summary>
+    private int LineCredits(string sport, SourceRegistry registry)
+    {
+        var declared = registry.OddsSources.Sum(s => s.CreditsPerScan(sport));
+        return declared > 0 ? declared : registry.OddsSources.Count * _options.LinePolling.CreditsPerSportPerScan;
     }
 
     /// <summary>
@@ -632,6 +641,47 @@ public class IngestionJobs(
     /// </summary>
     public Task<JobOutcome> RunClosingScanAsync(string sport, DateOnly leagueDay, CancellationToken ct = default)
         => RunAsync(OddsLinesPrefix + sport, leagueDay, ct);
+
+    /// <summary>
+    /// One league's line scan as the scheduler takes it, paced (<paramref name="closingScanDay"/>
+    /// null) or as its closing scan: the same job a press runs, but only when the operator chose
+    /// automatic scanning and only while the month affords it above the reserve held for pulls on
+    /// request (<see cref="AllowanceState.AffordsUnattended"/>), the rule the scores obey. Held
+    /// back, it writes no run and makes no request. A press goes through <see cref="RunAsync(string, CancellationToken)"/>
+    /// and is unaffected: its price was stated first.
+    /// </summary>
+    public async Task<JobOutcome> RunUnattendedLinesAsync(string sport, DateOnly? closingScanDay = null, CancellationToken ct = default)
+    {
+        var jobKey = OddsLinesPrefix + sport;
+
+        await using (var scope = scopeFactory.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
+
+            if (!await db.LinesRunUnattendedAsync(_options.LinePolling.RunsUnattended, ct))
+                return new JobOutcome(jobKey, true, 0, 0, "Lines are pulled on request only; nothing was spent.");
+
+            var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
+            var billsCredits = registry.FindOdds(Adapters.TheOddsApiAdapter.SourceKey) is not null;
+
+            if (billsCredits && await ReadAllowanceAsync(scope.ServiceProvider, ct) is { } allowance)
+            {
+                var cost = LineCredits(sport, registry);
+
+                if (!allowance.AffordsUnattended(cost))
+                {
+                    logger.LogInformation(
+                        "{Job} held back: {Cost} credits would leave {After} of {Budget}, under the {Reserve} kept for pulls on request",
+                        jobKey, cost, allowance.Remaining - cost, allowance.Budget, allowance.Reserve);
+
+                    return new JobOutcome(jobKey, true, 0, 0,
+                        $"Held back for {sport.ToUpperInvariant()}: the scan would dip into the credits kept for pulls on request.");
+                }
+            }
+        }
+
+        return await RunAsync(jobKey, closingScanDay, ct);
+    }
 
     private async Task<JobOutcome> RunAsync(string key, DateOnly? closingScanDay, CancellationToken ct)
     {

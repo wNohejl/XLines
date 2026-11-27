@@ -435,16 +435,23 @@ public class IngestionScheduler(
 
             _lastLeagueScan[closing.Sport] = now;
 
+            // Unattended, so never into the reserve: held back, it writes no run and the cap is not used.
             await using var jobScope = scopeFactory.CreateAsyncScope();
             await jobScope.ServiceProvider.GetRequiredService<IngestionJobs>()
-                .RunClosingScanAsync(closing.Sport, closing.LeagueDay, ct);
+                .RunUnattendedLinesAsync(closing.Sport, closing.LeagueDay, ct);
         }
     }
 
+    /// <summary>
+    /// One paced scan, through the unattended entry: the same job a press runs, held back where the
+    /// month cannot afford it above the reserve (<see cref="IngestionJobs.RunUnattendedLinesAsync"/>).
+    /// </summary>
     private async Task ScanLeagueAsync(string sport, DateTimeOffset now, CancellationToken ct)
     {
         _lastLeagueScan[sport] = now;
-        await RunJobAsync(IngestionJobs.OddsLinesPrefix + sport, ct);
+
+        await using var scope = scopeFactory.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<IngestionJobs>().RunUnattendedLinesAsync(sport, null, ct);
     }
 
     private async Task RunJobAsync(string key, CancellationToken ct)
