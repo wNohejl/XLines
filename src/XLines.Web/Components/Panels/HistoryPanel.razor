@@ -500,59 +500,62 @@ else if (!Loaded && !Failed)
     // of the whole record per day walked.
     private void OnCoordinatorChanged() => RequestRefresh();
 
+    /// <summary>
+    /// The load in flight, cancelled by the next. A walk sends a notice a second and each starts a
+    /// load, so a slower read must neither run on beside the newer one nor land after it.
+    /// </summary>
+    private readonly LatestRead _reads = new();
+
+    /// <summary>
+    /// A load claimed the season read and was superseded before it handed it over: the next load
+    /// reads the seasons in its place, or the claim would leave the table unread for an interval.
+    /// </summary>
+    private bool _seasonsPending;
+
+    /// <summary>What one load read, handed over at once.</summary>
+    private sealed record HistoryRead(
+        IReadOnlyList<SourceEligibility> Eligibility,
+        BackfillCoverage Coverage,
+        List<BackfillCheckpoint> Recent,
+        IReadOnlyList<SeasonCoverage>? Seasons,
+        IReadOnlyDictionary<string, string> SourceNames);
+
     private async Task LoadAsync(bool seasons = true)
     {
         _seasonsAsked |= seasons;
 
         await WithActivityAsync(async () =>
         {
+            var ct = _reads.Next();
             var walking = Coordinator.IsRunning;
             var now = DateTimeOffset.UtcNow;
-            var readSeasons = SeasonsDue(_seasonsAsked, _seasonsReadAt, now, walkEnded: _wasWalking && !walking);
+            var readSeasons = SeasonsDue(_seasonsAsked || _seasonsPending, _seasonsReadAt, now, walkEnded: _wasWalking && !walking);
             var heldSince = _seasonsReadAt;
 
             // Claimed as the read starts, not as it ends. Notices arrive every second during a
             // walk and each starts a load beside this one: while the season read was slow — the
             // case the cadence is for — every one of them saw it still asked for and read it too.
             _seasonsAsked = false;
+            _seasonsPending = readSeasons;
 
             if (readSeasons)
                 _seasonsReadAt = now;
 
             try
             {
-                // Eligibility is read again inside GetCoverageAsync for its target; this copy is the
-                // list the Sources section shows, and HistoryBackfillService returns it no other way.
-                _eligibility = await Backfill.GetEligibilityAsync(CancellationToken.None);
-                _coverage = await Backfill.GetCoverageAsync(CancellationToken.None);
-
-                await using var db = await DbFactory.CreateDbContextAsync();
-                _recent = await db.BackfillCheckpoints.AsNoTracking()
-                    .Include(c => c.Sport)
-                    .OrderByDescending(c => c.CompletedAt)
-                    .Take(40)
-                    .ToListAsync();
-
-                if (readSeasons)
-                    _seasons = await new DataQuality(db).SeasonsAsync();
-
-                // Names for the keys the backfill reports in. Read with the rest so a source renamed
-                // in the registry is renamed here on the next change, not on the next restart.
-                var names = await db.Sources.AsNoTracking()
-                    .Select(s => new { s.Key, s.Name })
-                    .ToListAsync();
-
-                _sourceNames = names
-                    .GroupBy(s => s.Key, StringComparer.OrdinalIgnoreCase)
-                    .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.OrdinalIgnoreCase);
+                await LatestRead.HandOverAsync(ct, () => ReadAsync(readSeasons, ct), HandOver);
             }
-            catch
+            catch when (!ct.IsCancellationRequested)
             {
                 // A load that failed leaves the next one — Try again repeats it — reading everything.
                 _seasonsAsked = true;
                 _seasonsReadAt = heldSince;
                 throw;
             }
+
+            // Superseded: the newer load carries on from here.
+            if (ct.IsCancellationRequested)
+                return;
 
             _wasWalking = walking;
 
@@ -578,6 +581,48 @@ else if (!Loaded && !Failed)
         status: () => Coordinator.IsRunning
             ? $"{Coordinator.Progress?.Walked ?? 0:N0} days"
             : _coverage is { Completed: > 0 } ? $"{_coverage.Completed:N0} days held" : "no history");
+    }
+
+    private async Task<HistoryRead> ReadAsync(bool readSeasons, CancellationToken ct)
+    {
+        // Eligibility is read again inside GetCoverageAsync for its target; this copy is the
+        // list the Sources section shows, and HistoryBackfillService returns it no other way.
+        var eligibility = await Backfill.GetEligibilityAsync(ct);
+        var coverage = await Backfill.GetCoverageAsync(ct);
+
+        await using var db = await DbFactory.CreateDbContextAsync(ct);
+        var recent = await db.BackfillCheckpoints.AsNoTracking()
+            .Include(c => c.Sport)
+            .OrderByDescending(c => c.CompletedAt)
+            .Take(40)
+            .ToListAsync(ct);
+
+        var seasons = readSeasons ? await new DataQuality(db).SeasonsAsync(ct) : null;
+
+        // Names for the keys the backfill reports in. Read with the rest so a source renamed
+        // in the registry is renamed here on the next change, not on the next restart.
+        var names = await db.Sources.AsNoTracking()
+            .Select(s => new { s.Key, s.Name })
+            .ToListAsync(ct);
+
+        var sourceNames = names
+            .GroupBy(s => s.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().Name, StringComparer.OrdinalIgnoreCase);
+
+        return new HistoryRead(eligibility, coverage, recent, seasons, sourceNames);
+    }
+
+    private void HandOver(HistoryRead read)
+    {
+        _eligibility = read.Eligibility;
+        _coverage = read.Coverage;
+        _recent = read.Recent;
+
+        if (read.Seasons is { } seasons)
+            _seasons = seasons;
+
+        _sourceNames = read.SourceNames;
+        _seasonsPending = false;
     }
 
     private IReadOnlyDictionary<string, string> _sourceNames =
@@ -735,5 +780,9 @@ else if (!Loaded && !Failed)
 
     private void Stop() => Coordinator.Stop();
 
-    protected override void OnDispose() => Coordinator.Changed -= OnCoordinatorChanged;
+    protected override void OnDispose()
+    {
+        Coordinator.Changed -= OnCoordinatorChanged;
+        _reads.Cancel();
+    }
 }

@@ -309,7 +309,7 @@ else
                     @if (clv is { } c)
                     {
                         <span class="@(c.BeatClose ? "up" : "down")">
-                            @(c.SameNumber ? c.CentsPercent.ToString("+0.0;-0.0") + "% CLV" : c.PointsGained!.Value.ToString("+0.#;-0.#") + " pts CLV")
+                            @(OddsText.Clv(c) + " CLV")
                         </span>
                     }
                 </div>

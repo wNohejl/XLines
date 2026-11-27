@@ -36,7 +36,7 @@
 
     <div class="fact">
         <div class="fact__label">Closing spread</div>
-        <div class="fact__value mono">@(Row.ClosingSpread is { } s ? Line(s) : "—")</div>
+        <div class="fact__value mono">@(Row.ClosingSpread is { } s ? OddsText.Line(s) : "—")</div>
     </div>
 
     <div class="fact">
@@ -88,6 +88,4 @@
 
 @code {
     [Parameter, EditorRequired] public TeamGameLogRow Row { get; set; } = default!;
-
-    private static string Line(decimal value) => value > 0 ? $"+{value}" : value.ToString();
 }

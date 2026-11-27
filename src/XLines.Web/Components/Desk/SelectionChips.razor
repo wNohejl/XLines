@@ -75,7 +75,7 @@
                             }
                             @if (choice.Offer is { } offer)
                             {
-                                <span class="selection-chip__price num">@Price(offer.PriceAmerican)</span>
+                                <span class="selection-chip__price num">@OddsText.Price(offer.PriceAmerican)</span>
                             }
                             else
                             {
@@ -231,6 +231,4 @@
 
     private static bool IsOver(SelectionChoice choice)
         => string.Equals(choice.Outcome, "over", StringComparison.OrdinalIgnoreCase);
-
-    private static string Price(int american) => american > 0 ? $"+{american}" : american.ToString();
 }

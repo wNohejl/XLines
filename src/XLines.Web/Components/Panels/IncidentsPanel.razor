@@ -435,14 +435,37 @@ else
         () => _open > 0 ? PulseState.Critical : PulseState.Healthy,
         () => _open > 0 ? $"{_open} open" : "none open");
 
+    /// <summary>
+    /// The load in flight, cancelled by the next: an alerts notice reloads this window, and a
+    /// slower read must not land after the one that superseded it.
+    /// </summary>
+    private readonly LatestRead _reads = new();
+
+    protected override void OnDispose() => _reads.Cancel();
+
+    /// <summary>
+    /// The list, handed over only by the latest load. The token is taken here, inside the work,
+    /// so Try again, which repeats it, starts a read of its own.
+    /// </summary>
     private async Task ReadAsync()
     {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        var service = scope.ServiceProvider.GetRequiredService<IncidentService>();
+        var ct = _reads.Next();
 
-        // Every open incident, and the newest IncidentService.RecentLimit resolved ones: past the
-        // cap, the Resolved tile and the median resolve read over those, not the whole record.
-        _incidents = await service.GetAllAsync();
+        await LatestRead.HandOverAsync(ct, async () =>
+        {
+            await using var scope = ScopeFactory.CreateAsyncScope();
+            var service = scope.ServiceProvider.GetRequiredService<IncidentService>();
+
+            // Every open incident, and the newest IncidentService.RecentLimit resolved ones: past
+            // the cap, the Resolved tile and the median resolve read over those, not the whole record.
+            return await service.GetAllAsync(ct: ct);
+        },
+        HandOver);
+    }
+
+    private void HandOver(IReadOnlyList<Incident> incidents)
+    {
+        _incidents = incidents;
         _openIncidents = _incidents.Where(i => i.Status != IncidentStatus.Resolved).ToList();
         _resolvedIncidents = _incidents.Where(i => i.Status == IncidentStatus.Resolved).ToList();
         _open = _openIncidents.Count;
@@ -532,6 +555,9 @@ else
 
     private async Task AddNoteAsync()
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         if (_selected is null)
             return;
 
@@ -554,6 +580,9 @@ else
 
     private async Task ResolveAsync()
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         if (_selected is null)
             return;
 
@@ -597,6 +626,9 @@ else
 
     private async Task MitigateAsync()
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         if (_selected is null)
             return;
 

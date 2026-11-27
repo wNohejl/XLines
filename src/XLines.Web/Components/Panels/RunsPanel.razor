@@ -259,17 +259,43 @@
 
     private Task LoadAsync() => WithActivityAsync(ReadRunsAsync, RunsPulse, RunsStatus);
 
+    /// <summary>
+    /// The load in flight, cancelled by the next. A runs notice reloads this window, and a filter
+    /// changed meanwhile must not be painted over by the slower read of the one before it.
+    /// </summary>
+    private readonly LatestRead _reads = new();
+
+    protected override void OnDispose() => _reads.Cancel();
+
+    /// <summary>
+    /// Read into locals and handed over at once, and only by the latest load. The token is taken
+    /// here, inside the work, so Try again, which repeats it, starts a read of its own.
+    /// </summary>
     private async Task ReadRunsAsync()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
+        var ct = _reads.Next();
 
-        // Read with the first load that succeeds, so a window whose first read failed still
-        // gets its source picker once a filter or a retry gets through.
-        if (!_sourcesRead)
+        await LatestRead.HandOverAsync(ct, () => ReadAsync(ct), read =>
         {
-            _sources = await db.Sources.AsNoTracking().OrderBy(s => s.Name).ToListAsync();
-            _sourcesRead = true;
-        }
+            // With the first load that succeeds, so a window whose first read failed still
+            // gets its source picker once a filter or a retry gets through.
+            if (read.Sources is not null)
+            {
+                _sources = read.Sources;
+                _sourcesRead = true;
+            }
+
+            _runs = read.Runs;
+        });
+    }
+
+    private async Task<(List<Source>? Sources, List<IngestionRun> Runs)> ReadAsync(CancellationToken ct)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync(ct);
+
+        var sources = _sourcesRead
+            ? null
+            : await db.Sources.AsNoTracking().OrderBy(s => s.Name).ToListAsync(ct);
 
         var query = db.IngestionRuns.AsNoTracking().Include(r => r.Source).AsQueryable();
 
@@ -279,7 +305,9 @@
         if (Enum.TryParse<RunStatus>(_statusFilter, out var status))
             query = query.Where(r => r.Status == status);
 
-        _runs = await query.OrderByDescending(r => r.StartedAt).Take(RunLimit).ToListAsync();
+        var runs = await query.OrderByDescending(r => r.StartedAt).Take(RunLimit).ToListAsync(ct);
+
+        return (sources, runs);
     }
 
     // Recent failures are what this window is for, so they drive its pulse.

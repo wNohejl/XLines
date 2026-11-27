@@ -100,16 +100,14 @@ public abstract class PanelBase : DeskPanelBase
         return seasonLabel is null ? record : $"{record} · {seasonLabel}";
     }
 
-    protected static string Price(int american) => american > 0 ? $"+{american}" : american.ToString();
+    /// <summary>An American price (<see cref="OddsText.Price(int)"/>).</summary>
+    protected static string Price(int american) => OddsText.Price(american);
 
-    /// <summary>A price taken to the cent: "+104", "+104.35" (<see cref="OddsMath.FormatPrice(decimal)"/>).</summary>
-    protected static string Price(decimal american) => OddsMath.FormatPrice(american);
+    /// <summary>A price taken to the cent (<see cref="OddsText.Price(decimal)"/>).</summary>
+    protected static string Price(decimal american) => OddsText.Price(american);
 
-    /// <summary>
-    /// A line as a book prints it: "-3", "+4.5". A line read back from the journal carries the
-    /// column's scale, and decimal's own ToString printed it as "-3.00".
-    /// </summary>
-    protected static string Line(decimal value) => value.ToString("+0.##;-0.##;0");
+    /// <summary>A line as a book prints it, "-3", "+4.5" (<see cref="OddsText.Line(decimal)"/>).</summary>
+    protected static string Line(decimal value) => OddsText.Line(value);
 
     protected static string Age(double minutes) => minutes switch
     {

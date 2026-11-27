@@ -540,6 +540,9 @@ else
 
     private async Task SetPollingAsync(bool automatic)
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         try
         {
             await using var scope = ScopeFactory.CreateAsyncScope();
@@ -586,6 +589,9 @@ else
 
     private async Task SaveKeyAsync()
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         if (_oddsKey is null || string.IsNullOrWhiteSpace(_keyDraft) || _keyBusy)
             return;
 
@@ -628,6 +634,9 @@ else
 
     private async Task RemoveKeyAsync()
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         if (_oddsKey is null || _keyBusy)
             return;
 
@@ -1032,56 +1041,115 @@ else
             : PulseState.Healthy,
         () => _alerts.Count == 0 ? "all clear" : $"{_alerts.Count} open");
 
+    /// <summary>
+    /// The load in flight, cancelled by the next. Every runs and alerts notice reloads this window,
+    /// and a read of ten queries overtaken by a newer one must neither run on nor land last.
+    /// </summary>
+    private readonly LatestRead _reads = new();
+
+    protected override void OnDispose() => _reads.Cancel();
+
+    /// <summary>What one load read, handed over at once.</summary>
+    private sealed record OpsRead(
+        IReadOnlyList<OddsProviderState> Feeds,
+        XLines.Web.Services.DeskOddsKey? OddsKey,
+        bool PollingSetHere,
+        bool Unattended,
+        PollPlan? Plan,
+        IReadOnlyList<SportMarkets> MarketsBySport,
+        StatsPort Port,
+        ScoresPlan? Scores,
+        AllowanceState? Allowance,
+        IReadOnlyList<SourceHealth> Health,
+        IReadOnlyList<Alert> Alerts,
+        int OpenIncidents,
+        long RowsToday,
+        List<Source> Injectable);
+
+    /// <summary>
+    /// Everything read into locals and handed over at once, and only by the latest load. The
+    /// reads share the scope's one context, so they stay one after another. The token is taken
+    /// here, inside the work, so Try again, which repeats it, starts a read of its own.
+    /// </summary>
     private async Task ReadAsync()
     {
+        var ct = _reads.Next();
+
+        await LatestRead.HandOverAsync(ct, () => FetchAsync(ct), HandOver);
+    }
+
+    private async Task<OpsRead> FetchAsync(CancellationToken ct)
+    {
         await using var scope = ScopeFactory.CreateAsyncScope();
-        var kpi = scope.ServiceProvider.GetRequiredService<KpiCalculator>();
-        var alerts = scope.ServiceProvider.GetRequiredService<AlertEngine>();
-        var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
         var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
 
-        _feeds = scope.ServiceProvider.GetRequiredService<OddsFeedStatus>().Describe();
+        var pollingSetHere = await db.GetSettingAsync(AppSetting.LinePolling, ct) is not null;
+        var unattended = await db.LinesRunUnattendedAsync(LinePolling.RunsUnattended, ct);
 
-        _oddsKey = scope.ServiceProvider.GetService<XLines.Web.Services.DeskOddsKey>();
-        _keyHint = _oddsKey?.Hint;
+        var kpi = scope.ServiceProvider.GetRequiredService<KpiCalculator>();
+        var alertEngine = scope.ServiceProvider.GetRequiredService<AlertEngine>();
+        var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
 
-        _pollingSetHere = await db.GetSettingAsync(AppSetting.LinePolling) is not null;
-        _unattended = await db.LinesRunUnattendedAsync(LinePolling.RunsUnattended);
+        var feeds = scope.ServiceProvider.GetRequiredService<OddsFeedStatus>().Describe();
+        var oddsKey = scope.ServiceProvider.GetService<XLines.Web.Services.DeskOddsKey>();
 
         // Recomputed here rather than read off the scheduler: it is a pure function of the
         // budget already spent, so the panel and the scheduler reach the same answer without
         // the panel needing a handle on a background service.
         var planner = scope.ServiceProvider.GetRequiredService<LinePollPlanner>();
         var oddsKeys = registry.OddsSources.Select(s => s.Key).ToList();
-        _plan = await planner.PlanAsync(oddsKeys);
-        _marketsBySport = oddsKeys.Count == 0 ? [] : planner.MarketsBySport(oddsKeys);
+        var plan = await planner.PlanAsync(oddsKeys, ct);
+        IReadOnlyList<SportMarkets> marketsBySport = oddsKeys.Count == 0 ? [] : planner.MarketsBySport(oddsKeys);
 
-        _port = registry.Port;
-        _scores = await planner.ScoresPlanAsync();
-        _allowance = registry.FindOdds(XLines.Ingestion.Adapters.TheOddsApiAdapter.SourceKey) is not null || registry.Scores is not null
-            ? await scope.ServiceProvider.GetRequiredService<CreditAllowance>().ReadAsync()
+        var scores = await planner.ScoresPlanAsync(ct);
+        var allowance = registry.FindOdds(XLines.Ingestion.Adapters.TheOddsApiAdapter.SourceKey) is not null || registry.Scores is not null
+            ? await scope.ServiceProvider.GetRequiredService<CreditAllowance>().ReadAsync(ct)
             : null;
 
         var o = Options.Value;
 
-        _health = await kpi.GetAllHealthAsync(o.SuccessRateWindow, o.VolumeBaselineDays);
-        _alerts = await alerts.GetOpenAlertsAsync();
-        // In SLO means both SLOs: a source the table tags Degraded (success rate under its floor)
-        // is not counted as in it, so the tile and the table agree.
-        _healthy = _health.Count(h => h.NeverRun || (!h.IsStale(o.FreshnessSlo) && !IsRateLow(h)));
-        _criticals = _alerts.Count(a => a.Severity == AlertSeverity.Critical);
-        _openIncidents = await db.Incidents.CountAsync(i => i.Status != IncidentStatus.Resolved);
+        var health = await kpi.GetAllHealthAsync(o.SuccessRateWindow, o.VolumeBaselineDays, ct);
+        var alerts = await alertEngine.GetOpenAlertsAsync(ct);
+        var openIncidents = await db.Incidents.CountAsync(i => i.Status != IncidentStatus.Resolved, ct);
 
         var dayStart = new DateTimeOffset(DateTime.UtcNow.Date, TimeSpan.Zero);
-        _rowsToday = await db.IngestionRuns
+        var rowsToday = await db.IngestionRuns
             .Where(r => r.StartedAt >= dayStart)
-            .SumAsync(r => (long?)r.RowsIngested) ?? 0;
+            .SumAsync(r => (long?)r.RowsIngested, ct) ?? 0;
 
         var keys = registry.OddsSources.OfType<IFailureInjectable>().Cast<IOddsSource>().Select(s => s.Key)
             .Concat(registry.StatsSources.OfType<IFailureInjectable>().Cast<IStatsSource>().Select(s => s.Key))
             .ToList();
 
-        _injectable = await db.Sources.Where(s => keys.Contains(s.Key)).OrderBy(s => s.Name).ToListAsync();
+        var injectable = await db.Sources.Where(s => keys.Contains(s.Key)).OrderBy(s => s.Name).ToListAsync(ct);
+
+        return new OpsRead(feeds, oddsKey, pollingSetHere, unattended, plan, marketsBySport, registry.Port,
+            scores, allowance, health, alerts, openIncidents, rowsToday, injectable);
+    }
+
+    private void HandOver(OpsRead read)
+    {
+        _feeds = read.Feeds;
+        _oddsKey = read.OddsKey;
+        _keyHint = _oddsKey?.Hint;
+        _pollingSetHere = read.PollingSetHere;
+        _unattended = read.Unattended;
+        _plan = read.Plan;
+        _marketsBySport = read.MarketsBySport;
+        _port = read.Port;
+        _scores = read.Scores;
+        _allowance = read.Allowance;
+        _health = read.Health;
+        _alerts = read.Alerts;
+
+        // In SLO means both SLOs: a source the table tags Degraded (success rate under its floor)
+        // is not counted as in it, so the tile and the table agree.
+        var o = Options.Value;
+        _healthy = _health.Count(h => h.NeverRun || (!h.IsStale(o.FreshnessSlo) && !IsRateLow(h)));
+        _criticals = _alerts.Count(a => a.Severity == AlertSeverity.Critical);
+        _openIncidents = read.OpenIncidents;
+        _rowsToday = read.RowsToday;
+        _injectable = read.Injectable;
     }
 
     // Identity, not arithmetic. The same EvaluateAsync pass that opens an alert also
@@ -1101,6 +1169,9 @@ else
 
     private async Task EvaluateAsync()
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         _busy = true;
         Report(PulseState.Active, "evaluating");
 
@@ -1162,6 +1233,9 @@ else
 
     private async Task SetModeAsync(int sourceId, string? mode)
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         try
         {
             await using var scope = ScopeFactory.CreateAsyncScope();
@@ -1182,6 +1256,9 @@ else
 
     private async Task DrillAsync()
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         // Its own flag: sharing Evaluate's set both keys shimmering whichever one ran.
         _drillBusy = true;
         Report(PulseState.Active, "drill running");
@@ -1246,6 +1323,9 @@ else
 
     private async Task PromoteAsync(long alertId)
     {
+        if (!Manager.Access.CanOperate)
+            return;
+
         try
         {
             await using var scope = ScopeFactory.CreateAsyncScope();

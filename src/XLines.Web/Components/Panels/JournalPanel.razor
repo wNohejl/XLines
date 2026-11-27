@@ -1509,9 +1509,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                keyboard (HIG 12), and the figure keeps its own text as its name. *@
             <DeskTooltip Text="@ClvTitle(e)">
                 <span class="journal-clv @(clv.BeatClose ? "up" : "down")" tabindex="0">
-                    @(clv.SameNumber
-                        ? clv.CentsPercent.ToString("+0.0;-0.0") + "%"
-                        : clv.PointsGained!.Value.ToString("+0.#;-0.#") + " pts")
+                    @OddsText.Clv(clv)
                 </span>
             </DeskTooltip>
         }
@@ -1522,7 +1520,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
     </text>;
 
     private static string Describe(JournalEntry e)
-        => e.FreeTextMarket ?? $"{e.Outcome}{(e.LineTaken is { } l ? " " + (l > 0 ? $"+{l}" : l.ToString()) : "")} {SelectionText.MarketName(e.Market)}";
+        => e.FreeTextMarket ?? $"{e.Outcome}{(e.LineTaken is { } l ? " " + OddsText.Line(l) : "")} {SelectionText.MarketName(e.Market)}";
 
     private static ClvResult? Clv(JournalEntry entry) => PerformanceAnalytics.ComputeClv(entry);
 
