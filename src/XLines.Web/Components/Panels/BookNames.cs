@@ -95,6 +95,71 @@ public static class BookNames
         ["wynnbet"] = "WB",
     };
 
+    /// <summary>
+    /// The main sportsbooks, in the fixed order every list of books leads with: DraftKings,
+    /// FanDuel, BetMGM, Bally Bet, Caesars — the owner's five, each with a free, permitted source
+    /// (the first four on The Odds API's list, Caesars through SportsGameOdds; ADR 0033, addendum
+    /// 2026-11-27). Fanatics and bet365 are not among them: no free source for either has been
+    /// verified yet, so a "main" book with no price would only ever be absent.
+    /// Each is the key the desk files it under; <see cref="MainRank"/> matches the aliases.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Main = ["draftkings", "fanduel", "betmgm", "ballybet", "williamhill_us"];
+
+    /// <summary>
+    /// Every spelling of a main book, folded to lowercase letters and digits, with its place in
+    /// <see cref="Main"/>: the feeds' keys (<c>williamhill_us</c> and <c>caesars</c> are one book),
+    /// the names they go by, and the cased names ESPN's closing lines carry ("Caesars Sportsbook",
+    /// "William Hill", "DraftKings").
+    /// </summary>
+    private static readonly Dictionary<string, int> MainSpellings = new(StringComparer.Ordinal)
+    {
+        ["draftkings"] = 0,
+        ["draftkingssportsbook"] = 0,
+        ["fanduel"] = 1,
+        ["fanduelsportsbook"] = 1,
+        ["betmgm"] = 2,
+        ["betmgmsportsbook"] = 2,
+        ["ballybet"] = 3,
+        ["ballys"] = 3,
+        ["ballysportsbook"] = 3,
+        ["caesars"] = 4,
+        ["caesarssportsbook"] = 4,
+        ["williamhill"] = 4,
+        ["williamhillus"] = 4,
+    };
+
+    private static string Fold(string text)
+        => new(text.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());
+
+    /// <summary>
+    /// The book's place among the main sportsbooks (0 for DraftKings … 4 for Caesars), by its key,
+    /// any alias of it, or the name it goes by; null for every other book.
+    /// </summary>
+    public static int? MainRank(string? book)
+    {
+        if (string.IsNullOrWhiteSpace(book))
+            return null;
+
+        if (MainSpellings.TryGetValue(Fold(book), out var rank))
+            return rank;
+
+        return MainSpellings.TryGetValue(Fold(Display(book)), out var byName) ? byName : null;
+    }
+
+    /// <summary>Whether the book is one of the main sportsbooks (<see cref="Main"/>).</summary>
+    public static bool IsMain(string? book) => MainRank(book) is not null;
+
+    /// <summary>
+    /// Books as a picker lists them: the main sportsbooks in their fixed order, then the rest
+    /// alphabetically by the name they go by. Duplicates (one book under two keys) are kept: a
+    /// picker's values are the keys it was given.
+    /// </summary>
+    public static IReadOnlyList<string> MainFirst(IEnumerable<string> books)
+        => books
+            .OrderBy(b => MainRank(b) ?? int.MaxValue)
+            .ThenBy(b => Display(b), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
     /// <summary>"DraftKings" for <c>draftkings</c>; a key it does not know, in capitalised words.</summary>
     public static string Display(string? book)
     {

@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Components;
 namespace XLines.Web.Tests;
 
 /// <summary>
-/// The one control a wager's price is chosen with: every book quoting the side, best first, by
-/// name, each price in a column, the edge against fair where the side has one at that number,
+/// The one control a wager's price is chosen with: every book quoting the side, the main
+/// sportsbooks first in their fixed order and then the rest best first, by name, each price in a column, the edge against fair where the side has one at that number,
 /// a stale price's age, and Custom price… leading to the window's own typed price.
 /// </summary>
 public class PricePickerTests : DeskTestContext
@@ -57,16 +57,33 @@ public class PricePickerTests : DeskTestContext
     }
 
     [Fact]
-    public void Books_are_listed_best_first_then_the_best_number_by_price_then_any_other_number()
+    public void Main_sportsbooks_lead_in_their_order_then_the_rest_best_first_by_price()
     {
         var cut = Picker();
         PricePickers.Open(cut);
 
+        // DraftKings, FanDuel and BetMGM are main sportsbooks, in that fixed order whatever they pay;
+        // Pinnacle follows. FanDuel keeps its Best mark where it falls.
         var names = PricePickers.Rows(cut).Select(r => r.QuerySelector(".menu__label")!.TextContent).ToList();
-        Assert.Equal(["FanDuel", "Pinnacle", "DraftKings", "BetMGM"], names);
+        Assert.Equal(["DraftKings", "FanDuel", "BetMGM", "Pinnacle"], names);
 
         var figures = PricePickers.Rows(cut).Select(r => r.QuerySelector(".menu__figure")!.TextContent).ToList();
-        Assert.Equal(["+3 +100", "+3 -102", "+3 -108", "+3.5 -105"], figures);
+        Assert.Equal(["+3 -108", "+3 +100", "+3.5 -105", "+3 -102"], figures);
+    }
+
+    [Fact]
+    public void Past_the_main_sportsbooks_the_rest_are_best_first_then_the_best_number_by_price_then_any_other_number()
+    {
+        var cut = Picker([
+            Offer("bovada", -108, ev: -0.06),
+            Offer("betrivers", -105, line: 3.5m, fair: false, ev: null),
+            Offer("pinnacle", 100, best: true, ev: 0.021),
+            Offer("betonlineag", -102, ev: -0.01)
+        ], chosen: "pinnacle");
+        PricePickers.Open(cut);
+
+        var names = PricePickers.Rows(cut).Select(r => r.QuerySelector(".menu__label")!.TextContent).ToList();
+        Assert.Equal(["Pinnacle", "BetOnline.ag", "Bovada", "BetRivers"], names);
     }
 
     [Fact]
@@ -75,12 +92,13 @@ public class PricePickerTests : DeskTestContext
         var cut = Picker();
         PricePickers.Open(cut);
 
+        // FanDuel holds the best price; it is second, after DraftKings, in the main sportsbooks' order.
         var rows = PricePickers.Rows(cut);
-        Assert.Equal("Best", rows[0].QuerySelector(".menu__mark")!.TextContent.Trim());
-        Assert.All(rows.Skip(1), r => Assert.Null(r.QuerySelector(".menu__mark")));
-        Assert.Contains("best price", rows[0].GetAttribute("aria-label"));
-        Assert.DoesNotContain("best price", rows[1].GetAttribute("aria-label"));
-        Assert.Equal("true", rows[0].GetAttribute("aria-checked"));
+        Assert.Equal("Best", rows[1].QuerySelector(".menu__mark")!.TextContent.Trim());
+        Assert.All(rows.Where((_, i) => i != 1), r => Assert.Null(r.QuerySelector(".menu__mark")));
+        Assert.Contains("best price", rows[1].GetAttribute("aria-label"));
+        Assert.DoesNotContain("best price", rows[0].GetAttribute("aria-label"));
+        Assert.Equal("true", rows[1].GetAttribute("aria-checked"));
     }
 
     [Fact]
@@ -90,17 +108,17 @@ public class PricePickerTests : DeskTestContext
         PricePickers.Open(cut);
 
         var rows = PricePickers.Rows(cut);
-        var best = rows[0].QuerySelector(".menu__subfigure")!;
+        var best = rows[1].QuerySelector(".menu__subfigure")!;
         Assert.Equal(Checks.Percent(0.021), best.TextContent);
         Assert.Contains("menu__subfigure--positive", best.ClassList);
 
-        var behind = rows[2].QuerySelector(".menu__subfigure")!;
+        var behind = rows[0].QuerySelector(".menu__subfigure")!;
         Assert.Equal(Checks.Percent(-0.06), behind.TextContent);
         Assert.Contains("menu__subfigure--warning", behind.ClassList);
 
         // BetMGM is on another number: no fair price there, so no edge is drawn or heard.
-        Assert.Null(rows[3].QuerySelector(".menu__subfigure"));
-        Assert.DoesNotContain("edge", rows[3].GetAttribute("aria-label"));
+        Assert.Null(rows[2].QuerySelector(".menu__subfigure"));
+        Assert.DoesNotContain("edge", rows[2].GetAttribute("aria-label"));
 
         Assert.Equal("Edge against fair +104 (Pinnacle, no-vig). A book on another number has no fair price to read.",
             cut.Find(".popup__foot").TextContent);
@@ -113,8 +131,8 @@ public class PricePickerTests : DeskTestContext
         PricePickers.Open(cut);
 
         var rows = PricePickers.Rows(cut);
-        Assert.Equal("Captured 71h 47m ago", rows[0].QuerySelector(".menu__desc")!.TextContent);
-        Assert.True(string.IsNullOrEmpty(rows[1].QuerySelector(".menu__desc")?.TextContent));
+        Assert.Equal("Captured 71h 47m ago", rows[1].QuerySelector(".menu__desc")!.TextContent);
+        Assert.True(string.IsNullOrEmpty(rows[0].QuerySelector(".menu__desc")?.TextContent));
     }
 
     [Fact]

@@ -64,7 +64,7 @@ public class PerformancePanelTests : DeskTestContext
         var source = Source();
 
         Assert.Contains("e => BookNames.Display(e.Book)", source);
-        Assert.Contains("@BookNames.Display(book)", source);
+        Assert.Contains("<XLines.Web.Components.Snippets.BookOptions Books=\"_books\" />", source);
         Assert.DoesNotContain("BookName(", source);
     }
 
@@ -80,7 +80,7 @@ public class PerformancePanelTests : DeskTestContext
         Assert.DoesNotContain("Title=\"Key\"", source);
         Assert.Contains("@Breakdown(_byMarket, \"Market\")", source);
         Assert.Contains("@Breakdown(_bySport, \"Sport\")", source);
-        Assert.Contains("@Breakdown(_byBook, \"Book\")", source);
+        Assert.Contains("@Breakdown(_byBook, \"Book\", netFirst: false)", source);
         Assert.Contains("Property=\"r => r.Label\" Title=\"@by\"", source);
         Assert.Contains("Class=\"perf-table\"", source);
 
@@ -327,5 +327,33 @@ public class PerformancePanelTests : DeskTestContext
         var sports = panel.FindAll("[role=radiogroup][aria-label=Sport] [role=radio]")
             .Select(b => b.TextContent.Trim()).ToList();
         Assert.Equal(["All", "MLB", "NFL"], sports);
+    }
+
+    /// <summary>
+    /// The Book picker and the By book card lead with the main sportsbooks in their fixed order,
+    /// the rest alphabetically after (ADR 0033, addendum 2026-11-27): the picker under two headings,
+    /// the card in that order until a heading sorts it, rather than by Net.
+    /// </summary>
+    [Fact]
+    public void The_book_picker_and_by_book_lead_with_the_main_sportsbooks()
+    {
+        var journal = new CountedJournal();
+        foreach (var book in new[] { "pinnacle", "williamhill_us", "bovada", "fanduel", "ballybet", "draftkings" })
+            journal.Entries.Add(Won("nfl", book));
+        Services.AddSingleton<JournalService>(journal);
+
+        var panel = RenderComponent<PerformancePanel>();
+        panel.WaitForAssertion(() => Assert.Contains("6 bets", panel.Markup));
+
+        var picker = panel.Find("select[aria-label=Book]");
+        var groups = picker.QuerySelectorAll("optgroup");
+        Assert.Equal(["Main sportsbooks", "More sportsbooks"], groups.Select(g => g.GetAttribute("label")));
+        Assert.Equal(["DraftKings", "FanDuel", "Bally Bet", "Caesars"],
+            groups[0].QuerySelectorAll("option").Select(o => o.TextContent.Trim()));
+        Assert.Equal(["Bovada", "Pinnacle"], groups[1].QuerySelectorAll("option").Select(o => o.TextContent.Trim()));
+
+        var byBook = Card(panel, "By book").QuerySelectorAll(".mud-table-body .mud-table-row")
+            .Select(r => r.QuerySelector(".mud-table-cell")!.TextContent.Trim());
+        Assert.Equal(["DraftKings", "FanDuel", "Bally Bet", "Caesars", "Bovada", "Pinnacle"], byBook);
     }
 }

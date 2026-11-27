@@ -176,6 +176,33 @@ removed.
 Do not put a capsule on a control. A capsule means *this is a state*; a control
 that looks like a state is a control nobody presses.
 
+## `DeskChip` — the one capsule that is a key
+
+`DeskChip` wraps `MudChip` (Text variant, Default colour, no ripple) for the one place a capsule
+*is* pressed: a fold under a list ("More · 5 books", then "Fewer") or a single filter beside what it
+filters. It is told apart from a tag by everything but hue:
+
+- **Its words are an action or a count**, never a state word, and it sits *after* what it acts on,
+  never in a column of states.
+- **It carries a glyph** where it discloses (`Icon`, drawn through `Glyph`: expand-more folded,
+  expand-less open), a pointer cursor, and the Desk's deepen-on-hover; the accent is only its focus ring.
+- **Pressed is fill and weight**: the deeper neutral fill, the primary ink, a semibold word
+  (`.desk-chip--pressed`) — never the accent wash, never a state colour.
+- **It is a native button.** A clickable `MudChip` draws `<button type="button">` inside
+  `.mud-chip-container`, so Tab, Enter and Space are the browser's own; disabled, Mud draws an inert
+  element (`tabindex="-1"`, no handler).
+- **Its state is the caller's** (`Pressed`, `PressedChanged`). Given `Controls` (the id of the region
+  it shows and hides) it is a disclosure and reports `aria-expanded` and `aria-controls`; without, a
+  toggle reporting `aria-pressed`. The element is the same in both states, so focus stays on it.
+- **The seam** (`mud-bridge.css`, after the base `.mud-chip`): Mud's `.mud-chip-text.mud-clickable
+  :hover:not(.mud-disabled)` is four classes deep, so every `.desk-chip` state rule is one deeper,
+  led by `.desk-chip` — the companion-rule pattern, never `!important`.
+
+```razor
+<DeskChip Controls="@listId" Icon="@(open ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+          Pressed="open" PressedChanged="v => open = v">@(open ? "Fewer" : "More · 5 items")</DeskChip>
+```
+
 ---
 
 ## Section cards and the flow

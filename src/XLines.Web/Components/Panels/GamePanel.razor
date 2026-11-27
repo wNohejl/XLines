@@ -698,7 +698,7 @@ else
     private void ToggleMarket(string market) => _openMarket = _openMarket == market ? null : market;
 
     /// <summary>
-    /// The markets showing every book rather than the first five (MarketMovement's View more),
+    /// The markets showing every book rather than the main sportsbooks (MarketMovement's More chip),
     /// kept by the window so a market closed and opened again comes back as it was left. Cleared
     /// when the window is aimed at another game: its books are another market's.
     /// </summary>
@@ -859,9 +859,9 @@ else
         Manager.OpenWager(game, market, offer!.Outcome, offer.Book);
     }
 
-    /// <summary>Every book's number on a side, by name — the cell's tooltip.</summary>
+    /// <summary>Every book's number on a side, by name — the cell's tooltip: the main sportsbooks first in their fixed order, then the rest as the board ranks them.</summary>
     private static string EveryBook(BestOffer offer)
-        => string.Join("\n", offer.Rungs.Select(r =>
+        => string.Join("\n", offer.Rungs.OrderBy(r => BookNames.MainRank(r.Book) ?? int.MaxValue).Select(r =>
             $"{BookNames.Display(r.Book)} {(r.Line is { } l ? OddsMath.FormatLine(l, offer.Outcome) + " " : "")}{OddsMath.FormatPrice(r.PriceAmerican)}"));
 
     /// <summary>A side as the lines name it: the club's nickname, as the Board's matchup does.</summary>
@@ -877,8 +877,15 @@ else
     /// <summary>The group's footer: what the numbers are, and when a close, what that means.</summary>
     private string LinesFoot
         => _row!.PricesAreClosing
-            ? "Closing prices: the last number each book showed before the start. Open a market for every book's."
-            : $"The best price on each side across {AcrossText(_row, _polled)}. Open a market for every book's, and how each moved.";
+            ? $"Closing prices: the last number each book showed before the start; {MainText(_row, _polled)}. Open a market for every book's."
+            : $"The best price on each side across {AcrossText(_row, _polled)}; {MainText(_row, _polled)}. Open a market for every book's, and how each moved.";
+
+    /// <summary>
+    /// The direct count of the main sportsbooks over the game's markets (MainCoverage): "4 of 5 main
+    /// sportsbooks priced (missing Caesars)".
+    /// </summary>
+    public static string MainText(BoardRow row, IReadOnlyCollection<string>? polled)
+        => MainCoverage.Of(BookCoverage.Books(row), polled).Phrase;
 
     /// <summary>
     /// "8 of 10 polled books" once the polled list is known (a book outside it that priced the game

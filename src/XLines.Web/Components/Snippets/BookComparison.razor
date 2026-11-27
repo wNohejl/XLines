@@ -17,8 +17,8 @@
     it as the value check writes an edge ("+2.1%"), positive in the positive ink because that is a
     fact about the value; the best price on each side is heavier and carries a dot and the words
     ", best" for a screen reader — never colour alone, and never the accent, which is for what can
-    be pressed. The books are ranked (BookRanking) and capped at the top five, the rest behind a
-    key under the table that says how many (MoreBooks).
+    be pressed. The books are ranked (BookRanking): the main sportsbooks show, the rest behind a
+    More chip under the table that says how many (MoreBooks).
 
     No wrapper element: the grid is the card's own child where the host puts it straight in a
     FormGroup, so the card frames it (desk.css, ".wgroup > .deskgrid") and nothing frames it twice.
@@ -26,7 +26,7 @@
 
 @{
     var ranked = BookRanking.Priced(First, Second);
-    var shown = BookRanking.Visible(ranked, IsExpanded, Top);
+    var shown = BookRanking.Visible(ranked, IsExpanded);
 }
 
 @if (ranked.Count == 0)
@@ -77,8 +77,8 @@ else
         }
     </DeskGrid>
 
-    <MoreBooks Total="ranked.Count" Top="Top" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Controls"
-               Books="ranked" Polled="Polled" />
+    <MoreBooks Books="ranked" First="First" Second="Second" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Controls"
+               Polled="Polled" />
 }
 
 @code {
@@ -111,9 +111,6 @@ else
     /// (not closing) price is a button; not given, every price is a reading.
     /// </summary>
     [Parameter] public EventCallback<BookDoor> OnTake { get; set; }
-
-    /// <summary>How many books show before the key.</summary>
-    [Parameter] public int Top { get; set; } = BookRanking.Top;
 
     /// <summary>
     /// Whether every book shows. Bound by a host that keeps the state itself (so it outlives this

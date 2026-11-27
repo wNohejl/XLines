@@ -33,12 +33,16 @@ public static class PolledBooks
 
     /// <summary>The same, from a scope the caller already holds.</summary>
     public static IReadOnlyList<string> Read(IServiceProvider services)
+        => Of(Feeds(services));
+
+    /// <summary>The odds providers as Ops describes them (<see cref="OddsFeedStatus"/>); empty with no ingestion services.</summary>
+    public static IReadOnlyList<OddsProviderState> Feeds(IServiceProvider services)
     {
         if (services.GetService<SourceRegistry>() is not { } registry
             || services.GetService<IOptions<IngestionOptions>>() is not { } options)
             return [];
 
-        return Of(new OddsFeedStatus(options, registry).Describe());
+        return new OddsFeedStatus(options, registry).Describe();
     }
 
     /// <summary>The books of the live providers, each once, in their configured order.</summary>

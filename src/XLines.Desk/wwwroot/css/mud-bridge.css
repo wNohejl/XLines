@@ -763,6 +763,58 @@
     transition: none;
 }
 
+/* DeskChip: the same capsule, made a key. MudChip draws a clickable chip as a native button
+   (.mud-chip-text.mud-clickable), and Mud's Text variant paints it --mud-palette-action-* greys
+   at rest and under the pointer, at up to four classes deep (".mud-chip-text.mud-clickable:hover
+   :not(.mud-disabled)"). The companion-rule pattern again: each state is restated here one class
+   deeper, led by .desk-chip, so the Desk's fill wins on specificity and never on !important.
+
+   Hue is not the affordance: rest is .tag's neutral capsule, pointer and press deepen it toward
+   the ink (as every Desk control deepens rather than lightens), and pressed — a fold that is open,
+   a filter that is on — is the deeper fill with the primary ink and a semibold word, told to a
+   reader by aria-expanded or aria-pressed. The accent is spent only on the focus ring. The key is
+   a little taller than a tag (a 22px target), and the base chip's 4px Mud margin is gone. */
+.desk-chip.mud-chip-text {
+    margin: 0;
+    min-height: 22px;
+    padding: 3px var(--space-3);
+    gap: var(--space-1);
+    background-color: var(--surface-3);
+    color: var(--text-secondary);
+    transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.desk-chip.mud-chip-text > .mud-chip-content { gap: var(--space-1); }
+
+/* The fold's chevron, at the small key's glyph size, leading the words. */
+.desk-chip.mud-chip-text svg { width: var(--glyph-sm); height: var(--glyph-sm); flex: 0 0 auto; margin-inline-start: -2px; }
+
+@media (hover: hover) and (pointer: fine) {
+    .desk-chip.mud-chip-text.mud-clickable:hover:not(.mud-disabled) {
+        background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 8%);
+        color: var(--text-primary);
+    }
+}
+
+.desk-chip.mud-chip-text.mud-clickable:focus-visible:not(.mud-disabled) {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.desk-chip.mud-chip-text.mud-clickable:active:not(.mud-disabled),
+.desk-chip.desk-chip--pressed.mud-chip-text {
+    background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 14%);
+    color: var(--text-primary);
+}
+
+.desk-chip.desk-chip--pressed.mud-chip-text { font-weight: var(--weight-semibold); }
+
+@media (hover: hover) and (pointer: fine) {
+    .desk-chip.desk-chip--pressed.mud-chip-text.mud-clickable:hover:not(.mud-disabled) {
+        background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 20%);
+    }
+}
+
 /* ----------------------------------------------------------------- toasts --- */
 
 /* None. The desk draws its own notices (Primitives/DeskToastStack.razor, desk.css .toasts,

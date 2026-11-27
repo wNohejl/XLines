@@ -1,67 +1,80 @@
 @namespace XLines.Web.Components.Snippets
+@using XLines.Data.CrossReference
 
 @*
-    The row under a market's table of books: how many it shows of how many are priced, in what
-    order, and the key that shows the rest (BookRanking).
+    The row under a market's table of books: how many it shows of how many are priced, and the
+    More chip that shows the rest (BookRanking, BookFold; ADR 0033, addendum 2026-11-27).
 
-    A real button that reports aria-expanded and names the count ("View 5 more books"), Plain: the
-    table's context already has its one Filled key, if any, elsewhere. It stays the same element in
-    both states, so a press keeps focus on it while the rows it controls grow or fold beneath the
-    table above it.
+    The table shows the main sportsbooks (DraftKings, FanDuel, BetMGM, Bally Bet, Caesars) and
+    folds every other book behind a DeskChip that names the count ("More · 5 books", then
+    "Fewer"): the owner asked for a chip. It reports aria-expanded and aria-controls, is a native
+    button, and stays the same element in both states, so a press keeps focus on it while the
+    rows it controls grow or fold beneath the table above it.
 
-    Given the books the desk polls (Polled) and the books that priced this market (Books), the
-    count is priced of polled ("Top 5 of 8 priced · 10 books polled") and, once every row shows,
-    one quiet line names the polled books with no price here, by full name — real text inside the
-    same row, so a screen reader reaches it and no second hairline is drawn (BookCoverage). The row
-    is then drawn even with five or fewer books, so every polled book is accounted for. Without a
-    polled list nothing is drawn while every priced book already shows, as before.
+    The fold never hides the best price silently. Where a side's best price is at a book behind
+    the chip, the count line says so in words ("… · best price at Pinnacle, under More") and the
+    chip carries the table's best-price dot with its words for a screen reader. A market no main
+    sportsbook priced has nothing to fold: every row shows, and the line says "No main sportsbook
+    priced this market".
+
+    The line leads with the direct count of the main sportsbooks (MainCoverage), folded or open:
+    "3 of 5 main sportsbooks priced · 9 books priced · 10 polled", the polled count once the polled
+    list is known. Under it, real text inside the same row (no second hairline, a screen reader
+    reaches it): once every row shows, the polled books with no price here, by full name
+    (BookCoverage); and always, the main sportsbooks missing ("Main sportsbooks missing: Bally Bet,
+    Caesars."). The row is drawn for every table with a price, so the count is always on the desk.
 *@
 
 @{
-    var coverage = BookCoverage.Of(Books ?? [], Polled);
-    var folds = Total > Top;
+    var books = (Books ?? []).ToList();
+    var fold = BookFold.Of(books, First, Second);
+    var coverage = BookCoverage.Of(books, Polled);
+    var main = MainCoverage.Of(books, Polled);
+    var bestHidden = !Expanded && fold.Folds && fold.BestUnderMore.Count > 0;
 }
 
-@if (folds || coverage is not null)
+@if (fold.Total > 0)
 {
     <div class="bookmore">
-        @if (coverage is null)
+        <span class="bookmore__count">@BookRanking.CountLine(fold, coverage, main, Expanded)</span>
+
+        @if (fold.Folds)
         {
-            <span class="bookmore__count">@BookRanking.CountText(Total, Expanded, Top): @BookRanking.OrderText.</span>
-        }
-        else if (folds)
-        {
-            <span class="bookmore__count">@coverage.CountText(Expanded, Top): @BookRanking.OrderText.</span>
-        }
-        else
-        {
-            <span class="bookmore__count">@(coverage.CountText(Expanded, Top)).</span>
+            <DeskChip Class="bookmore__key" Disclosure="true" Controls="@Controls" Pressed="Expanded" PressedChanged="ToggleAsync"
+                      Icon="@(Expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+                @BookRanking.KeyLabel(fold.More, Expanded)
+                @if (bestHidden)
+                {
+                    @* The table's own mark for a best price, so the chip says what it hides. *@
+                    <span class="bookmore__dot" aria-hidden="true">●</span>
+                    <span class="sr-only">, best price</span>
+                }
+            </DeskChip>
         }
 
-        @if (folds)
-        {
-            <DeskButton Size="DeskKeySize.Small" Class="bookmore__key"
-                        Icon="@(Expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
-                        OnClick="ToggleAsync"
-                        aria-expanded="@(Expanded ? "true" : "false")"
-                        aria-controls="@Controls">
-                @BookRanking.KeyLabel(Total - Top, Expanded)
-            </DeskButton>
-        }
-
-        @if (coverage is { Complete: false } && (Expanded || !folds))
+        @if (coverage is { Complete: false } && (Expanded || !fold.Folds))
         {
             <p class="bookmore__absent">@coverage.AbsentText</p>
+        }
+
+        @if (main.MissingText is { Length: > 0 } missing)
+        {
+            @* The main sportsbooks with no price here, by name, folded or open: the gap is a fact about
+               the rows that show, not about the ones behind the chip. *@
+            <p class="bookmore__absent">@missing</p>
         }
     </div>
 }
 
 @code {
-    /// <summary>How many books priced the market.</summary>
-    [Parameter, EditorRequired] public int Total { get; set; }
+    /// <summary>The keys of the books that priced the market — the table's rows — for the fold and the polled count.</summary>
+    [Parameter, EditorRequired] public IEnumerable<string>? Books { get; set; }
 
-    /// <summary>How many show before the key.</summary>
-    [Parameter] public int Top { get; set; } = BookRanking.Top;
+    /// <summary>The market's first side (away, Over), for whether its best price is behind the chip.</summary>
+    [Parameter] public BestOffer? First { get; set; }
+
+    /// <summary>The market's second side (home, Under).</summary>
+    [Parameter] public BestOffer? Second { get; set; }
 
     /// <summary>Whether every book shows.</summary>
     [Parameter] public bool Expanded { get; set; }
@@ -71,11 +84,8 @@
     /// <summary>The id of the region the rows are in, for aria-controls; none when the host has none.</summary>
     [Parameter] public string? Controls { get; set; }
 
-    /// <summary>The keys of the books that priced the market (the table's rows), for the polled count.</summary>
-    [Parameter] public IEnumerable<string>? Books { get; set; }
-
-    /// <summary>The books the desk polls (<c>PolledBooks</c>). Null or empty: unknown, and the row reads as before.</summary>
+    /// <summary>The books the desk polls (<c>PolledBooks</c>). Null or empty: unknown, and the row reads without the polled count.</summary>
     [Parameter] public IReadOnlyCollection<string>? Polled { get; set; }
 
-    private Task ToggleAsync() => ExpandedChanged.InvokeAsync(!Expanded);
+    private Task ToggleAsync(bool expanded) => ExpandedChanged.InvokeAsync(expanded);
 }

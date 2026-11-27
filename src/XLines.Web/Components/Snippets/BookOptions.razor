@@ -1,0 +1,46 @@
+@namespace XLines.Web.Components.Snippets
+@using XLines.Web.Components.Panels
+
+@*
+    A book picker's options, as every list of books leads (ADR 0033, addendum 2026-11-27): the
+    main sportsbooks in their fixed order — DraftKings, FanDuel, BetMGM, Bally Bet, Caesars —
+    under "Main sportsbooks", then every other book alphabetically by its name under "More
+    sportsbooks" (BookNames.MainFirst). Each value is the key it was given; each label the name the
+    book goes by. A list with only one kind draws its options without a heading, since one group
+    has nothing to be told apart from. Goes inside a <select> (DeskSelect), after any "All books"
+    or placeholder option the caller writes itself.
+*@
+
+@{
+    var ordered = BookNames.MainFirst(Books ?? []);
+    var main = ordered.Where(BookNames.IsMain).ToList();
+    var more = ordered.Where(b => !BookNames.IsMain(b)).ToList();
+}
+
+@if (main.Count > 0 && more.Count > 0)
+{
+    <optgroup label="Main sportsbooks">
+        @foreach (var book in main)
+        {
+            <option value="@book">@BookNames.Display(book)</option>
+        }
+    </optgroup>
+    <optgroup label="More sportsbooks">
+        @foreach (var book in more)
+        {
+            <option value="@book">@BookNames.Display(book)</option>
+        }
+    </optgroup>
+}
+else
+{
+    @foreach (var book in ordered)
+    {
+        <option value="@book">@BookNames.Display(book)</option>
+    }
+}
+
+@code {
+    /// <summary>The books to offer, by key, in any order.</summary>
+    [Parameter, EditorRequired] public IEnumerable<string>? Books { get; set; }
+}

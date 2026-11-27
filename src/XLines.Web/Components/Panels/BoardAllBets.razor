@@ -50,7 +50,7 @@ else
 @* Each market a section card in a flow, as the windows lay out their sections (ADR 0032): the
    market's name in the card's bar, the table of books straight in the card, the fair line and
    what the marks mean under it. A wide row or window puts the cards side by side rather than one
-   column of thirty rows, and each card shows its top five books, the rest behind a key that says
+   column of thirty rows, and each card shows its main sportsbooks, the rest behind a More chip that says
    how many (BookComparison, BookRanking). It was a lit-price Note over three ruled sections,
    each a four-column table of every book capped at 720px. *@
 <div class="wflow">
@@ -111,7 +111,7 @@ else
     /// <summary>
     /// The markets showing every book, by key. The window's, not the table's: a refresh or a take
     /// opening redraws the tables, and a market the operator opened stays open while the window
-    /// does. Re-aimed at another game, every market folds back to its top five.
+    /// does. Re-aimed at another game, every market folds back to its main sportsbooks.
     /// </summary>
     private readonly HashSet<string> _expanded = new(StringComparer.Ordinal);
 

@@ -37,3 +37,28 @@
     white-space: normal;
 }
 .opsbooks__name { white-space: nowrap; }
+
+/* The main sportsbooks' count under the feeds table: a row of the card (its inset hairline is the
+   card's own), the count first in the row's ink, the five and the note under it in footnote type. */
+.opsmain {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+}
+
+.opsmain p { margin: 0; }
+
+.opsmain__books,
+.opsmain__note { font-size: var(--text-footnote); }
+
+/* The table above it gives up its last row's hairline inside a card, so this row draws the inset
+   one rows are divided by, as the rows' own rule does between two rows. */
+.opsmain::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: var(--space-4);
+    border-top: 1px solid var(--separator);
+}

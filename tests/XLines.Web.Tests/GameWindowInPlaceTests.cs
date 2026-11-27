@@ -85,16 +85,16 @@ public class GameWindowInPlaceTests : DeskTestContext
     // ---- A market opened in place --------------------------------------------------------
 
     [Fact]
-    public void Every_book_joins_both_sides_in_name_order()
+    public void Every_book_joins_both_sides_main_sportsbooks_first()
     {
         var away = Offer("Kansas City Chiefs", Rung("betmgm", -120), Rung("draftkings", -125));
         var home = Offer("Denver Broncos", Rung("draftkings", 105), Rung("fanduel", 102), Rung("betmgm", 100));
 
         var books = MarketMovement.EveryBook(away, home);
 
-        Assert.Equal(["betmgm", "draftkings", "fanduel"], books.Select(b => b.Book));
-        Assert.Null(books[2].First);
-        Assert.Equal(105, books[1].Second!.PriceAmerican);
+        Assert.Equal(["draftkings", "fanduel", "betmgm"], books.Select(b => b.Book));
+        Assert.Null(books[1].First);
+        Assert.Equal(105, books[0].Second!.PriceAmerican);
     }
 
     /// <summary>
@@ -119,8 +119,10 @@ public class GameWindowInPlaceTests : DeskTestContext
 
         var rows = cut.FindAll("tbody tr");
         Assert.Equal(2, rows.Count);
-        Assert.Contains("BetMGM", rows[0].TextContent);
-        Assert.Contains("-1.5 -108", rows[0].TextContent.Replace('−', '-'));
+        // Main sportsbooks in their fixed order: DraftKings, then BetMGM.
+        Assert.Contains("DraftKings", rows[0].TextContent);
+        Assert.Contains("BetMGM", rows[1].TextContent);
+        Assert.Contains("-1.5 -108", rows[1].TextContent.Replace('−', '-'));
         Assert.Equal(2, cut.FindAll(".bookcmp__best").Count);
         Assert.Equal(2, cut.FindAll(".bookcmp__dot").Count);
         Assert.Empty(cut.FindAll(".gate"));

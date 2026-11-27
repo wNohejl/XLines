@@ -314,7 +314,7 @@ public class GameWindowCardsTests : DeskTestContext
         Assert.Empty(head.QuerySelectorAll("img"));
     }
 
-    /// <summary>View more is the window's to keep: a market closed and opened again shows every book still.</summary>
+    /// <summary>The More chip is the window's to keep: a market closed and opened again shows every book still.</summary>
     [Fact]
     public void An_opened_market_keeps_view_more_across_closing_and_reopening()
     {
@@ -331,8 +331,9 @@ public class GameWindowCardsTests : DeskTestContext
         void Toggle() => cut.FindAll("button.gamelines__toggle").First(b => b.TextContent.Contains("Moneyline")).Click();
 
         Toggle();
-        cut.WaitForAssertion(() => Assert.Equal(5, Books()));
-        cut.Find(".gamelines__detail .bookmore button").Click();
+        // DraftKings, FanDuel, BetMGM and Caesars: the main sportsbooks; the other six behind More.
+        cut.WaitForAssertion(() => Assert.Equal(4, Books()));
+        cut.Find(".gamelines__detail .bookmore .desk-chip").Click();
         cut.WaitForAssertion(() => Assert.Equal(10, Books()));
 
         Toggle();

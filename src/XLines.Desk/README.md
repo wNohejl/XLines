@@ -507,6 +507,7 @@ system edge on controls and cards (the one place a control carries an edge at re
 | `DeskButton` | The key: the caller states how loud (`Emphasis`) and whether it destroys. Every weight wears the same finish — a top line and a sheen above the label (`--key-*`), an inner shade while held; Plain only while pointed at — so weight still carries the hierarchy. | `MudButton` |
 | `DeskChart` | A chart that names the kind of number it shows and headlines its takeaway. | `MudChart` |
 | `DeskCheckbox` | One setting that is on or off. | — |
+| `DeskChip` | A small capsule key beside what it acts on — a fold ("More · 5 items") or one filter. `Pressed`/`PressedChanged` are the caller's state; given `Controls` it is a disclosure (`aria-expanded`, `aria-controls`), otherwise a toggle (`aria-pressed`). A native button, so Tab, Enter and Space are the browser's; pressed is a deeper neutral fill and a semibold word, never a hue, and the accent is only its focus ring. | `MudChip` |
 | `DeskDialog` | A floating, non-modal panel for comparing things beside the desk. | — |
 | `DeskDisclosure` | Details hidden behind a label until they are wanted. | — |
 | `DeskErrorPage` | The page a host shows when a request failed: what happened, its reference, and the way back. | — |

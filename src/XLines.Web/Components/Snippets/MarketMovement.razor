@@ -63,9 +63,9 @@
                 </tr>
             </thead>
             <tbody>
-                @* Ranked on the whole market and capped, as every book table is (BookRanking): the
-                   same five books lead here as in More bets and Line movement. *@
-                @foreach (var row in BookRanking.Visible(BookRanking.Order(_rows, r => r.Book, First, Second), IsExpanded, MaxBooks))
+                @* Ranked on the whole market and folded, as every book table is (BookRanking): the
+                   main sportsbooks lead here as in More bets and Line movement, the rest behind More. *@
+                @foreach (var row in BookRanking.Visible(BookRanking.Order(_rows, r => r.Book, First, Second), r => r.Book, IsExpanded))
                 {
                     <tr>
                         <td class="trunc">@BookNames.Display(row.Book)</td>
@@ -89,8 +89,8 @@
             </tbody>
         </table>
 
-        <MoreBooks Total="_rows.Count" Top="MaxBooks" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Id"
-                   Books="_rows.Select(r => r.Book)" Polled="Polled" />
+        <MoreBooks Books="_rows.Select(r => r.Book)" First="First" Second="Second" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@Id"
+                   Polled="Polled" />
 
         <p class="gamemove__foot">
             <span>@OddsPanel.SpanText(_rows)</span>
@@ -152,8 +152,6 @@
     /// <summary>The books the desk polls (<c>PolledBooks</c>), for the tables' priced-of-polled count; null or empty: unknown.</summary>
     [Parameter] public IReadOnlyCollection<string>? Polled { get; set; }
 
-    /// <summary>How many books the row shows before "View more" (BookRanking.Top, as every book table).</summary>
-    public const int MaxBooks = BookRanking.Top;
 
     /// <summary>
     /// Whether every book shows. Optional: a host that binds it (with ExpandedChanged) keeps the
@@ -257,7 +255,7 @@
 
     /// <summary>
     /// Every book's number on both sides, a row per book: the desk's one book table
-    /// (BookComparison), ranked and capped at the top five as More bets and Line movement are.
+    /// (BookComparison), ranked and folded behind More as More bets and Line movement are.
     /// It was a table of its own here, headed "Close", that wrote a total's number without its
     /// o/u, named no edge and ordered by name.
     /// </summary>
@@ -271,7 +269,7 @@
             <BookComparison Market="@Market" First="First" Second="Second"
                             FirstSide="@FirstSide" SecondSide="@SecondSide"
                             Sport="@Sport" FirstAbbrev="@FirstAbbrev" SecondAbbrev="@SecondAbbrev"
-                            Top="MaxBooks" Controls="@Id" Polled="Polled"
+                            Controls="@Id" Polled="Polled"
                             Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" />
             <p class="gamemove__foot">
                 <span>
@@ -286,14 +284,15 @@
         }
     </text>;
 
-    /// <summary>The two sides' rungs joined by book, in book-name order.</summary>
+    /// <summary>The two sides' rungs joined by book: the main sportsbooks first in their fixed order, then the rest by name.</summary>
     public static IReadOnlyList<(string Book, BookPrice? First, BookPrice? Second)> EveryBook(BestOffer? first, BestOffer? second)
     {
         var a = (first?.Rungs ?? []).GroupBy(r => r.Book).ToDictionary(g => g.Key, g => g.First());
         var b = (second?.Rungs ?? []).GroupBy(r => r.Book).ToDictionary(g => g.Key, g => g.First());
 
         return a.Keys.Union(b.Keys)
-            .OrderBy(k => BookNames.Display(k), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(k => BookNames.MainRank(k) ?? int.MaxValue)
+            .ThenBy(k => BookNames.Display(k), StringComparer.OrdinalIgnoreCase)
             .Select(k => (k, a.GetValueOrDefault(k), b.GetValueOrDefault(k)))
             .ToList();
     }

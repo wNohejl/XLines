@@ -197,3 +197,36 @@ licensed ones. None is built.
   - The Ops window cannot yet take the SportsGameOdds key; for now it is set in configuration or the
     environment.
   - The VM deployment's `deploy/compose.yml` does not pass the key yet.
+
+## Addendum, 2026-11-27 — Main sportsbooks lead every list; the rest sit behind a More chip
+
+The owner asked for every list of books to lead with the main sportsbooks, with the rest behind a
+"More" chip. The five, in this fixed order, are **DraftKings, FanDuel, BetMGM, Bally Bet and
+Caesars** (`BookNames.Main`, matched by `BookNames.MainRank` through the feeds' keys — `caesars` and
+`williamhill_us` are one book — and the names ESPN's closing lines carry).
+
+- **Why these five.** Each is a book the owner bets at and each has a free, permitted source: the
+  first four on The Odds API's ten, Caesars through SportsGameOdds (above). Fanatics and bet365 were
+  named in the same breath but are not among them: no free source for either has been verified yet
+  (two candidate providers are being checked), so a main book with no price would only be absent.
+- **The order.** Main sportsbooks first, in the fixed order (a main book with no price for the market
+  has no row; the "Not priced here: …" line still accounts for it), then every other book ranked as
+  before: best price on either side, then the lowest hold, then the name (`BookRanking.Rank`).
+- **The fold.** A book table shows the main sportsbooks' rows and folds the rest behind a `DeskChip`
+  ("More · 5 books", then "Fewer") under the table (`MoreBooks`). The fold never hides the best price
+  silently: when it sits behind the chip, the count line says so ("best price at Pinnacle, under
+  More") and the chip carries the table's best-price dot. A market no main book priced is drawn
+  unfolded and says "No main sportsbook priced this market".
+- **The best price is still the best of all books.** The Board's cells and the Game window's Lines
+  card show the single best price per side across every book; only lists are ordered and folded.
+- **The gap is a number on the desk** (`MainCoverage`). Every book table's count line leads with
+  "3 of 5 main sportsbooks priced · 9 books priced · 10 polled" and names the main books missing
+  ("Main sportsbooks missing: Bally Bet, Caesars."); the Board has a "Main sportsbooks 3 / 5" tile
+  for the games in view, its note giving each missing book's reason where the desk can know it
+  ("not polled", "needs a paid plan", "polled, not priced"; with the polled list unknown, the names
+  alone); the Game window's Lines footnote carries the same count; and Ops → Odds feeds says
+  "Main sportsbooks: 4 of 5 obtainable now" from configuration and feed state, each of the five with
+  its state, and "Fanatics and bet365 are not polled: no free source has been verified."
+- **The price tooltip** lists the cell's own book, then the main sportsbooks; the footnote counts the
+  rest ("+4 more in More bets"). Pickers (the wager window's book, the Journal's and Performance's
+  filters) group main sportsbooks first under their own heading, the rest alphabetically after.

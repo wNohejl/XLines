@@ -236,12 +236,12 @@ else
 
         @if (AnyMoves)
         {
-        @* Ranked on the whole market and capped at the top five, as every book table on the desk is
-           (BookRanking): the books holding the best price on either side lead, then the lowest hold,
-           and the rest are behind the key under the grid. It opened sorted by book name; a heading
+        @* Ranked on the whole market, as every book table on the desk is (BookRanking): the main
+           sportsbooks lead in their fixed order, then the rest by best price and lowest hold, and
+           those are behind the More chip under the grid. It opened sorted by book name; a heading
            still sorts the rows showing. *@
         <div class="oddsbooks" id="@_booksId">
-        <DeskGrid T="MovementRow" Items="BookRanking.Visible(BookRanking.Order(_rows, r => r.Book, SideOffer, OtherOffer), _expanded.Contains(_market))" Resizable="false" EmptyText="No prices on this side.">
+        <DeskGrid T="MovementRow" Items="BookRanking.Visible(BookRanking.Order(_rows, r => r.Book, SideOffer, OtherOffer), r => r.Book, _expanded.Contains(_market))" Resizable="false" EmptyText="No prices on this side.">
             @* The book by its name, as Every book names it: the feed's key ("draftkings") is
                for joining rows, not for reading. *@
             @* Every value here holds one line; the trend takes what is left, so the book's name
@@ -310,8 +310,8 @@ else
                 </CellTemplate>
             </TemplateColumn>
         </DeskGrid>
-        <MoreBooks Total="_rows.Count" Expanded="@_expanded.Contains(_market)" ExpandedChanged="@((bool open) => SetExpanded(open))" Controls="@_booksId"
-                   Books="_rows.Select(r => r.Book)" Polled="_polled" />
+        <MoreBooks Books="_rows.Select(r => r.Book)" First="SideOffer" Second="OtherOffer" Expanded="@_expanded.Contains(_market)" ExpandedChanged="@((bool open) => SetExpanded(open))" Controls="@_booksId"
+                   Polled="_polled" />
         </div>
         }
     </div>
@@ -442,7 +442,7 @@ else
     ];
 
     /// <summary>
-    /// The markets showing every book rather than the top five, by key: the operator's choice per
+    /// The markets showing every book rather than the main sportsbooks, by key: the operator's choice per
     /// market, kept for as long as the window is open — across a side switch, a refresh, another
     /// game followed — and shared by the movement grid and the standing's books, which are the
     /// same books.

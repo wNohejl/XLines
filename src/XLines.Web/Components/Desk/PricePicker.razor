@@ -18,7 +18,8 @@
       the host's headline, drawn immediately before the key ("−128 DraftKings · Best"), at the
       size the host gives its one number; the key does not repeat it (ShowFigure off), so the
       figure is said once and the control does not shrink it into a chip.
-    - The list is every book quoting the side, best first, then the books on the best one's
+    - The list is every book quoting the side, the main sportsbooks first in their fixed order
+      (DraftKings, FanDuel, BetMGM, Bally Bet, Caesars), then the rest: best first, then the books on the best one's
       number by price, then any on another number. Each row: the name, "Best" on the best, the
       line and price right-aligned so prices compare down the column, and beneath, the edge
       against the fair price where the side has one at that number (the value check's own
@@ -75,13 +76,19 @@
 
     private DateTimeOffset At => Now ?? DateTimeOffset.UtcNow;
 
-    /// <summary>Best first; then the books on the best one's number, by what they pay; then any other number.</summary>
+    /// <summary>
+    /// The main sportsbooks first, in their fixed order (<see cref="BookNames.Main"/>; ADR 0033,
+    /// addendum 2026-11-27); then every other book as the tables rank them: the best first, then
+    /// the books on the best one's number by what they pay, then any other number. The best keeps
+    /// its "Best" mark wherever it falls, and the key opens on it.
+    /// </summary>
     public static IReadOnlyList<WagerOffer> Order(IReadOnlyList<WagerOffer> books)
     {
         var best = books.FirstOrDefault(b => b.IsBest);
 
         return books
-            .OrderByDescending(b => b.IsBest)
+            .OrderBy(b => BookNames.MainRank(b.Book) ?? int.MaxValue)
+            .ThenByDescending(b => b.IsBest)
             .ThenByDescending(b => best is not null && b.Line == best.Line)
             .ThenByDescending(b => b.PriceAmerican == 0 ? 0m : OddsMath.ToDecimal(b.PriceAmerican))
             .ToList();

@@ -10,10 +10,11 @@ using Microsoft.Extensions.DependencyInjection;
 namespace XLines.Web.Tests;
 
 /// <summary>
-/// A market laid out book by book shows its top five books and folds the rest behind a key that
-/// names how many (BookComparison, MoreBooks, BookRanking) — in More bets, the Game window's market
-/// in place, and Line movement alike. "Top" is the books holding the best price on either side
-/// first, then the lowest hold, so the marked prices are always among the five showing.
+/// A market laid out book by book shows the main sportsbooks — DraftKings, FanDuel, BetMGM, Bally
+/// Bet, Caesars, in that order — and folds the rest behind a More chip that names how many
+/// (BookComparison, MoreBooks, BookRanking, BookFold) — in More bets, the Game window's market in
+/// place, and Line movement alike. The rest rank by best price on either side, then the lowest
+/// hold; a best price behind the chip is said in words and marked on the chip.
 /// </summary>
 public class BookComparisonTests : WagerTestContext
 {
@@ -76,14 +77,59 @@ public class BookComparisonTests : WagerTestContext
     // ---- The order --------------------------------------------------------------------------
 
     [Fact]
-    public void Top_is_the_best_prices_first_then_the_lowest_hold()
+    public void Main_sportsbooks_lead_in_their_fixed_order_then_the_rest_by_best_price_then_hold()
     {
         var ranked = BookRanking.Priced(Away(), Home());
 
         Assert.Equal(10, ranked.Count);
-        // Both best books lead, the narrower hold of the two first; then the lowest holds.
-        Assert.Equal(["bovada", "wynnbet", "betmgm", "betonlineag", "betrivers"], ranked.Take(5));
+        // DraftKings, FanDuel, BetMGM and Caesars (filed here as "caesars") in the fixed order, Bally
+        // Bet unpriced and so absent; then the two best books, the narrower hold first; then the
+        // lowest holds.
+        Assert.Equal(
+            ["draftkings", "fanduel", "betmgm", "caesars", "bovada", "wynnbet", "betonlineag", "betrivers", "pointsbetus", "unibet_us"],
+            ranked);
     }
+
+    /// <summary>
+    /// One definition, matched by key through the aliases: Caesars under both of the feeds' keys,
+    /// and the cased names ESPN's closing lines carry.
+    /// </summary>
+    [Theory]
+    [InlineData("draftkings", 0)]
+    [InlineData("DraftKings", 0)]
+    [InlineData("fanduel", 1)]
+    [InlineData("FanDuel", 1)]
+    [InlineData("betmgm", 2)]
+    [InlineData("BetMGM", 2)]
+    [InlineData("ballybet", 3)]
+    [InlineData("Bally Bet", 3)]
+    [InlineData("williamhill_us", 4)]
+    [InlineData("caesars", 4)]
+    [InlineData("Caesars Sportsbook", 4)]
+    [InlineData("William Hill", 4)]
+    public void The_main_sportsbooks_are_matched_through_their_aliases(string book, int rank)
+    {
+        Assert.Equal(rank, BookNames.MainRank(book));
+        Assert.True(BookNames.IsMain(book));
+    }
+
+    [Theory]
+    [InlineData("pinnacle")]
+    [InlineData("betonlineag")]
+    [InlineData("espnbet")]
+    [InlineData("ESPN BET")]
+    [InlineData("fanatics")]
+    [InlineData("bet365")]
+    [InlineData("")]
+    public void Every_other_book_is_not_a_main_sportsbook(string book)
+    {
+        Assert.Null(BookNames.MainRank(book));
+        Assert.False(BookNames.IsMain(book));
+    }
+
+    [Fact]
+    public void The_main_sportsbooks_are_the_owners_five_in_order()
+        => Assert.Equal(["DraftKings", "FanDuel", "BetMGM", "Bally Bet", "Caesars"], BookNames.Main.Select(BookNames.Display));
 
     [Fact]
     public void A_book_with_no_price_is_neither_a_row_nor_counted()
@@ -96,13 +142,32 @@ public class BookComparisonTests : WagerTestContext
     }
 
     [Fact]
-    public void The_key_names_how_many_are_folded()
+    public void The_chip_names_how_many_are_folded()
     {
-        Assert.Equal("View 5 more books", BookRanking.KeyLabel(5, expanded: false));
-        Assert.Equal("View 1 more book", BookRanking.KeyLabel(1, expanded: false));
-        Assert.Equal("View fewer books", BookRanking.KeyLabel(5, expanded: true));
-        Assert.Equal("Top 5 of 10 books priced", BookRanking.CountText(10, expanded: false));
-        Assert.Equal("All 10 books priced", BookRanking.CountText(10, expanded: true));
+        Assert.Equal("More · 6 books", BookRanking.KeyLabel(6, expanded: false));
+        Assert.Equal("More · 1 book", BookRanking.KeyLabel(1, expanded: false));
+        Assert.Equal("Fewer", BookRanking.KeyLabel(6, expanded: true));
+
+        var fold = BookFold.Of(BookRanking.Priced(Away(), Home()), Away(), Home());
+        Assert.Equal((10, 4, 6), (fold.Total, fold.Main, fold.More));
+    }
+
+    [Fact]
+    public void A_best_price_behind_the_chip_is_said_by_name()
+    {
+        var fold = BookFold.Of(BookRanking.Priced(Away(), Home()), Away(), Home());
+
+        Assert.Equal(["Bovada", "WynnBET"], fold.BestUnderMore);
+        Assert.Equal("best prices at Bovada and WynnBET, under More", fold.BestText);
+        var main = MainCoverage.Of(BookRanking.Priced(Away(), Home()), null);
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced · best prices at Bovada and WynnBET, under More.",
+            BookRanking.CountLine(fold, null, main, expanded: false));
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced: main sportsbooks first.",
+            BookRanking.CountLine(fold, null, main, expanded: true));
+
+        // One side's best at a main sportsbook is not behind the chip.
+        var atMain = Home() with { Book = "draftkings" };
+        Assert.Equal("best price at Bovada, under More", BookFold.Of(BookRanking.Priced(Away(), atMain), Away(), atMain).BestText);
     }
 
     [Fact]
@@ -111,54 +176,85 @@ public class BookComparisonTests : WagerTestContext
 
     // ---- The table -------------------------------------------------------------------------
 
+    private static AngleSharp.Dom.IElement Chip(IRenderedFragment cut) => cut.Find(".bookmore .desk-chip");
+
     [Fact]
-    public void Ten_books_show_five_and_a_key_that_says_five_more()
+    public void Ten_books_show_the_main_sportsbooks_and_a_more_chip_for_the_rest()
     {
         var cut = Comparison();
 
-        Assert.Equal(5, BookColumn(cut).Count);
+        Assert.Equal(["DraftKings", "FanDuel", "BetMGM", "Caesars"], BookColumn(cut));
 
-        var key = cut.Find(".bookmore button");
-        Assert.Equal("View 5 more books", key.TextContent.Trim());
-        Assert.Equal("false", key.GetAttribute("aria-expanded"));
-        Assert.Contains("Top 5 of 10 books priced", cut.Find(".bookmore__count").TextContent);
-        Assert.Contains("best price on either side first, then the lowest hold", cut.Find(".bookmore__count").TextContent);
+        var chip = Chip(cut);
+        Assert.Equal("BUTTON", chip.TagName);
+        Assert.StartsWith("More · 6 books", chip.TextContent.Trim());
+        Assert.Equal("false", chip.GetAttribute("aria-expanded"));
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced · best prices at Bovada and WynnBET, under More.",
+            cut.Find(".bookmore__count").TextContent.Trim());
     }
 
+    /// <summary>
+    /// The best prices are at Bovada and WynnBET, behind the chip: the count line names them, and
+    /// the chip carries the table's dot with its words. Open, the rows carry the marks as before
+    /// and the chip's dot goes.
+    /// </summary>
     [Fact]
-    public void The_best_prices_are_within_the_visible_five()
+    public void A_best_price_under_more_is_marked_on_the_chip_and_on_its_row_once_shown()
     {
         var cut = Comparison();
-        var books = BookColumn(cut);
 
-        Assert.Contains(BookNames.Display("wynnbet"), books);
-        Assert.Contains(BookNames.Display("bovada"), books);
+        Assert.Empty(cut.FindAll(".bookcmp__best"));
+        Assert.NotNull(Chip(cut).QuerySelector(".bookmore__dot[aria-hidden=true]"));
+        Assert.Equal(", best price", Chip(cut).QuerySelector(".sr-only")!.TextContent);
+
+        Chip(cut).Click();
+
         Assert.Equal(2, cut.FindAll(".bookcmp__best").Count);
         Assert.Equal(2, cut.FindAll(".bookcmp__dot").Count);
+        Assert.Null(Chip(cut).QuerySelector(".bookmore__dot"));
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced: main sportsbooks first.", cut.Find(".bookmore__count").TextContent.Trim());
     }
 
     [Fact]
-    public void The_key_reveals_every_book_by_name_and_folds_them_back()
+    public void A_best_price_at_a_main_sportsbook_puts_no_dot_on_the_chip()
+    {
+        var away = Away() with { Book = "draftkings" };
+        var home = Home() with { Book = "fanduel" };
+        var cut = RenderComponent<BookComparison>(p => p
+            .Add(c => c.Market, Markets.Moneyline)
+            .Add(c => c.First, away)
+            .Add(c => c.Second, home)
+            .Add(c => c.FirstSide, "Bills")
+            .Add(c => c.SecondSide, "Chiefs"));
+
+        Assert.Equal(2, cut.FindAll(".bookcmp__best").Count);
+        Assert.Null(Chip(cut).QuerySelector(".bookmore__dot"));
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced.", cut.Find(".bookmore__count").TextContent.Trim());
+    }
+
+    [Fact]
+    public void The_chip_reveals_every_book_by_name_and_folds_them_back()
     {
         var cut = Comparison();
 
-        cut.Find(".bookmore button").Click();
+        Chip(cut).Click();
 
         var books = BookColumn(cut);
         Assert.Equal(10, books.Count);
         Assert.All(Ten, b => Assert.Contains(BookNames.Display(b), books));
+        Assert.Equal(["DraftKings", "FanDuel", "BetMGM", "Caesars", "Bovada", "WynnBET"], books.Take(6));
 
-        var key = cut.Find(".bookmore button");
-        Assert.Equal("View fewer books", key.TextContent.Trim());
-        Assert.Equal("true", key.GetAttribute("aria-expanded"));
+        var chip = Chip(cut);
+        Assert.StartsWith("Fewer", chip.TextContent.Trim());
+        Assert.Equal("true", chip.GetAttribute("aria-expanded"));
 
-        key.Click();
-        Assert.Equal(5, BookColumn(cut).Count);
-        Assert.Equal("false", cut.Find(".bookmore button").GetAttribute("aria-expanded"));
+        chip.Click();
+        Assert.Equal(4, BookColumn(cut).Count);
+        Assert.Equal("false", Chip(cut).GetAttribute("aria-expanded"));
     }
 
     [Fact]
-    public void Five_books_or_fewer_draw_no_key()
+    public void Only_main_sportsbooks_priced_draw_no_chip()
     {
         var cut = RenderComponent<BookComparison>(p => p
             .Add(c => c.Market, Markets.Moneyline)
@@ -168,13 +264,36 @@ public class BookComparisonTests : WagerTestContext
             .Add(c => c.SecondSide, "Chiefs"));
 
         Assert.Equal(2, BookColumn(cut).Count);
-        Assert.Empty(cut.FindAll(".bookmore"));
+        Assert.Empty(cut.FindAll(".desk-chip"));
+        // Nothing to fold, but the count is still on the table, with the main sportsbooks missing.
+        Assert.Equal("2 of 5 main sportsbooks priced · 2 books priced.", cut.Find(".bookmore__count").TextContent.Trim());
+        Assert.Equal("Main sportsbooks missing: BetMGM, Bally Bet, Caesars.", cut.Find(".bookmore__absent").TextContent.Trim());
+    }
+
+    /// <summary>A market no main sportsbook priced has nothing to fold behind: every row shows, and it says so.</summary>
+    [Fact]
+    public void A_market_no_main_sportsbook_priced_is_drawn_unfolded_and_says_so()
+    {
+        static BestOffer Only(BestOffer side) => side with { Rungs = side.Rungs.Where(r => !BookNames.IsMain(r.Book)).ToList() };
+        var cut = RenderComponent<BookComparison>(p => p
+            .Add(c => c.Market, Markets.Moneyline)
+            .Add(c => c.First, Only(Away()))
+            .Add(c => c.Second, Only(Home()))
+            .Add(c => c.FirstSide, "Bills")
+            .Add(c => c.SecondSide, "Chiefs"));
+
+        Assert.Equal(6, BookColumn(cut).Count);
+        Assert.Empty(cut.FindAll(".desk-chip"));
+        Assert.Equal("No main sportsbook priced this market (0 of 5) · 6 books priced.", cut.Find(".bookmore__count").TextContent.Trim());
+        Assert.Equal(2, cut.FindAll(".bookcmp__best").Count);
     }
 
     [Fact]
     public void A_price_reads_as_line_movement_quotes_it_with_its_edge_after()
     {
         var cut = Comparison();
+        // The best prices are at books behind the chip: open it to read them.
+        Chip(cut).Click();
         var best = cut.FindAll(".bookcmp__best").Select(e => e.TextContent.Trim()).ToList();
 
         Assert.Contains("+120", best);
@@ -213,26 +332,26 @@ public class BookComparisonTests : WagerTestContext
         var cut = RenderComponent<BoardAllBets>(p => p.Add(x => x.GameId, BoardRows.GameId));
 
         var moneyline = cut.FindAll(".wsection")[0];
-        Assert.Equal(5, moneyline.QuerySelectorAll(".mud-table-body .mud-table-row").Length);
+        Assert.Equal(4, moneyline.QuerySelectorAll(".mud-table-body .mud-table-row").Length);
 
-        cut.Find(".wsection .bookmore button").Click();
+        cut.Find(".wsection .bookmore .desk-chip").Click();
         cut.SetParametersAndRender(p => p.Add(x => x.GameId, BoardRows.GameId));
 
         moneyline = cut.FindAll(".wsection")[0];
         Assert.Equal(10, moneyline.QuerySelectorAll(".mud-table-body .mud-table-row").Length);
-        Assert.Equal("true", moneyline.QuerySelector(".bookmore button")!.GetAttribute("aria-expanded"));
-        Assert.Equal(moneyline.Id, moneyline.QuerySelector(".bookmore button")!.GetAttribute("aria-controls"));
+        Assert.Equal("true", moneyline.QuerySelector(".bookmore .desk-chip")!.GetAttribute("aria-expanded"));
+        Assert.Equal(moneyline.Id, moneyline.QuerySelector(".bookmore .desk-chip")!.GetAttribute("aria-controls"));
 
-        // Another game folds every market back to its top five.
+        // Another game folds every market back to its main sportsbooks.
         cut.SetParametersAndRender(p => p.Add(x => x.GameId, BoardRows.GameId + 1));
         cut.WaitForAssertion(() =>
-            Assert.Equal(5, cut.FindAll(".wsection")[0].QuerySelectorAll(".mud-table-body .mud-table-row").Length));
+            Assert.Equal(4, cut.FindAll(".wsection")[0].QuerySelectorAll(".mud-table-body .mud-table-row").Length));
     }
 
     // ---- The Game window's market in place --------------------------------------------------
 
     [Fact]
-    public void The_game_window_s_market_caps_its_closes_too()
+    public void The_game_window_s_market_folds_its_closes_too()
     {
         var cut = RenderComponent<MarketMovement>(p => p
             .Add(c => c.GameId, BoardRows.GameId)
@@ -245,11 +364,11 @@ public class BookComparisonTests : WagerTestContext
             .Add(c => c.Id, "gamemove-test")
             .Add(c => c.Closing, true));
 
-        Assert.Equal(5, BookColumn(cut).Count);
-        Assert.Equal("gamemove-test", cut.Find(".bookmore button").GetAttribute("aria-controls"));
+        Assert.Equal(4, BookColumn(cut).Count);
+        Assert.Equal("gamemove-test", cut.Find(".bookmore .desk-chip").GetAttribute("aria-controls"));
         Assert.Empty(cut.FindAll("button.take"));
 
-        cut.Find(".bookmore button").Click();
+        Chip(cut).Click();
         Assert.Equal(10, BookColumn(cut).Count);
 
         // A new price for the same market re-renders the row and keeps it open.
@@ -260,11 +379,11 @@ public class BookComparisonTests : WagerTestContext
     // ---- Line movement -----------------------------------------------------------------------
 
     /// <summary>
-    /// A side nobody has moved shows each book's standing in Line movement: the same five books
-    /// lead as in More bets, ranked on the whole market, and the key shows the rest.
+    /// A side nobody has moved shows each book's standing in Line movement: the main sportsbooks
+    /// lead as in More bets, and the chip shows the rest and says the best prices are behind it.
     /// </summary>
     [Fact]
-    public void Line_movement_s_standing_caps_its_books_and_keeps_the_best_in_view()
+    public void Line_movement_s_standing_folds_its_books_and_says_where_the_best_is()
     {
         var at = DateTimeOffset.UtcNow;
         var snaps = Ten.Select(b => new OddsSnapshot
@@ -284,15 +403,66 @@ public class BookComparisonTests : WagerTestContext
             .Add(x => x.Now, at));
 
         var books = BookColumn(cut);
-        Assert.Equal(5, books.Count);
-        Assert.StartsWith(BookNames.Display("bovada"), books[0]);
-        Assert.StartsWith(BookNames.Display("wynnbet"), books[1]);
+        Assert.Equal(["DraftKings", "FanDuel", "BetMGM", "Caesars"], books);
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced · best prices at WynnBET and Bovada, under More.",
+            cut.Find(".bookmore__count").TextContent.Trim());
 
-        var key = cut.Find(".bookmore button");
-        Assert.Equal("View 5 more books", key.TextContent.Trim());
+        var key = Chip(cut);
+        Assert.StartsWith("More · 6 books", key.TextContent.Trim());
+        Assert.NotNull(key.QuerySelector(".bookmore__dot"));
         Assert.Equal(cut.Find(".standing__books").Id, key.GetAttribute("aria-controls"));
 
         key.Click();
-        Assert.Equal(10, BookColumn(cut).Count);
+        var all = BookColumn(cut);
+        Assert.Equal(10, all.Count);
+        Assert.StartsWith(BookNames.Display("bovada"), all[4]);
+        Assert.StartsWith(BookNames.Display("wynnbet"), all[5]);
+    }
+
+    // ---- The count line with the polled list ------------------------------------------------
+
+    [Fact]
+    public void With_the_polled_list_the_count_line_reads_in_the_folds_terms()
+    {
+        string[] polled = ["draftkings", "fanduel", "betmgm", "ballybet", "pinnacle", "bovada", "betonlineag", "betrivers", "espnbet", "hardrockbet"];
+        string[] priced = ["draftkings", "fanduel", "betmgm", "ballybet", "pinnacle", "bovada", "betonlineag", "betrivers", "espnbet"];
+        var coverage = BookCoverage.Of(priced, polled);
+        var best = new BestOffer("Over", "pinnacle", -102, 47.5m, DateTimeOffset.UtcNow, null, false, false,
+            priced.Select(b => new BookPrice(b, -110, 47.5m, 0.52)).ToList());
+        var fold = BookFold.Of(priced, best, null);
+
+        var main = MainCoverage.Of(priced, polled);
+        Assert.Equal("4 of 5 main sportsbooks priced · 9 books priced · 10 polled · best price at Pinnacle, under More.",
+            BookRanking.CountLine(fold, coverage, main, expanded: false));
+        Assert.Equal("4 of 5 main sportsbooks priced · 9 books priced · 10 polled: main sportsbooks first.",
+            BookRanking.CountLine(fold, coverage, main, expanded: true));
+
+        string[] offMain = ["pinnacle", "bovada", "betonlineag"];
+        Assert.Equal("No main sportsbook priced this market (0 of 5) · 3 books priced · 10 polled.",
+            BookRanking.CountLine(BookFold.Of(offMain, null, null), BookCoverage.Of(offMain, polled), MainCoverage.Of(offMain, polled), expanded: false));
+    }
+
+    // ---- Pickers ------------------------------------------------------------------------------
+
+    /// <summary>A picker lists the main sportsbooks under their heading in the fixed order, then the rest by name.</summary>
+    [Fact]
+    public void A_book_picker_groups_the_main_sportsbooks_first()
+    {
+        var cut = RenderComponent<BookOptions>(p => p.Add(x => x.Books,
+            new[] { "wynnbet", "williamhill_us", "betonlineag", "betmgm", "draftkings", "bovada" }));
+
+        var groups = cut.FindAll("optgroup");
+        Assert.Equal(["Main sportsbooks", "More sportsbooks"], groups.Select(g => g.GetAttribute("label")));
+        Assert.Equal(["draftkings", "betmgm", "williamhill_us"], groups[0].QuerySelectorAll("option").Select(o => o.GetAttribute("value")));
+        Assert.Equal(["BetOnline.ag", "Bovada", "WynnBET"], groups[1].QuerySelectorAll("option").Select(o => o.TextContent.Trim()));
+    }
+
+    [Fact]
+    public void A_picker_of_one_kind_needs_no_headings()
+    {
+        var cut = RenderComponent<BookOptions>(p => p.Add(x => x.Books, new[] { "fanduel", "draftkings" }));
+
+        Assert.Empty(cut.FindAll("optgroup"));
+        Assert.Equal(["DraftKings", "FanDuel"], cut.FindAll("option").Select(o => o.TextContent.Trim()));
     }
 }

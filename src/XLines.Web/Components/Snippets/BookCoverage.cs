@@ -75,25 +75,6 @@ public sealed record BookCoverage(int Priced, int Polled, IReadOnlyList<string> 
     /// <summary>"10 books polled".</summary>
     public string PolledText => $"{Polled} {(Polled == 1 ? "book" : "books")} polled";
 
-    /// <summary>
-    /// The count line under a table: "Top 5 of 8 priced · 10 books polled" while folded, "All 8
-    /// priced · 10 books polled" once every row shows, and "All 10 polled books priced" when every
-    /// polled book has a price and every row shows ("All 11 priced · all 10 polled books" where a
-    /// book outside the list priced it too).
-    /// </summary>
-    public string CountText(bool expanded, int top = BookRanking.Top)
-    {
-        if (!expanded && Priced > top)
-            return $"Top {top} of {Priced} priced · {PolledText}";
-
-        if (Complete)
-            return Priced == Polled
-                ? $"All {Polled} polled {(Polled == 1 ? "book" : "books")} priced"
-                : $"All {Priced} priced · all {Polled} polled {(Polled == 1 ? "book" : "books")}";
-
-        return $"All {Priced} priced · {PolledText}";
-    }
-
     /// <summary>"Not priced here: Pinnacle, Bovada." Empty when every polled book priced it.</summary>
     public string AbsentText => Complete ? string.Empty : $"Not priced here: {string.Join(", ", Absent)}.";
 

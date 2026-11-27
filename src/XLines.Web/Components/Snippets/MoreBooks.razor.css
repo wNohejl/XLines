@@ -26,6 +26,10 @@
 
 .bookmore__count { min-width: 0; }
 
+/* The best-price dot on the chip: the table's own mark (BookComparison's .bookcmp__dot), so a
+   best price behind the fold is marked the same way it is marked on its row. */
+.bookmore__dot { margin-left: var(--space-1); font-size: 0.6em; vertical-align: 0.2em; color: currentColor; }
+
 /* The polled books with no price here: a footnote to the count, on a line of its own inside the
    same row (no second hairline), in the row's secondary ink, wrapping as a sentence does. */
 .bookmore__absent {

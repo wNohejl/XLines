@@ -205,10 +205,7 @@
                                     aria-label="Book the parlay was placed at"
                                     ValueChanged="@((string? b) => Slip.SetParlay(Slip.ParlayStake, Slip.ParlayPriceQuoted, b))">
                             <option value="">Book</option>
-                            @foreach (var book in Books)
-                            {
-                                <option value="@book">@BookNames.Display(book)</option>
-                            }
+                            <XLines.Web.Components.Snippets.BookOptions Books="ParlayBooks" />
                         </DeskSelect>
                     </FormRow>
                 </ChildContent>
@@ -315,7 +312,7 @@
 
     private void OnSlipChanged() => _ = InvokeAsync(StateHasChanged);
 
-    private IEnumerable<string> Books
+    private IEnumerable<string> ParlayBooks
         => JournalService.CommonBooks
             .Concat(Slip.Items.Select(i => i.Book))
             .Distinct(StringComparer.OrdinalIgnoreCase)

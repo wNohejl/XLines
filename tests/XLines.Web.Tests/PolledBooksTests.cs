@@ -55,59 +55,75 @@ public class PolledBooksTests : WagerTestContext
 
     // ---- The book tables ----------------------------------------------------------------------
 
+    /// <summary>The lines under the table after the count: the absent polled books, then the main sportsbooks missing.</summary>
+    private static IReadOnlyList<string> Footnotes(IRenderedFragment cut)
+        => cut.FindAll(".bookmore__absent").Select(e => e.TextContent.Trim()).ToList();
+
     [Fact]
     public void Four_of_ten_count_priced_of_polled_and_name_the_six_absent()
     {
         var cut = Comparison(["draftkings", "fanduel", "betmgm", "caesars"], Polled);
 
         Assert.Equal(4, Rows(cut));
-        Assert.Equal("All 4 priced · 10 books polled.", cut.Find(".bookmore__count").TextContent.Trim());
-        // caesars is williamhill_us by name, so Caesars is not absent.
-        Assert.Equal("Not priced here: BetRivers, theScore Bet, Fanatics, Pinnacle, Bovada, BetOnline.ag.",
-            cut.Find(".bookmore__absent").TextContent.Trim());
-        // No key: every priced book already shows.
-        Assert.Empty(cut.FindAll(".bookmore button"));
+        Assert.Equal("4 of 5 main sportsbooks priced · 4 books priced · 10 polled.", cut.Find(".bookmore__count").TextContent.Trim());
+        // caesars is williamhill_us by name, so Caesars is not absent; Bally Bet is the main book missing.
+        Assert.Equal(
+            ["Not priced here: BetRivers, theScore Bet, Fanatics, Pinnacle, Bovada, BetOnline.ag.", "Main sportsbooks missing: Bally Bet."],
+            Footnotes(cut));
+        // No chip: every priced book already shows.
+        Assert.Empty(cut.FindAll(".bookmore .desk-chip"));
     }
 
     [Fact]
-    public void Eight_of_ten_fold_to_five_and_name_the_absent_only_when_expanded()
+    public void Eight_of_ten_fold_to_the_main_sportsbooks_and_name_the_absent_only_when_expanded()
     {
         var cut = Comparison(Polled.Take(8), Polled);
 
-        Assert.Equal(5, Rows(cut));
-        Assert.StartsWith("Top 5 of 8 priced · 10 books polled: ", cut.Find(".bookmore__count").TextContent.Trim());
-        Assert.Empty(cut.FindAll(".bookmore__absent"));
+        // DraftKings, FanDuel, BetMGM and Caesars show; theScore Bet, BetRivers, Fanatics and Pinnacle fold.
+        Assert.Equal(4, Rows(cut));
+        Assert.Equal("4 of 5 main sportsbooks priced · 8 books priced · 10 polled.", cut.Find(".bookmore__count").TextContent.Trim());
+        // The main sportsbooks' gap is said folded too; the absent polled books wait for every row.
+        Assert.Equal(["Main sportsbooks missing: Bally Bet."], Footnotes(cut));
 
-        cut.Find(".bookmore button").Click();
+        cut.Find(".bookmore .desk-chip").Click();
 
         Assert.Equal(8, Rows(cut));
-        Assert.StartsWith("All 8 priced · 10 books polled: ", cut.Find(".bookmore__count").TextContent.Trim());
-        Assert.Equal("Not priced here: Bovada, BetOnline.ag.", cut.Find(".bookmore__absent").TextContent.Trim());
+        Assert.Equal("4 of 5 main sportsbooks priced · 8 books priced · 10 polled: main sportsbooks first.",
+            cut.Find(".bookmore__count").TextContent.Trim());
+        Assert.Equal(["Not priced here: Bovada, BetOnline.ag.", "Main sportsbooks missing: Bally Bet."], Footnotes(cut));
     }
 
     [Fact]
-    public void Every_polled_book_priced_says_so_and_draws_no_absent_line()
+    public void Every_polled_book_priced_draws_no_absent_line()
     {
         var cut = Comparison(Polled, Polled);
 
-        cut.Find(".bookmore button").Click();
+        cut.Find(".bookmore .desk-chip").Click();
 
-        Assert.StartsWith("All 10 polled books priced", cut.Find(".bookmore__count").TextContent.Trim());
-        Assert.Empty(cut.FindAll(".bookmore__absent"));
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced · 10 polled: main sportsbooks first.",
+            cut.Find(".bookmore__count").TextContent.Trim());
+        // Every polled book priced, so nothing is "not priced here"; Bally Bet is not on this list.
+        Assert.Equal(["Main sportsbooks missing: Bally Bet."], Footnotes(cut));
     }
 
+    /// <summary>
+    /// With the polled list unknown the count line is still drawn — the main sportsbooks' count is
+    /// on every table — without the polled count or the absent line.
+    /// </summary>
     [Fact]
-    public void An_unknown_polled_list_reads_exactly_as_before()
+    public void An_unknown_polled_list_still_counts_the_main_sportsbooks()
     {
         var few = Comparison(["draftkings", "fanduel"], null);
-        Assert.Empty(few.FindAll(".bookmore"));
+        Assert.Equal("2 of 5 main sportsbooks priced · 2 books priced.", few.Find(".bookmore__count").TextContent.Trim());
+        Assert.Equal(["Main sportsbooks missing: BetMGM, Bally Bet, Caesars."], Footnotes(few));
+        Assert.Empty(few.FindAll(".desk-chip"));
 
         var empty = Comparison(["draftkings", "fanduel"], []);
-        Assert.Empty(empty.FindAll(".bookmore"));
+        Assert.Equal("2 of 5 main sportsbooks priced · 2 books priced.", empty.Find(".bookmore__count").TextContent.Trim());
 
         var many = Comparison(Polled, null);
-        Assert.Contains("Top 5 of 10 books priced", many.Find(".bookmore__count").TextContent);
-        Assert.Empty(many.FindAll(".bookmore__absent"));
+        Assert.Equal("4 of 5 main sportsbooks priced · 10 books priced.", many.Find(".bookmore__count").TextContent.Trim());
+        Assert.Equal(["Main sportsbooks missing: Bally Bet."], Footnotes(many));
     }
 
     [Fact]
@@ -115,9 +131,16 @@ public class PolledBooksTests : WagerTestContext
     {
         var cut = Comparison(["draftkings", "fanduel", "ESPN BET"], ["DraftKings", "FANDUEL", "pinnacle"]);
 
+        // ESPN BET is not a main sportsbook, so it folds behind the chip: still a row, once shown.
+        Assert.Equal(2, Rows(cut));
+        Assert.Equal("2 of 5 main sportsbooks priced · 3 books priced · 3 polled.", cut.Find(".bookmore__count").TextContent.Trim());
+
+        cut.Find(".bookmore .desk-chip").Click();
+
         Assert.Equal(3, Rows(cut));
-        Assert.Equal("All 3 priced · 3 books polled.", cut.Find(".bookmore__count").TextContent.Trim());
-        Assert.Equal("Not priced here: Pinnacle.", cut.Find(".bookmore__absent").TextContent.Trim());
+        Assert.Equal("2 of 5 main sportsbooks priced · 3 books priced · 3 polled: main sportsbooks first.",
+            cut.Find(".bookmore__count").TextContent.Trim());
+        Assert.Equal("Not priced here: Pinnacle.", Footnotes(cut)[0]);
 
         var coverage = BookCoverage.Of(["draftkings", "fanduel", "ESPN BET"], ["draftkings", "fanduel", "pinnacle"])!;
         Assert.Equal(3, coverage.Priced);
@@ -149,10 +172,28 @@ public class PolledBooksTests : WagerTestContext
     {
         var tip = Cell(Polled.Take(8), Polled).FindComponent<DeskTooltip>().Instance;
 
-        Assert.Equal(5, tip.Rows!.Count);
-        Assert.Equal("+3 more in More bets · 2 of 10 polled books not priced", tip.Footnote);
+        // The cell's own book (DraftKings) and the other main sportsbooks; the four others are counted.
+        Assert.Equal(["DraftKings", "FanDuel", "BetMGM", "Caesars"], tip.Rows!.Select(r => r.Label));
+        Assert.Equal("+4 more in More bets · 2 of 10 polled books not priced", tip.Footnote);
         // The spoken text carries it too.
-        Assert.Equal("+3 more in More bets · 2 of 10 polled books not priced", tip.Text.Split('\n')[^1]);
+        Assert.Equal("+4 more in More bets · 2 of 10 polled books not priced", tip.Text.Split('\n')[^1]);
+    }
+
+    /// <summary>
+    /// The tooltip's rows are the cell's own book first — it holds the price shown, here Pinnacle —
+    /// then the main sportsbooks in their fixed order, five at most, and nothing else; every other
+    /// book is counted in the footnote.
+    /// </summary>
+    [Fact]
+    public void The_tooltip_names_the_cells_book_then_the_main_sportsbooks()
+    {
+        string[] books = ["pinnacle", "bovada", "williamhill_us", "betonlineag", "fanduel", "ballybet", "draftkings", "betmgm"];
+        var tip = Cell(books, null).FindComponent<DeskTooltip>().Instance;
+
+        Assert.Equal(["Pinnacle", "DraftKings", "FanDuel", "BetMGM", "Bally Bet"], tip.Rows!.Select(r => r.Label));
+        Assert.True(tip.Rows![0].Emphasis);
+        // Caesars is the sixth and the cap is five: it is counted with Bovada and BetOnline.ag.
+        Assert.Equal("+3 more in More bets", tip.Footnote);
     }
 
     [Fact]

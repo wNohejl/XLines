@@ -67,10 +67,7 @@ else
             <DeskSelect TValue="string" aria-label="Book"
                         Value="_bookFilter" ValueChanged="@((string? b) => FilterAsync(() => _bookFilter = b))">
                 <option value="">All books</option>
-                @foreach (var book in _books)
-                {
-                    <option value="@book">@BookNames.Display(book)</option>
-                }
+                <XLines.Web.Components.Snippets.BookOptions Books="_books" />
             </DeskSelect>
         </div>
     </Overflow>
@@ -1450,10 +1447,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
         <DeskSelect TValue="string" Class="wfield--short" aria-label="Book" Value="current"
                     ValueChanged="@(async (string? b) => await set(b ?? string.Empty))">
             <option value="">Book…</option>
-            @foreach (var book in _books)
-            {
-                <option value="@book">@BookNames.Display(book)</option>
-            }
+            <XLines.Web.Components.Snippets.BookOptions Books="_books" />
         </DeskSelect>
     </text>;
 

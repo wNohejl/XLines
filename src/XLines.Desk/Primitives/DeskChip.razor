@@ -1,0 +1,111 @@
+@namespace XLines.Desk.Primitives
+@using XLines.Desk.Windowing
+
+@*
+    A chip: a small capsule key that shows or hides something, or turns one filter on and off,
+    beside the thing it acts on — "More · 5 items" under a list it folds.
+
+    It wraps MudChip (of string: the chip carries no value of its own) for the same reason
+    DeskButton wraps MudButton: a call site that has to remember Variant, Color, Ripple and a
+    class string drifts from the one beside it. The MudChip underneath is its plainest form —
+    Text variant, Default colour, no ripple, no close icon — and everything it looks like comes
+    from .desk-chip in mud-bridge.css, which spends the Desk's tokens at the two-class depth Mud's
+    own chip rules use (the companion-rule pattern), never !important.
+
+    Hue is not the affordance. At rest it is the neutral capsule .tag and the base chip share;
+    pressed (a filter that is on, a fold that is open) it takes the stronger fill and the heavier
+    weight, and says so to a reader — aria-expanded and aria-controls when it discloses a region
+    (Disclosure, or Controls given), aria-pressed when it is a toggle. The accent is spent only on its focus ring.
+
+    It is a key: a clickable MudChip draws a native <button type="button"> (inside Mud's
+    .mud-chip-container), so the tab stop, Enter and Space are the browser's own and nothing here
+    re-implements them. The element is the same in both states, so a press keeps focus on it
+    while what it controls grows or folds. Disabled, Mud draws it as an inert element (tabindex -1,
+    no click handler, aria-disabled): dimmed, out of the tab order, and the press ignored.
+*@
+
+<MudChip T="string"
+         Class="@Classes"
+         Variant="Variant.Text"
+         Color="Color.Default"
+         Ripple="false"
+         Disabled="@Disabled"
+         OnClick="PressAsync"
+         aria-disabled="@(Disabled ? "true" : null)"
+         aria-expanded="@(IsDisclosure ? Pressed ? "true" : "false" : null)"
+         aria-controls="@Controls"
+         aria-pressed="@(IsDisclosure ? null : Pressed ? "true" : "false")"
+         title="@Title"
+         @attributes="Extra">
+    @if (Icon is not null)
+    {
+        <Glyph Icon="@Icon" />
+    }
+    @ChildContent
+</MudChip>
+
+@code {
+    /// <summary>The chip's words — short, sentence case, and naming a count where it folds one: "More · 5 items".</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>
+    /// Whether it is pressed: the filter is on, or the region it controls is open. Drawn by fill
+    /// and weight, and told to a reader by <c>aria-expanded</c> or <c>aria-pressed</c>.
+    /// </summary>
+    [Parameter] public bool Pressed { get; set; }
+
+    /// <summary>
+    /// A press, with the state it asks for (the opposite of <see cref="Pressed"/>). The chip keeps
+    /// no state of its own: the caller holds it, so it outlives the chip.
+    /// </summary>
+    [Parameter] public EventCallback<bool> PressedChanged { get; set; }
+
+    /// <summary>A press, for a caller that wants the event itself.</summary>
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>
+    /// The id of the region the chip shows and hides, for <c>aria-controls</c>. Given, the chip is a
+    /// disclosure; see <see cref="Disclosure"/>.
+    /// </summary>
+    [Parameter] public string? Controls { get; set; }
+
+    /// <summary>
+    /// The chip shows and hides something (<c>aria-expanded</c>) rather than turning a filter on
+    /// (<c>aria-pressed</c>). Implied by <see cref="Controls"/>; set it where the region has no id.
+    /// </summary>
+    [Parameter] public bool Disclosure { get; set; }
+
+    private bool IsDisclosure => Disclosure || Controls is not null;
+
+    /// <summary>A MudBlazor icon string, drawn bare through <c>Glyph</c> before the words: a fold's chevron, so the chip reads as a key and not a tag.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The tooltip, for the longer wording a short label leaves out.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Extra classes, appended last so a one-off can still win.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    /// <summary>Everything else the caller passed, onto the chip's element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? Extra { get; set; }
+
+    private string Classes => string.Join(' ', new[]
+    {
+        "desk-chip",
+        Pressed ? "desk-chip--pressed" : null,
+        Disabled ? "desk-chip--disabled" : null,
+        Class
+    }.Where(c => c is { Length: > 0 }));
+
+    private async Task PressAsync(MouseEventArgs e)
+    {
+        if (Disabled)
+            return;
+
+        await OnClick.InvokeAsync(e);
+        await PressedChanged.InvokeAsync(!Pressed);
+    }
+}

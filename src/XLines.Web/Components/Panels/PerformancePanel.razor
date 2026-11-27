@@ -74,10 +74,7 @@ else
                 <DeskSelect TValue="string" aria-label="Book"
                             Value="_book" ValueChanged="@((string? b) => FilterAsync(() => _book = b))">
                     <option value="">All books</option>
-                    @foreach (var book in _books)
-                    {
-                        <option value="@book">@BookNames.Display(book)</option>
-                    }
+                    <XLines.Web.Components.Snippets.BookOptions Books="_books" />
                 </DeskSelect>
             </div>
             <div class="ptoolbar__item">
@@ -221,7 +218,7 @@ else
 
             <FormGroup Title="By sport" GroupClass="perf-card">@Breakdown(_bySport, "Sport")</FormGroup>
 
-            <FormGroup Title="By book" GroupClass="perf-card">@Breakdown(_byBook, "Book")</FormGroup>
+            <FormGroup Title="By book" GroupClass="perf-card">@Breakdown(_byBook, "Book", netFirst: false)</FormGroup>
 
             <FormGroup Title="What CLV was measured against" GroupClass="perf-card">
             <DeskGrid T="BasisRow" Items="_byBasis" Class="perf-table" EmptyText="No selections with a close.">
@@ -407,7 +404,9 @@ else
         // desk's one map of names (BookNames), so a book reads the same here as in every window
         // that names one.
         _byMarket = Rows(PerformanceAnalytics.SummariseBy(set.Ledger, e => MarketLabel(e.Market)));
-        _byBook = Rows(PerformanceAnalytics.SummariseBy(set.Ledger, e => BookNames.Display(e.Book)));
+        // Main sportsbooks first in their fixed order, the rest alphabetically, until a heading sorts it
+        // (ADR 0033, addendum 2026-11-27).
+        _byBook = MainFirst(Rows(PerformanceAnalytics.SummariseBy(set.Ledger, e => BookNames.Display(e.Book))));
         _bySport = Rows(PerformanceAnalytics.SummariseBy(set.Ledger, e => e.Game?.Sport?.Key.ToUpperInvariant() ?? "Mixed / none"));
 
         var curve = PerformanceAnalytics.BankrollCurve(set.Ledger, _startingBankroll);
@@ -560,12 +559,18 @@ else
     private static DeskState Sign(decimal value)
         => value > 0 ? DeskState.Positive : value < 0 ? DeskState.Negative : DeskState.Neutral;
 
+    /// <summary>The By book rows as every list of books leads: main sportsbooks first, the rest by name.</summary>
+    private static List<BreakdownRow> MainFirst(List<BreakdownRow> rows)
+        => BookNames.MainFirst(rows.Select(r => r.Label)).Select(l => rows.First(r => r.Label == l)).ToList();
+
     private static List<BreakdownRow> Rows(IReadOnlyDictionary<string, PerformanceSummary> data)
         => data.Select(kv => new BreakdownRow(kv.Key, kv.Value)).ToList();
 
     /// <param name="data">The rows, already labelled with display names.</param>
     /// <param name="by">What a row is — "Market", "Sport", "Book" — which is the first column's name.</param>
-    private RenderFragment Breakdown(List<BreakdownRow> data, string by) => @<text>
+    /// <param name="netFirst">Open sorted by Net, best first. The By book card opens in its own order instead
+    /// (main sportsbooks first, ADR 0033 addendum); a heading still sorts it.</param>
+    private RenderFragment Breakdown(List<BreakdownRow> data, string by, bool netFirst = true) => @<text>
         @if (data.Count == 0)
         {
             @* Inside a card, at the rows' inset and leading, as Ops and Incidents say theirs. *@
@@ -589,7 +594,7 @@ else
                 @* Best-earning first was the hand-written order; sorting keeps it as the default
                    rather than as the only one. *@
                 <PropertyColumn T="BreakdownRow" TProperty="decimal" Property="r => r.Summary.NetProfit"
-                                Title="Net" Align="Align.Right" InitialDirection="SortDirection.Descending"
+                                Title="Net" Align="Align.Right" InitialDirection="@(netFirst ? SortDirection.Descending : SortDirection.None)"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate>
                         <span class="@(context.Item.Summary.NetProfit > 0 ? "up" : context.Item.Summary.NetProfit < 0 ? "down" : null)">

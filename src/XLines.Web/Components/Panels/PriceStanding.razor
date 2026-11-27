@@ -56,11 +56,11 @@
         @* Every book on the side, by what it pays, against the fair price at its own number, and
            how long it has held it. Replaces the movement columns, which for a side nobody has
            moved were "unmoved" and "seen once" in every row. *@
-        @* Ranked on the whole market and capped at the top five, as every book table is (BookRanking),
-           the rest behind the key under it. *@
+        @* Ranked on the whole market, the main sportsbooks first, as every book table is (BookRanking),
+           the rest behind the More chip under it. *@
         var books = BookRanking.Order(Books(Rows, Side), b => b.Book, Side, Other);
         <div class="standing__books" id="@_booksId">
-        <DeskGrid T="BookStanding" Items="BookRanking.Visible(books, IsExpanded)" Resizable="false" EmptyText="No prices on this side.">
+        <DeskGrid T="BookStanding" Items="BookRanking.Visible(books, b => b.Book, IsExpanded)" Resizable="false" EmptyText="No prices on this side.">
             <PropertyColumn T="BookStanding" TProperty="string" Property="b => b.Book" Title="Book"
                             Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
                 <CellTemplate>
@@ -100,8 +100,8 @@
                 </CellTemplate>
             </TemplateColumn>
         </DeskGrid>
-        <MoreBooks Total="books.Count" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@_booksId"
-                   Books="books.Select(b => b.Book)" Polled="Polled" />
+        <MoreBooks Books="books.Select(b => b.Book)" First="Side" Second="Other" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@_booksId"
+                   Polled="Polled" />
         </div>
     }
 

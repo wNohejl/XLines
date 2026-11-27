@@ -162,7 +162,7 @@
 @if (Loaded)
 {
 @* Compact (.board__metrics): the figure and its label on one line, the note under them, so the
-   four tiles are one short row a Board wraps by its own width rather than four 90px boxes. *@
+   tiles are one short row a Board wraps by its own width rather than five 90px boxes. *@
 <MetricRow Class="board__metrics">
     <Metric Label="Games" Value='@_rows.Count.ToString("N0")' Note="@HorizonNote"
             State="DeskState.Info" Numeric />
@@ -173,6 +173,11 @@
 
     @* Store-on-change (ADR 0001): a price that has not moved is not written, so this counts
        market activity rather than polls. Zero on a busy slate is a fact worth seeing. *@
+    @* The direct count of the main sportsbooks over the games in view (ADR 0033, addendum
+       2026-11-27): the five the owner bets at against the ones that priced something here, with the
+       missing ones and why, where the desk knows, in the note. *@
+    <Metric Label="Main sportsbooks" Value="@_main.Figure" Note="@MainNote" State="@MainState" Numeric />
+
     <Metric Label="Moves today" Value='@_movesToday.ToString("N0")' Note="@MovesNote" Numeric />
 
     @* The count is the way in. A tile that only says "2" leaves the reader to find the window
@@ -724,6 +729,15 @@ else
     /// <summary>The books the desk polls (PolledBooks); empty when unknown.</summary>
     private IReadOnlyList<string> _polled = [];
 
+    /// <summary>The main sportsbooks over the games in view (MainCoverage); a main book counts when it prices any of them.</summary>
+    private MainCoverage _main = MainCoverage.Of([], null);
+
+    /// <summary>"Missing: Bally Bet (polled, not priced), Caesars (not polled)", or "all five priced".</summary>
+    private string MainNote => _rows.Count == 0 ? "nothing on the board" : _main.Missing.Count == 0 ? "all five priced" : _main.ReasonsText;
+
+    /// <summary>The state goes on the figure: all five priced is positive, a gap a warning.</summary>
+    private DeskState MainState => _rows.Count == 0 ? DeskState.Neutral : _main.Missing.Count == 0 ? DeskState.Positive : DeskState.Warning;
+
     /// <summary>" · 10 polled" after the tile's book count, once the polled list is known.</summary>
     private string PolledPhrase => _polled.Count > 0 ? $" · {_polled.Count} polled" : "";
 
@@ -939,11 +953,13 @@ else
 
                 // The books the desk polls (PolledBooks), so an unpriced row and the Priced tile
                 // account for them; empty with no odds provider live, and both read as before.
-                var polled = XLines.Web.Services.PolledBooks.Read(scope.ServiceProvider);
+                var feeds = XLines.Web.Services.PolledBooks.Feeds(scope.ServiceProvider);
+                var polled = XLines.Web.Services.PolledBooks.Of(feeds);
+                var paidOnly = MainCoverage.PaidOnlyOf(feeds);
 
-                return (Rows: rows, Port: port, Moves: await movesRead, Alerts: await alertsRead, Names: await namesRead, Polled: polled);
+                return (Rows: rows, Port: port, Moves: await movesRead, Alerts: await alertsRead, Names: await namesRead, Polled: polled, PaidOnly: paidOnly);
             },
-            read => HandOver(read.Rows, read.Port, read.Moves, read.Alerts, read.Names, read.Polled));
+            read => HandOver(read.Rows, read.Port, read.Moves, read.Alerts, read.Names, read.Polled, read.PaidOnly));
         },
         settle: () => _rows.Count == 0 ? PulseState.Idle : PulseState.Healthy,
         status: () => _rows.Count == 0 ? "no games" : $"{_priced}/{_rows.Count} priced");
@@ -952,10 +968,11 @@ else
     /// <summary>What the latest load read, onto the board at once.</summary>
     private void HandOver(
         List<BoardRow> rows, StatsPort? port, long moves, (int Open, int Critical) alerts, Dictionary<string, string> names,
-        IReadOnlyList<string>? polled = null)
+        IReadOnlyList<string>? polled = null, IReadOnlyList<string>? paidOnly = null)
     {
         _rows = rows;
         _polled = polled ?? [];
+        _main = MainCoverage.Of(_rows.SelectMany(BookCoverage.Books), _polled, paidOnly);
         _bookCount = _rows.Count == 0 ? 0 : _rows.Max(r => r.BookCount);
         _fewestBooks = _rows.Where(r => r.BookCount > 0).Select(r => r.BookCount).DefaultIfEmpty().Min();
         _priced = _rows.Count(r => r.HasPrices);

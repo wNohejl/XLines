@@ -203,9 +203,9 @@ else
         => $"Fair {FormatPrice(fair.PriceAmerican)} ({Checks.Basis(fair)}, no-vig)";
 
     /// <summary>
-    /// How many books the tooltip names: the tables' own <c>BookRanking.Top</c>. A tooltip is
-    /// read at a glance and cannot be scrolled or clicked into, so past five the rest are counted
-    /// and pointed at More bets, which lists them all.
+    /// How many books the tooltip names at most: the cell's own and the main sportsbooks
+    /// (<c>BookRanking.Top</c>). A tooltip is read at a glance and cannot be scrolled or clicked
+    /// into, so every other book is counted and pointed at More bets, which lists them all.
     /// </summary>
     public const int TipBooks = XLines.Web.Components.Snippets.BookRanking.Top;
 
@@ -243,25 +243,21 @@ else
     }
 
     /// <summary>
-    /// Every book on this side, best first: the cell's own book — the one holding the price —
-    /// then the rest by value against fair, highest first (a book without one after those with),
-    /// the name last. Not the two-sided tables' order (<c>BookRanking</c>: best on either side,
-    /// then lowest hold): that put +170 above +172 here, and with five rows and a count for the
-    /// rest, the reader has to be able to trust that nothing left out beats what is shown. Value
-    /// rather than the bare price, because on a spread or a total books quote different numbers.
+    /// The books the tooltip names, as every list of books leads (ADR 0033, addendum 2026-11-27):
+    /// the cell's own book first — it holds the price the cell shows, so nothing left out beats
+    /// it — then the main sportsbooks priced on this side, in their fixed order
+    /// (<see cref="BookNames.Main"/>), and nothing else; at most <see cref="TipBooks"/> rows. The
+    /// rest are counted in the footnote and listed in More bets.
     /// </summary>
-    private IReadOnlyList<BookPrice> Ranked
+    private IReadOnlyList<BookPrice> Shown
         => Offer is null ? []
             : Offer.Rungs
+                .Where(r => string.Equals(r.Book, Offer.Book, StringComparison.OrdinalIgnoreCase) || BookNames.IsMain(r.Book))
+                .DistinctBy(r => r.Book, StringComparer.OrdinalIgnoreCase)
                 .OrderBy(r => string.Equals(r.Book, Offer.Book, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-                .ThenBy(r => r.Ev is null ? 1 : 0)
-                .ThenByDescending(r => r.Ev ?? 0)
-                .ThenByDescending(r => r.PriceAmerican)
-                .ThenBy(r => BookNames.Display(r.Book), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(r => BookNames.MainRank(r.Book) ?? int.MaxValue)
+                .Take(TipBooks)
                 .ToList();
-
-    /// <summary>The books the tooltip names: the first <see cref="TipBooks"/> of <see cref="Ranked"/>.</summary>
-    private IReadOnlyList<BookPrice> Shown => Ranked.Take(TipBooks).ToList();
 
     private int Unshown => Offer is null ? 0 : Math.Max(0, Offer.Rungs.Count - Shown.Count);
 

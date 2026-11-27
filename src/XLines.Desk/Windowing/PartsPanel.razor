@@ -354,6 +354,32 @@
 
 </PanelSection>
 
+<PanelSection Title="Chip">
+<p class="empty">
+    A small capsule key beside what it acts on. Under a list it folds the rest and says how many
+    ("More · 3 items", then "Fewer"), reporting expanded and the region it controls; on its own
+    it is one filter, reporting pressed. Pressed is a deeper fill and a heavier word, never a hue.
+</p>
+
+<ul id="parts-chip-list" class="empty">
+    <li>First item</li>
+    <li>Second item</li>
+    @if (_chipOpen)
+    {
+        <li>Third item</li>
+        <li>Fourth item</li>
+        <li>Fifth item</li>
+    }
+</ul>
+
+<DeskRow Gap="DeskSpace.Space2" Align="DeskAlign.Center">
+    <DeskChip Controls="parts-chip-list" @bind-Pressed="_chipOpen">@(_chipOpen ? "Fewer" : "More · 3 items")</DeskChip>
+    <DeskChip @bind-Pressed="_chipFilter">Only flagged</DeskChip>
+    <DeskChip Disabled="true">Disabled</DeskChip>
+</DeskRow>
+
+</PanelSection>
+
 <PanelSection Title="Stepper">
 <p class="empty">
     One capsule that nudges a value by a step, always beside the field that shows it: the field
@@ -1531,6 +1557,8 @@
     private bool _onlyOverdue = true;
     private bool _includeArchived;
     private bool _showHidden = true;
+    private bool _chipOpen;
+    private bool _chipFilter;
     private bool _notify;
     private int _copies = 3;
     private double _share = 45;

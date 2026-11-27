@@ -420,9 +420,9 @@ public class PriceCellTests : DeskTestContext
     // ---- The structured tooltip -----------------------------------------------------------
     //
     // Ten books written as one string ran as a single line ~1100px wide across the window. The
-    // tooltip is a title, a caption and a table now: one book a row, by name, five at most, best
-    // first (the cell's own book, then by value against fair, so nothing left out beats a row
-    // that shows), and a last line saying where the rest are.
+    // tooltip is a title, a caption and a table now: one book a row, by name, five at most: the
+    // cell's own book (it holds the price shown), then the main sportsbooks in their fixed order,
+    // and a last line counting the rest and saying where they are.
 
     private static BookPrice Scored(string book, int american, double implied, double ev, double? hold = null)
         => Rung(book, american, implied) with { Ev = ev, Hold = hold };
@@ -459,15 +459,16 @@ public class PriceCellTests : DeskTestContext
     }
 
     [Fact]
-    public void The_books_are_rows_by_name_best_first_and_five_at_most()
+    public void The_books_are_rows_by_name_the_cells_own_then_the_main_sportsbooks()
     {
         var tip = Closing().FindComponent<DeskTooltip>().Instance;
 
-        // The cell's own book, then by value: +176, +175, +174 show; +173 and below are counted.
-        Assert.Equal(["BetRivers", "Pinnacle", "FanDuel", "Bovada", "DraftKings"], tip.Rows!.Select(r => r.Label));
+        // The cell's own book, then the main sportsbooks priced here in their fixed order (Bally Bet and
+        // Caesars have no price); the six others, Pinnacle among them, are counted.
+        Assert.Equal(["BetRivers", "DraftKings", "FanDuel", "BetMGM"], tip.Rows!.Select(r => r.Label));
         Assert.Equal("+185", tip.Rows![0].Value);
         Assert.Equal("−1.2% EV", tip.Rows![0].Qualifier);
-        Assert.Equal("+5 more in More bets", tip.Footnote);
+        Assert.Equal("+6 more in More bets", tip.Footnote);
     }
 
     [Fact]
@@ -475,7 +476,7 @@ public class PriceCellTests : DeskTestContext
     {
         var tip = Closing(book: "lowvig", american: 170).FindComponent<DeskTooltip>().Instance;
 
-        Assert.Equal(5, tip.Rows!.Count);
+        Assert.Equal(["LowVig.ag", "DraftKings", "FanDuel", "BetMGM"], tip.Rows!.Select(r => r.Label));
         Assert.Equal("LowVig.ag", tip.Rows![0].Label);
         Assert.True(tip.Rows![0].Emphasis);
         Assert.Single(tip.Rows!, r => r.Emphasis);
@@ -489,7 +490,7 @@ public class PriceCellTests : DeskTestContext
 
         Assert.Equal("Closing price", lines[0]);
         Assert.Contains("BetRivers (best) +185, −1.2% EV", lines);
-        Assert.Equal("+5 more in More bets", lines[^1]);
+        Assert.Equal("+6 more in More bets", lines[^1]);
         Assert.DoesNotContain("BR ", text);
     }
 
@@ -504,7 +505,7 @@ public class PriceCellTests : DeskTestContext
 
         Assert.StartsWith("Best price\n", title);
         Assert.Contains("\nBetRivers (best) +185, −1.2% EV\n", title);
-        Assert.EndsWith("+5 more in More bets\nClick to log this price.", title);
+        Assert.EndsWith("+6 more in More bets\nClick to log this price.", title);
     }
 
     /// <summary>

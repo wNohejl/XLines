@@ -1,3 +1,4 @@
+@using XLines.Web.Components.Snippets
 @using XLines.Data
 @using XLines.Reliability
 @using XLines.Ingestion.Services
@@ -475,10 +476,11 @@ else
        on one line, so the list wraps between books, never inside one. *@
     <TemplateColumn T="OddsProviderState" Title="Books" Sortable="false" HeaderClass="col--wide" CellClass="col--wide">
         <CellTemplate>
+            @{ var books = BookNames.MainFirst(context.Item.Books); }
             <span class="dim opsbooks">
-                @foreach (var (book, i) in context.Item.Books.Select((b, i) => (b, i)))
+                @foreach (var (book, i) in books.Select((b, i) => (b, i)))
                 {
-                    <span class="opsbooks__name">@BookNames.Display(book)@(i < context.Item.Books.Count - 1 ? "," : "")</span>
+                    <span class="opsbooks__name">@BookNames.Display(book)@(i < books.Count - 1 ? "," : "")</span>
                 }
             </span>
         </CellTemplate>
@@ -489,6 +491,15 @@ else
         <CellTemplate><span class="trunc dim" title="@context.Item.Reason">@context.Item.Reason</span></CellTemplate>
     </PropertyColumn>
 </DeskGrid>
+    @* The direct count of the main sportsbooks the feeds can price now (ADR 0033, addendum
+       2026-11-27), from configuration and feed state: each of the five with its state, and the two
+       wanted books that are not among them. A row of the card, under the table. *@
+    @{ var mainSources = MainSource.Of(_feeds); }
+    <div class="wgroup__row opsmain" role="group" aria-label="Main sportsbooks">
+        <p class="opsmain__count"><strong>@MainSource.CountText(mainSources)</strong></p>
+        <p class="opsmain__books dim">@string.Join(", ", mainSources.Select(s => s.Text)).</p>
+        <p class="opsmain__note dim">@MainSource.NotAmongText</p>
+    </div>
     </div>
     @if (!ShowsScanning)
     {
