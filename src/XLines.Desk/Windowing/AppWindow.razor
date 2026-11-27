@@ -86,7 +86,7 @@
                         disabled="@(!Window.CanPageBack)"
                         @onclick="PageBack" @onclick:stopPropagation="true"
                         @ondblclick:stopPropagation="true">
-                    <Glyph Icon="@Icons.Material.Filled.ChevronLeft" />
+                    <Glyph Icon="@DeskIcons.ChevronLeft" />
                 </button>
                 <button class="win__nav-btn" type="button" data-window-control
                         title="@ForwardTitle"
@@ -95,7 +95,7 @@
                         disabled="@(!Window.CanPageForward)"
                         @onclick="PageForward" @onclick:stopPropagation="true"
                         @ondblclick:stopPropagation="true">
-                    <Glyph Icon="@Icons.Material.Filled.ChevronRight" />
+                    <Glyph Icon="@DeskIcons.ChevronRight" />
                 </button>
             </div>
 
@@ -110,7 +110,7 @@
                     aria-keyshortcuts="Alt+R"
                     @onclick="Refresh" @onclick:stopPropagation="true"
                     @ondblclick:stopPropagation="true">
-                <Glyph Icon="@Icons.Material.Filled.Refresh" />
+                <Glyph Icon="@DeskIcons.Refresh" />
             </button>
         }
 
@@ -183,7 +183,7 @@
                 <button class="win__ctl" type="button" data-window-control
                         title="Minimise" aria-label="Minimise @Window.Title"
                         @onclick="Minimise" @onclick:stopPropagation="true">
-                    <Glyph Icon="@Icons.Material.Filled.Remove" />
+                    <Glyph Icon="@DeskIcons.Remove" />
                 </button>
                 <button class="win__ctl" type="button" data-window-control
                         title="@(Window.Maximised ? "Restore the row" : "Take the whole row")"
@@ -191,8 +191,8 @@
                         @onclick="Maximise" @onclick:stopPropagation="true"
                         @ondblclick:stopPropagation="true">
                     <Glyph Icon="@(Window.Maximised
-                                   ? Icons.Material.Filled.FilterNone
-                                   : Icons.Material.Filled.CropSquare)" />
+                                   ? DeskIcons.FilterNone
+                                   : DeskIcons.CropSquare)" />
                 </button>
                 @* In a group, Close closes the window showing, as a plain window's does; the next
                    most recent comes forward. Minimise and Maximise act on the column. *@
@@ -200,7 +200,7 @@
                         title="Close (Alt+W)" aria-label="Close @Window.Title"
                         aria-keyshortcuts="Alt+W"
                         @onclick="Close" @onclick:stopPropagation="true">
-                    <Glyph Icon="@Icons.Material.Filled.Close" />
+                    <Glyph Icon="@DeskIcons.Close" />
                 </button>
             </div>
         }
@@ -241,7 +241,7 @@
                 <EmptyState Kind="EmptyStateKind.Error">
                     <ChildContent>@Window.Title stopped. Nothing you typed elsewhere is lost.</ChildContent>
                     <Action>
-                        <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.Refresh"
+                        <DeskButton Size="DeskKeySize.Small" Icon="@DeskIcons.Refresh"
                                     OnClick="Recover">Try again</DeskButton>
                     </Action>
                 </EmptyState>

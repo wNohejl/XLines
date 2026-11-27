@@ -44,7 +44,7 @@
             {
                 <button class="launcher__item" type="button" role="menuitem"
                         @onclick="() => Apply(workspace)">
-                    <Glyph Icon="@Icons.Material.Filled.Dashboard" />
+                    <Glyph Icon="@DeskIcons.Dashboard" />
                     <span>
                         @workspace.Name
                         <span class="launcher__desc">@workspace.Description</span>
@@ -59,7 +59,7 @@
                 {
                     <button class="launcher__item" type="button" role="menuitem"
                             @onclick="() => Apply(workspace)">
-                        <Glyph Icon="@Icons.Material.Filled.Bookmark" />
+                        <Glyph Icon="@DeskIcons.Bookmark" />
                         <span>
                             @workspace.Name
                             <span class="launcher__desc">@workspace.Description</span>
@@ -72,13 +72,13 @@
             <div class="launcher__group">Desk</div>
             <button class="launcher__item" type="button" role="menuitem"
                     aria-keyshortcuts="Control+Comma Meta+Comma" @onclick="OpenSettings">
-                <Glyph Icon="@Icons.Material.Filled.Tune" />
+                <Glyph Icon="@DeskIcons.Tune" />
                 <span>Settings…<span class="launcher__desc">Ctrl+,</span></span>
             </button>
 
             <div class="launcher__group">Clear</div>
             <button class="launcher__item" type="button" role="menuitem" @onclick="CloseAll">
-                <Glyph Icon="@Icons.Material.Filled.ClearAll" />
+                <Glyph Icon="@DeskIcons.ClearAll" />
                 <span>Close all<span class="launcher__desc">Empty the desk.</span></span>
             </button>
         </div>
@@ -108,14 +108,14 @@
         <button class="rail__btn" type="button" title="Go to anything (Ctrl+K)"
                 aria-label="Go to anything" aria-keyshortcuts="Control+K Meta+K"
                 @onclick="Manager.RequestPalette">
-            <Glyph Icon="@Icons.Material.Filled.Search" />
+            <Glyph Icon="@DeskIcons.Search" />
         </button>
 
         <button class="rail__btn" type="button" title="Reset column widths"
                 aria-label="Reset column widths"
                 disabled="@(Manager.OpenCount == 0)"
                 @onclick="Manager.ResetWidths">
-            <Glyph Icon="@Icons.Material.Filled.ViewColumn" />
+            <Glyph Icon="@DeskIcons.ViewColumn" />
         </button>
 
         @* A window closed by its own key, or an open refused at the ceiling, is said as a toast

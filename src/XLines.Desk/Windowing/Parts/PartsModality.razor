@@ -14,18 +14,18 @@
 
 <DeskStack Gap="DeskSpace.Space3">
 <DeskRow Gap="DeskSpace.Space2">
-    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@Icons.Material.Filled.OpenInNew"
+    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@DeskIcons.OpenInNew"
                 OnClick="@(() => _dialogOpen = true)">
         Floating dialog
     </DeskButton>
 
-    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@Icons.Material.Filled.VerticalAlignBottom"
+    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@DeskIcons.VerticalAlignBottom"
                 OnClick="OpenSheetAsync">
         Modal sheet
     </DeskButton>
 
     <DeskButton Emphasis="DeskEmphasis.Tinted" Role="DeskRole.Destructive"
-                Icon="@Icons.Material.Filled.DeleteOutline"
+                Icon="@DeskIcons.DeleteOutline"
                 OnClick="AskAsync">
         Destructive alert
     </DeskButton>

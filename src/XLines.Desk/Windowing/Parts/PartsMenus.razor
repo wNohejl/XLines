@@ -77,7 +77,7 @@
 </p>
 
 <DeskRow Gap="DeskSpace.Space2">
-    <DeskJobMenu Label="Refresh data" Icon="@Icons.Material.Filled.CloudDownload"
+    <DeskJobMenu Label="Refresh data" Icon="@DeskIcons.CloudDownload"
                  Jobs="_demoJobs" Align="DeskPopoverAlign.Start" />
 </DeskRow>
 </PanelSection>
@@ -97,7 +97,7 @@
                     aria-haspopup="menu" aria-expanded="@(_popoverOpen ? "true" : "false")"
                     data-popover-return="true">
             Sort: @_sort
-            <Glyph Icon="@Icons.Material.Filled.ExpandMore" />
+            <Glyph Icon="@DeskIcons.ExpandMore" />
         </DeskButton>
     </Anchor>
     <ChildContent>
@@ -189,7 +189,7 @@
     </InlineConfirm>
 
     <InlineConfirm ConfirmLabel="Delete" Destructive="true"
-                   ConfirmIcon="@Icons.Material.Filled.DeleteOutline"
+                   ConfirmIcon="@DeskIcons.DeleteOutline"
                    OnConfirm="@(() => _confirmOutcome = "Deleted")"
                    OnCancel="@(() => _confirmOutcome = "Kept")">
         Delete this draft? It cannot be brought back.

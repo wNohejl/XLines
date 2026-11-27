@@ -25,7 +25,7 @@
                         }
                         <span class="desk-empty__windows">Opens @offered.Windows</span>
                     </span>
-                    <span class="desk-empty__chevron" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.ChevronRight" /></span>
+                    <span class="desk-empty__chevron" aria-hidden="true"><Glyph Icon="@DeskIcons.ChevronRight" /></span>
                 </button>
             </li>
         }
@@ -41,7 +41,7 @@
     [Parameter, EditorRequired] public IReadOnlyList<OfferedWorkspace> Offered { get; set; } = [];
 
     /// <summary>The glyph for a workspace that names no icon of its own.</summary>
-    [Parameter] public string Fallback { get; set; } = Icons.Material.Filled.Dashboard;
+    [Parameter] public string Fallback { get; set; } = DeskIcons.Dashboard;
 
     [Parameter] public EventCallback<Workspace> OnChoose { get; set; }
 }

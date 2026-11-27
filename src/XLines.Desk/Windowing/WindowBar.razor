@@ -91,7 +91,7 @@
                         @onkeydown="e => OnGroupKey(e, name, firstSlot, firstSlot + group.Count - 1)"
                         @onclick="() => TogglePin(name)">
                     <span class="bar__group-name">@name</span>
-                    <Glyph Icon="@Icons.Material.Filled.ExpandMore" />
+                    <Glyph Icon="@DeskIcons.ExpandMore" />
 
                     @if (openInGroup.Count > 0)
                     {
@@ -130,7 +130,7 @@
                                    closes with Delete on the row, a middle click closes too. *@
                                 <span class="bar__close" title="Close @item.Title" aria-hidden="true"
                                       @onclick="() => CloseAsync(open)" @onclick:stopPropagation="true">
-                                    <Glyph Icon="@Icons.Material.Filled.Close" />
+                                    <Glyph Icon="@DeskIcons.Close" />
                                 </span>
                             }
                         </button>

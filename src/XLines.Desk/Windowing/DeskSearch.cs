@@ -1,4 +1,3 @@
-using MudBlazor;
 
 namespace XLines.Desk.Windowing;
 
@@ -8,7 +7,7 @@ namespace XLines.Desk.Windowing;
 /// <param name="Group">The heading it is listed under — "Customers", "Windows".</param>
 /// <param name="Title">What it is called.</param>
 /// <param name="Detail">A line that tells two similar results apart: a date, a region, an account.</param>
-/// <param name="Icon">A MudBlazor icon string.</param>
+/// <param name="Icon">A <see cref="DeskIcons"/> glyph.</param>
 /// <param name="Open">What choosing it does — usually opens a window on the desk.</param>
 public sealed record DeskSearchResult(string Group, string Title, string? Detail, string Icon, Action Open);
 
@@ -40,11 +39,11 @@ public sealed class DeskCommands(WindowManager manager) : IDeskSearch
     {
         DeskSearchResult[] all =
         [
-            new(Group, "Move window left", "Ctrl+Alt+←", Icons.Material.Filled.West,
+            new(Group, "Move window left", "Ctrl+Alt+←", DeskIcons.West,
                 () => Desk.MoveFocused(manager, -1)),
-            new(Group, "Move window right", "Ctrl+Alt+→", Icons.Material.Filled.East,
+            new(Group, "Move window right", "Ctrl+Alt+→", DeskIcons.East,
                 () => Desk.MoveFocused(manager, +1)),
-            new(Group, "Settings", "Ctrl+,", Icons.Material.Filled.Tune,
+            new(Group, "Settings", "Ctrl+,", DeskIcons.Tune,
                 () => Desk.OpenSettings(manager))
         ];
 

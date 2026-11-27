@@ -61,7 +61,7 @@
                             {
                                 <section class="desk-empty__featured" aria-labelledby="desk-empty-featured">
                                     <span class="desk-empty__icon desk-empty__icon--featured" aria-hidden="true">
-                                        <Glyph Icon="@(featured.Workspace.Icon ?? Icons.Material.Filled.Dashboard)" />
+                                        <Glyph Icon="@(featured.Workspace.Icon ?? DeskIcons.Dashboard)" />
                                     </span>
                                     <div class="desk-empty__body">
                                         <h3 class="desk-empty__name" id="desk-empty-featured">@featured.Workspace.Name</h3>
@@ -81,26 +81,26 @@
                             @if (workspaces.Count > 1)
                             {
                                 <WorkspaceList Heading="More workspaces" Offered="@workspaces.Skip(1).ToList()"
-                                               Fallback="@Icons.Material.Filled.Dashboard" OnChoose="Apply" />
+                                               Fallback="@DeskIcons.Dashboard" OnChoose="Apply" />
                             }
 
                             @if (saved.Count > 0)
                             {
                                 <WorkspaceList Heading="Saved on this desk" Offered="saved"
-                                               Fallback="@Icons.Material.Filled.Bookmark" OnChoose="Apply" />
+                                               Fallback="@DeskIcons.Bookmark" OnChoose="Apply" />
                             }
 
                             <p class="desk-empty__single">
                                 @if (featured is null)
                                 {
-                                    <DeskButton Emphasis="DeskEmphasis.Filled" Icon="@Icons.Material.Filled.AddBox" OnClick="OpenPrimary">
+                                    <DeskButton Emphasis="DeskEmphasis.Filled" Icon="@DeskIcons.AddBox" OnClick="OpenPrimary">
                                         Open @PrimaryTitle
                                     </DeskButton>
                                 }
                                 else
                                 {
                                     <span>Or open a single window:</span>
-                                    <DeskButton Emphasis="DeskEmphasis.Plain" Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.AddBox" OnClick="OpenPrimary">
+                                    <DeskButton Emphasis="DeskEmphasis.Plain" Size="DeskKeySize.Small" Icon="@DeskIcons.AddBox" OnClick="OpenPrimary">
                                         Open @PrimaryTitle
                                     </DeskButton>
                                 }

@@ -17,7 +17,7 @@
         <div class="palette__panel" role="dialog" aria-modal="true" aria-label="Go to anything"
              @onclick:stopPropagation="true">
             <div class="palette__field">
-                <Glyph Icon="@Icons.Material.Filled.Search" />
+                <Glyph Icon="@DeskIcons.Search" />
                 <input @ref="_input" class="palette__input" type="text" autocomplete="off" spellcheck="false"
                        placeholder="@Brand.SearchPlaceholder"
                        aria-label="Search the desk" aria-controls="palette-results"
@@ -202,7 +202,7 @@
         var workspaces = Manager.Catalog.Workspaces.Concat(Manager.UserWorkspaces)
             .Where(w => Matches(w.Name))
             .Select(w => new DeskSearchResult("Workspaces", w.Name, w.Description,
-                Icons.Material.Filled.Dashboard, () => Manager.ApplyWorkspace(w)));
+                DeskIcons.Dashboard, () => Manager.ApplyWorkspace(w)));
 
         return windows.Concat(workspaces).ToList();
     }

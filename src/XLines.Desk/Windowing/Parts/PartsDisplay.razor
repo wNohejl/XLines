@@ -36,7 +36,7 @@
 <DeskStack Gap="DeskSpace.Space2">
 <DeskRow Gap="DeskSpace.Space6" Align="DeskAlign.Center">
     <DeskLink Destination="details" OnClick="@(() => _linkOpened = "North region")">North region</DeskLink>
-    <DeskLink Destination="history" Icon="@Icons.Material.Filled.History"
+    <DeskLink Destination="history" Icon="@DeskIcons.History"
               OnClick="@(() => _linkOpened = "Ames")">Ames</DeskLink>
     <Tag State="DeskState.Positive" Live="true">Live</Tag>
     <Tag State="DeskState.Info">Queued</Tag>
@@ -157,9 +157,9 @@
 
 <DeskGrid T="PartRow" Items="@(_gridLoading ? Array.Empty<PartRow>() : _rows)" Loading="@_gridLoading"
           LoadingLabel="Fetching rows" SkeletonRows="4" Sortable="false">
-    <PropertyColumn T="PartRow" TProperty="string" Property="x => x.Source" Title="Source" />
-    <PropertyColumn T="PartRow" TProperty="string" Property="x => x.Stage" Title="Stage" />
-    <PropertyColumn T="PartRow" TProperty="string" Property="x => x.Amount" Title="Amount" />
+    <DeskColumn T="PartRow" TProperty="string" Property="x => x.Source" Title="Source" />
+    <DeskColumn T="PartRow" TProperty="string" Property="x => x.Stage" Title="Stage" />
+    <DeskColumn T="PartRow" TProperty="string" Property="x => x.Amount" Title="Amount" />
 </DeskGrid>
 </DeskStack>
 
@@ -183,7 +183,7 @@
     the same voice — never a card around cards.
 </p>
 
-<SnippetShell Title="Last five" Icon="@Icons.Material.Filled.History" Note="5 of 12"
+<SnippetShell Title="Last five" Icon="@DeskIcons.History" Note="5 of 12"
               OpenLabel="Full history" OnOpen="@(() => Task.CompletedTask)">
     <div class="meta">Draft · Review · Review · Final · Final</div>
 </SnippetShell>
@@ -210,7 +210,7 @@
         </ChildContent>
         <Action>
             <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                        Icon="@Icons.Material.Filled.Add">Log the first entry</DeskButton>
+                        Icon="@DeskIcons.Add">Log the first entry</DeskButton>
         </Action>
     </EmptyState>
 
@@ -220,7 +220,7 @@
         </ChildContent>
         <Action>
             <DeskButton Size="DeskKeySize.Small"
-                        Icon="@Icons.Material.Filled.FilterAltOff">Clear the filter</DeskButton>
+                        Icon="@DeskIcons.FilterAltOff">Clear the filter</DeskButton>
         </Action>
     </EmptyState>
 
@@ -230,7 +230,7 @@
             "nothing here yet". Hue plus shape, never hue on its own.
         </ChildContent>
         <Action>
-            <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.Refresh">Retry</DeskButton>
+            <DeskButton Size="DeskKeySize.Small" Icon="@DeskIcons.Refresh">Retry</DeskButton>
         </Action>
     </EmptyState>
 </DeskStack>
@@ -286,14 +286,14 @@
     [
         new()
         {
-            Key = "history", Label = "History", Icon = Icons.Material.Filled.History,
+            Key = "history", Label = "History", Icon = DeskIcons.History,
             Snippet = HistorySnippet, OpenLabel = "Full history",
             OpenWindow = EventCallback.Factory.Create(this, () => Task.CompletedTask)
         },
-        new() { Key = "notes", Label = "Notes", Icon = Icons.Material.Filled.Notes, Snippet = NotesSnippet },
+        new() { Key = "notes", Label = "Notes", Icon = DeskIcons.Notes, Snippet = NotesSnippet },
         new()
         {
-            Key = "open", Label = "Open item", Icon = Icons.Material.Filled.OpenInNew,
+            Key = "open", Label = "Open item", Icon = DeskIcons.OpenInNew,
             Emphasis = DeskEmphasis.Tinted,
             OpenWindow = EventCallback.Factory.Create(this, () => Toasts.Info("A command opens its window directly."))
         }
