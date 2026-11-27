@@ -15,9 +15,12 @@ public sealed record DeskNative
     /// <summary>Step 1: <c>DeskButton</c> is a <c>&lt;button&gt;</c>, not a <c>MudButton</c>.</summary>
     public bool Button { get; init; }
 
+    /// <summary>Step 2: <c>DeskTooltip</c> is a popover element placed by CSS, not a <c>MudTooltip</c>.</summary>
+    public bool Tooltip { get; init; }
+
     /// <summary>Every primitive as it was: on MudBlazor.</summary>
     public static DeskNative Off { get; } = new();
 
     /// <summary>Every step that has a native path, on.</summary>
-    public static DeskNative All { get; } = new() { Button = true };
+    public static DeskNative All { get; } = new() { Button = true, Tooltip = true };
 }

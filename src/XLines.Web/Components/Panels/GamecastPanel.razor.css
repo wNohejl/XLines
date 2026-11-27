@@ -25,7 +25,7 @@
     white-space: nowrap;
 }
 
-.gc__situation + .mud-tooltip-root > .gc__last::before {
+.gc__situation + :is(.mud-tooltip-root, .desk-tipped) > .gc__last::before {
     content: "·";
     margin-right: var(--space-2);
 }
