@@ -3992,6 +3992,20 @@ body.dialog-dragging { user-select: none; }
     .desk-btn:active:not(:disabled), .btn:active:not(:disabled) { transform: none; }
 }
 
+/* The key without MudBlazor (ADR 0034, step 1). Everything above already draws it. These four
+   are what a bare <button> was taking from MudBlazor's own reset, said here so the key does not
+   change on the day that stylesheet is no longer loaded. */
+.desk-btn--native {
+    appearance: none;
+    margin: 0;
+    user-select: none;
+    vertical-align: middle;
+}
+
+/* MudBlazor forced a disabled button's ink to the tertiary label, whatever its emphasis. The key
+   keeps that: a disabled key gives up its accent as well as its weight. */
+.desk-btn--native:disabled { color: var(--text-tertiary); }
+
 /* ------------------------------------------------------------------- fields ---
    A field is a place to put something, so it is cut into the surface rather than
    raised off it: a darker well, a hairline, and no fill of its own. ADR 0008 had
