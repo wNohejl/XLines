@@ -36,7 +36,7 @@
             }
         </span>
         <span class="gameh2h__chevron" aria-hidden="true">
-            <Glyph Icon="@(_open ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
+            <Glyph Icon="@(_open ? DeskIcons.ExpandLess : DeskIcons.ExpandMore)" />
         </span>
     </button>
 </div>
@@ -61,7 +61,7 @@
                         @* Named for the window it opens, Tinted as every such key on the desk is;
                            no ellipsis, since nothing more is asked before it opens. *@
                         <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                                    Icon="@Icons.Material.Filled.CompareArrows"
+                                    Icon="@DeskIcons.CompareArrows"
                                     Title="Every meeting on record, in the Head to head window"
                                     OnClick="() => OnOpenWindow.InvokeAsync()">
                             Head to head

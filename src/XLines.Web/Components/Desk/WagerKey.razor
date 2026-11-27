@@ -55,7 +55,7 @@
     public const string PlaceLabel = "Place wager";
 
     /// <summary>The wager's glyph: every key that records a bet, and the doors that open one, wear it.</summary>
-    public static readonly string Glyph = Icons.Material.Filled.Bolt;
+    public static readonly string Glyph = DeskIcons.Bolt;
 
     [Parameter, EditorRequired] public WagerKind Kind { get; set; }
 
@@ -101,11 +101,11 @@
     };
 
     private string EffectiveIcon => Done
-        ? Icons.Material.Filled.Check
+        ? DeskIcons.Check
         : Kind switch
         {
-            WagerKind.AddToSlip => Icons.Material.Filled.PlaylistAdd,
-            WagerKind.AddLeg => Icons.Material.Filled.Link,
+            WagerKind.AddToSlip => DeskIcons.PlaylistAdd,
+            WagerKind.AddLeg => DeskIcons.Link,
             _ => Glyph
         };
 

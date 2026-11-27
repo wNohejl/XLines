@@ -138,7 +138,7 @@ else if (!Loaded && !Failed)
                             @* One key size in the card: Gather, Re-walk and Backport are the default
                                size, and a 24px key among them sat short of its row's neighbours. *@
                             <DeskButton Emphasis="DeskEmphasis.Tinted" Role="DeskRole.Destructive"
-                                        Icon="@Icons.Material.Filled.Stop" OnClick="Stop">
+                                        Icon="@DeskIcons.Stop" OnClick="Stop">
                                 Stop
                             </DeskButton>
                         }
@@ -162,7 +162,7 @@ else if (!Loaded && !Failed)
                     <KeyRow Class="opsrow" Justify="DeskJustify.Start" Reason="@GatherWaits">
                         <Primary Context="why">
                             <DeskButton Emphasis="DeskEmphasis.Filled"
-                                        Icon="@Icons.Material.Filled.History"
+                                        Icon="@DeskIcons.History"
                                         Disabled="@(GatherWaits is not null)"
                                         aria-describedby="@why"
                                         OnClick="Start">
@@ -179,7 +179,7 @@ else if (!Loaded && !Failed)
                     @if (_confirmRewalk)
                     {
                         <InlineConfirm Class="opsrow" ConfirmLabel="Re-walk"
-                                       ConfirmIcon="@Icons.Material.Filled.Restore"
+                                       ConfirmIcon="@DeskIcons.Restore"
                                        OnConfirm="RewalkAsync" OnCancel="() => _confirmRewalk = false">
                             Walk <span class="num">@HeldDays.ToString("N0")</span> held @(HeldDays == 1 ? "day" : "days") again?
                         </InlineConfirm>
@@ -192,7 +192,7 @@ else if (!Loaded && !Failed)
                         <KeyRow Class="opsrow" Justify="DeskJustify.Start"
                                 Reason="@(HeldDays == 0 ? "No day is held yet, so there is nothing to walk again." : null)">
                             <Primary Context="why">
-                                <DeskButton Icon="@Icons.Material.Filled.Restore"
+                                <DeskButton Icon="@DeskIcons.Restore"
                                             Disabled="@(HeldDays == 0)"
                                             aria-describedby="@why"
                                             OnClick="() => _confirmRewalk = true">
@@ -239,7 +239,7 @@ else if (!Loaded && !Failed)
                             }
                         </Secondary>
                         <Primary Context="why">
-                            <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@Icons.Material.Filled.Restore"
+                            <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@DeskIcons.Restore"
                                         Disabled="@(RangeWaits is not null)"
                                         aria-describedby="@why"
                                         OnClick="BackportRange">
@@ -323,20 +323,20 @@ else if (!Loaded && !Failed)
     @* Every column here is a figure or a short name, so each holds one line; the season takes
        the slack, keeping the figures together at the right. Finals and closes fold away first in
        a narrow window: games held and box scores are the two a backfill pass is planned from. *@
-    <PropertyColumn T="SeasonCoverage" TProperty="string" Property="s => s.SportKey" Title="League"
+    <DeskColumn T="SeasonCoverage" TProperty="string" Property="s => s.SportKey" Title="League"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate><span>@context.Item.SportKey.ToUpperInvariant()</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="SeasonCoverage" TProperty="int" Property="s => s.SeasonYear" Title="Season"
+    <DeskColumn T="SeasonCoverage" TProperty="int" Property="s => s.SeasonYear" Title="Season"
                     InitialDirection="SortDirection.Descending" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
         <CellTemplate>
             <span class="num">@context.Item.SeasonYear</span>
             <span class="dim">@context.Item.SeasonType.ToString().ToLowerInvariant()</span>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="SeasonCoverage" TProperty="int" Property="s => s.Held" Title="Games" Align="Align.Right"
+    <DeskColumn T="SeasonCoverage" TProperty="int" Property="s => s.Held" Title="Games" Align="Align.Right"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             <span class="num">@context.Item.Held.ToString("N0")</span>
@@ -353,9 +353,9 @@ else if (!Loaded && !Failed)
                 </DeskTooltip>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="SeasonCoverage" TProperty="int" Property="s => s.Final" Title="Final" Align="Align.Right"
+    <DeskColumn T="SeasonCoverage" TProperty="int" Property="s => s.Final" Title="Final" Align="Align.Right"
                     HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
         <CellTemplate>
             <span class="num">@context.Item.Final.ToString("N0")</span>
@@ -364,16 +364,16 @@ else if (!Loaded && !Failed)
                 <span class="dim num">@($" ({context.Item.Postponed:N0} postponed)")</span>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* Every final with its box score is the expected state, said quietly; a shortfall keeps its
        tag, so the season that needs a pass is the one that stands out. *@
-    <PropertyColumn T="SeasonCoverage" TProperty="int" Property="s => s.FinalsWithoutStats" Title="Box scores" Align="Align.Right"
+    <DeskColumn T="SeasonCoverage" TProperty="int" Property="s => s.FinalsWithoutStats" Title="Box scores" Align="Align.Right"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             @if (context.Item.FinalsWithoutStats == 0)
             {
-                <span class="ops-ok"><MudIcon Icon="@Icons.Material.Filled.Check" aria-hidden="true" /><span class="sr-only">All</span></span>
+                <span class="ops-ok"><MudIcon Icon="@DeskIcons.Check" aria-hidden="true" /><span class="sr-only">All</span></span>
             }
             else
             {
@@ -383,11 +383,11 @@ else if (!Loaded && !Failed)
                 </DeskTooltip>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* A book market's close and the stats provider's one-book reference are different things
        (ADR 0011), so the count says how many of each. *@
-    <PropertyColumn T="SeasonCoverage" TProperty="int" Property="s => s.WithClose" Title="Closes" Align="Align.Right"
+    <DeskColumn T="SeasonCoverage" TProperty="int" Property="s => s.WithClose" Title="Closes" Align="Align.Right"
                     HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
         <CellTemplate>
             <span class="num">@context.Item.WithClose.ToString("N0")</span>
@@ -395,7 +395,7 @@ else if (!Loaded && !Failed)
                 <span class="dim num" tabindex="0">@($" ({context.Item.WithMarketClose:N0} market)")</span>
             </DeskTooltip>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 </DeskGrid>
 </FormGroup>
 }
@@ -407,31 +407,31 @@ else if (!Loaded && !Failed)
 <FormGroup Title="Recent days" Class="hist-recent">
 <DeskGrid T="BackfillCheckpoint" Items="_recent" Loading="@(!Loaded)" LoadingLabel="Reading recent days"
           EmptyText="Nothing walked yet. Gather history above, and days land here as they complete.">
-    <PropertyColumn T="BackfillCheckpoint" TProperty="DateOnly" Property="c => c.Date" Title="Day"
+    <DeskColumn T="BackfillCheckpoint" TProperty="DateOnly" Property="c => c.Date" Title="Day"
                     InitialDirection="SortDirection.Descending" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate><span class="num">@LongDay(context.Item.Date)</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="BackfillCheckpoint" TProperty="string" Property="c => c.Sport!.Name" Title="Sport"
+    <DeskColumn T="BackfillCheckpoint" TProperty="string" Property="c => c.Sport!.Name" Title="Sport"
                     HeaderClass="ops-col--grow" CellClass="ops-col--grow">
         <CellTemplate><span class="dim">@(context.Item.Sport?.Name ?? "—")</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="BackfillCheckpoint" TProperty="int" Property="c => c.GamesFound"
+    <DeskColumn T="BackfillCheckpoint" TProperty="int" Property="c => c.GamesFound"
                     Title="Games" Align="Align.Right" Format="N0" HeaderClass="ops-col--fit" CellClass="ops-col--fit" />
 
-    <PropertyColumn T="BackfillCheckpoint" TProperty="int" Property="c => c.RowsIngested"
+    <DeskColumn T="BackfillCheckpoint" TProperty="int" Property="c => c.RowsIngested"
                     Title="Rows" Align="Align.Right" Format="N0" HeaderClass="ops-col--fit" CellClass="ops-col--fit" />
 
     @* Sorting by state is how you find the days that need a retry pass. Held is the expected
        state and is a check mark; Failed keeps its tag, and its error is the tag's tooltip, which
        keyboard focus raises as well as hover. *@
-    <PropertyColumn T="BackfillCheckpoint" TProperty="bool" Property="@(c => c.Error == null)" Title="State"
+    <DeskColumn T="BackfillCheckpoint" TProperty="bool" Property="@(c => c.Error == null)" Title="State"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             @if (context.Item.Error is null)
             {
-                <span class="ops-ok"><MudIcon Icon="@Icons.Material.Filled.Check" aria-hidden="true" /><span class="sr-only">Held</span></span>
+                <span class="ops-ok"><MudIcon Icon="@DeskIcons.Check" aria-hidden="true" /><span class="sr-only">Held</span></span>
             }
             else
             {
@@ -440,7 +440,7 @@ else if (!Loaded && !Failed)
                 </DeskTooltip>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 </DeskGrid>
 </FormGroup>
 }

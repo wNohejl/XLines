@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace XLines.Data.CrossReference;
+namespace XLines.Core.Analytics;
 
 /// <summary>One player's passing line from one game: what the quarterback reader needs of it.</summary>
 /// <param name="SeasonYear">The game's season (<c>Game.SeasonYear</c>), where the provider stamped one.</param>

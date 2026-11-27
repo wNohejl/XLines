@@ -1,7 +1,7 @@
 using XLines.Data.CrossReference;
 using XLines.Desk.Windowing;
 using XLines.Web.Windowing;
-using MudBlazor;
+using XLines.Desk;
 
 namespace XLines.Web.Services;
 
@@ -26,17 +26,17 @@ public sealed class AppDeskSearch(IServiceScopeFactory scopes, WindowManager man
         [
             .. teams.Select(t => new DeskSearchResult(
                 "Teams", t.Name, $"{t.Sport?.Key.ToUpperInvariant()} · {t.Abbrev}",
-                Icons.Material.Filled.Shield, () => manager.OpenTeam(t.Id, t.Name))),
+                DeskIcons.Shield, () => manager.OpenTeam(t.Id, t.Name))),
 
             .. games.Select(g => new DeskSearchResult(
                 "Games", XLines.Web.Windowing.WindowShortcuts.Describe(g),
                 $"{XLines.Web.Components.DisplayTime.Format(g.StartsAt, "ddd MMM d, HH:mm")} {XLines.Web.Components.DisplayTime.Label} · {g.Sport?.Key.ToUpperInvariant()} · {g.Status}",
-                Icons.Material.Filled.Event, () => manager.OpenGame(g))),
+                DeskIcons.Event, () => manager.OpenGame(g))),
 
             .. players.Select(p => new DeskSearchResult(
                 "Players", p.FullName,
                 string.Join(" · ", new[] { p.Position, p.Team?.Name, p.Sport?.Key.ToUpperInvariant() }.Where(x => !string.IsNullOrEmpty(x))),
-                Icons.Material.Filled.Person, () => manager.OpenPlayer(p.Id, p.FullName)))
+                DeskIcons.Person, () => manager.OpenPlayer(p.Id, p.FullName)))
         ];
     }
 }

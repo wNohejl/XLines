@@ -300,7 +300,7 @@ public class BoardMatchupCellTests
 /// </summary>
 public class BoardStarterTests
 {
-    private static XLines.Data.CrossReference.BoardRow Row(Action<XLines.Core.Entities.Game>? game = null,
+    private static XLines.Core.Analytics.BoardRow Row(Action<XLines.Core.Entities.Game>? game = null,
         string? awayQb = null, string? homeQb = null)
     {
         var row = Support.BoardRows.Row();
@@ -339,7 +339,7 @@ public class BoardStarterTests
     [Fact]
     public void A_quarterback_on_the_plain_basis_keeps_the_last_start_title()
     {
-        var row = Row(awayQb: "Dak Prescott") with { AwayQuarterbackBasis = XLines.Data.CrossReference.Starters.LastGameBasis };
+        var row = Row(awayQb: "Dak Prescott") with { AwayQuarterbackBasis = XLines.Core.Analytics.Starters.LastGameBasis };
 
         Assert.Equal(("QB", "Prescott", "Started at quarterback in the club's last game: Dak Prescott"),
             XLines.Web.Components.Panels.BoardPanel.Starter(row, home: false));
@@ -353,7 +353,7 @@ public class BoardStarterTests
         var row = Row(awayQb: "Carson Wentz", homeQb: "Josh Allen") with
         {
             AwayQuarterbackBasis = basis,
-            HomeQuarterbackBasis = XLines.Data.CrossReference.Starters.LastGameBasis
+            HomeQuarterbackBasis = XLines.Core.Analytics.Starters.LastGameBasis
         };
 
         Assert.Equal(("QB", "Wentz", basis), XLines.Web.Components.Panels.BoardPanel.Starter(row, home: false));

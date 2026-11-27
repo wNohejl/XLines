@@ -57,7 +57,7 @@
         @if (CanUseFetched)
         {
             <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Plain" Class="typed-inline__back wager-manual-key"
-                        Icon="@Icons.Material.Filled.Undo"
+                        Icon="@DeskIcons.Undo"
                         Title="Go back to the price the desk fetched"
                         OnClick="OnUseFetched">
                 @UseFetchedLabel
@@ -86,7 +86,7 @@ else
             @if (CanUseFetched)
             {
                 <DeskButton Size="DeskKeySize.Small" Class="wager-manual-key"
-                            Icon="@Icons.Material.Filled.Undo"
+                            Icon="@DeskIcons.Undo"
                             Title="Go back to the price the desk fetched"
                             OnClick="OnUseFetched">
                     @UseFetchedLabel

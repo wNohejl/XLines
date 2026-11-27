@@ -41,7 +41,7 @@
         @if (fold.Folds)
         {
             <DeskChip Class="bookmore__key" Disclosure="true" Controls="@Controls" Pressed="Expanded" PressedChanged="ToggleAsync"
-                      Icon="@(Expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">
+                      Icon="@(Expanded ? DeskIcons.ExpandLess : DeskIcons.ExpandMore)">
                 @BookRanking.KeyLabel(fold.More, Expanded)
                 @if (bestHidden)
                 {

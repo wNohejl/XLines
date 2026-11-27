@@ -77,7 +77,7 @@ else
     <DeskGrid T="Row" Items="_rows" Class="deskgrid--clickable"
               OnRowClick="@(e => Manager.OpenPlayer(e.Item.Player.Id, e.Item.Player.FullName))"
               EmptyText="No players match this filter.">
-        <PropertyColumn T="Row" TProperty="string" Property="r => r.Player.FullName" Title="Player"
+        <DeskColumn T="Row" TProperty="string" Property="r => r.Player.FullName" Title="Player"
                         InitialDirection="SortDirection.Ascending">
             <CellTemplate>
                 <DeskLink Destination="player"
@@ -85,20 +85,20 @@ else
                     @context.Item.Player.FullName
                 </DeskLink>
             </CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="Row" TProperty="string" Property="r => r.Player.Sport!.Name" Title="Sport" HeaderClass="col--wide" CellClass="col--wide">
+        <DeskColumn T="Row" TProperty="string" Property="r => r.Player.Sport!.Name" Title="Sport" HeaderClass="col--wide" CellClass="col--wide">
             <CellTemplate><Tag>@context.Item.Player.Sport?.Name</Tag></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
         @* ESPN's NFL box scores name no position, so the column read "—" on every NFL row and told
            the reader nothing. It shows only while a row on screen has a position — an NFL list has
            no Pos column — and a row without one leaves its cell empty rather than drawing a dash. *@
-        <PropertyColumn T="Row" TProperty="string" Property="r => r.Player.Position!" Title="Pos" Hidden="@(!_anyPosition)">
+        <DeskColumn T="Row" TProperty="string" Property="r => r.Player.Position!" Title="Pos" Hidden="@(!_anyPosition)">
             <CellTemplate><span class="dim">@context.Item.Player.Position</span></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="Row" TProperty="string" Property="r => r.Player.Team!.Name" Title="Team">
+        <DeskColumn T="Row" TProperty="string" Property="r => r.Player.Team!.Name" Title="Team">
             <CellTemplate>
                 @if (context.Item.Player.Team is { } team)
                 {
@@ -112,9 +112,9 @@ else
                     <span class="dim">—</span>
                 }
             </CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="Row" TProperty="int" Property="r => r.Games" Title="Games" Align="Align.Right" />
+        <DeskColumn T="Row" TProperty="int" Property="r => r.Games" Title="Games" Align="Align.Right" />
     </DeskGrid>
 
     @if (_capped)
@@ -132,7 +132,7 @@ else
     /// the operator's desk. A visitor only reads (ADR 0018), and the toolbar's actions slot is
     /// not drawn at all.
     /// </summary>
-    private RenderFragment SyncKey => @<DeskButton Emphasis="DeskEmphasis.Filled" Icon="@Icons.Material.Filled.Sync"
+    private RenderFragment SyncKey => @<DeskButton Emphasis="DeskEmphasis.Filled" Icon="@DeskIcons.Sync"
                                                   OnClick="SyncAsync" Busy="@_busy">Sync stats</DeskButton>;
 
     private const int Limit = 150;

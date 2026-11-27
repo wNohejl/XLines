@@ -73,7 +73,7 @@ else
     <KeyRow Class="opsact" Justify="DeskJustify.Start"
             Reason="Rolls today's figures up and runs the alert rules again.">
         <Primary Context="why">
-            <DeskButton Emphasis="DeskEmphasis.Filled" Icon="@Icons.Material.Filled.Refresh"
+            <DeskButton Emphasis="DeskEmphasis.Filled" Icon="@DeskIcons.Refresh"
                         OnClick="EvaluateAsync" Busy="@_busy" aria-describedby="@why">
                 Evaluate now
             </DeskButton>
@@ -250,7 +250,7 @@ else
             @if (_confirmAutomatic)
             {
                 <InlineConfirm Class="wgroup__row" ConfirmLabel="Scan automatically"
-                               ConfirmIcon="@Icons.Material.Filled.Schedule"
+                               ConfirmIcon="@DeskIcons.Schedule"
                                OnConfirm="() => SetPollingAsync(automatic: true)"
                                OnCancel="() => _confirmAutomatic = false">
                     Scan at this price until switched back, from this host and the worker alike?
@@ -283,38 +283,38 @@ else
 else
 {
 <DeskGrid T="Alert" Items="_alerts" EmptyText="No open alerts. Every source is inside its SLO.">
-    <PropertyColumn T="Alert" TProperty="AlertSeverity" Property="a => a.Severity" Title="Severity"
+    <DeskColumn T="Alert" TProperty="AlertSeverity" Property="a => a.Severity" Title="Severity"
                     InitialDirection="SortDirection.Descending" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             <Tag State="@SeverityState(context.Item.Severity)">@AlertWords.Severity(context.Item.Severity)</Tag>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* The rule's name in words; its key, which is what the runbook is filed under, in a tooltip
        that keyboard focus raises as well as hover — a title on text reached a pointer only.
        Folded away in a narrow window: the message beside it says what the rule found. *@
-    <PropertyColumn T="Alert" TProperty="string" Property="a => a.RuleKey" Title="Rule"
+    <DeskColumn T="Alert" TProperty="string" Property="a => a.RuleKey" Title="Rule"
                     HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
         <CellTemplate>
             <DeskTooltip Text="@($"Rule key: {context.Item.RuleKey}")">
                 <span class="dim" tabindex="0">@RuleName(context.Item.RuleKey)</span>
             </DeskTooltip>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="Alert" TProperty="string" Property="a => a.Message" Title="What happened"
+    <DeskColumn T="Alert" TProperty="string" Property="a => a.Message" Title="What happened"
                     HeaderClass="ops-col--grow" CellClass="ops-col--grow">
         <CellTemplate><span class="trunc" title="@context.Item.Message">@context.Item.Message</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="Alert" TProperty="DateTimeOffset" Property="a => a.TriggeredAt" Title="Age" Align="Align.Right"
+    <DeskColumn T="Alert" TProperty="DateTimeOffset" Property="a => a.TriggeredAt" Title="Age" Align="Align.Right"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             <span class="dim">@Age((DateTimeOffset.UtcNow - context.Item.TriggeredAt).TotalMinutes)</span>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <TemplateColumn T="Alert" Title="" Sortable="false" Align="Align.Right"
+    <DeskTemplateColumn T="Alert" Title="" Sortable="false" Align="Align.Right"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             @if (context.Item.IncidentId is null)
@@ -330,13 +330,13 @@ else
             else
             {
                 <DeskLink Destination="incident"
-                          Icon="@Icons.Material.Filled.ReportProblem"
+                          Icon="@DeskIcons.ReportProblem"
                           OnClick="() => Manager.OpenIncident(context.Item.IncidentId.Value)">
                     <span class="num">#@context.Item.IncidentId</span>
                 </DeskLink>
             }
         </CellTemplate>
-    </TemplateColumn>
+    </DeskTemplateColumn>
 </DeskGrid>
 }
     </ChildContent>
@@ -358,25 +358,25 @@ else
     <ChildContent>
 <DeskGrid T="SourceHealth" Items="_health" EmptyText="No sources registered. A source appears here once it is configured and has run.">
     @* The source name goes through to its runs — "why is this stale" is answered there. *@
-    <PropertyColumn T="SourceHealth" TProperty="string" Property="h => h.Source.Name" Title="Source"
+    <DeskColumn T="SourceHealth" TProperty="string" Property="h => h.Source.Name" Title="Source"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             <DeskLink Destination="runs"
-                      Icon="@Icons.Material.Filled.History"
+                      Icon="@DeskIcons.History"
                       OnClick="() => Manager.OpenRuns(context.Item.Source.Id, context.Item.Source.Name)">
                 @context.Item.Source.Name
             </DeskLink>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="SourceHealth" TProperty="SourceKind" Property="h => h.Source.Kind" Title="Kind"
+    <DeskColumn T="SourceHealth" TProperty="SourceKind" Property="h => h.Source.Kind" Title="Kind"
                     HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
         <CellTemplate><span class="dim">@context.Item.Source.Kind</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* Sorts on minutes, so "stalest first" is a click. A never-run source sorts as the worst
        rather than as zero, which is the two-kinds-of-zero rule from ADR 0003. *@
-    <PropertyColumn T="SourceHealth" TProperty="double"
+    <DeskColumn T="SourceHealth" TProperty="double"
                     Property="h => h.FreshnessMinutes ?? double.MaxValue"
                     Title="Freshness" Align="Align.Right" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
@@ -384,29 +384,29 @@ else
                 @(context.Item.FreshnessMinutes is { } m ? Age(m) : "never")
             </span>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="SourceHealth" TProperty="double" Property="h => h.SuccessRate"
+    <DeskColumn T="SourceHealth" TProperty="double" Property="h => h.SuccessRate"
                     Title="Success 7d" Align="Align.Right" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             <Note Inline State="@(IsRateLow(context.Item) ? DeskState.Warning : DeskState.Neutral)">@context.Item.SuccessRate.ToString("P0")</Note>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="SourceHealth" TProperty="int" Property="h => h.RowsToday"
+    <DeskColumn T="SourceHealth" TProperty="int" Property="h => h.RowsToday"
                     Title="Rows today" HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit" Align="Align.Right" Format="N0" />
 
-    <PropertyColumn T="SourceHealth" TProperty="double" Property="h => h.VolumeRatio ?? -1"
+    <DeskColumn T="SourceHealth" TProperty="double" Property="h => h.VolumeRatio ?? -1"
                     Title="Volume" HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit" Align="Align.Right">
         <CellTemplate>
             <span class="dim">@(context.Item.VolumeRatio is { } v ? v.ToString("P0") : "—")</span>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* Healthy is a check mark, as a successful run is: a column of the same word on every row
        hid the one row that was not. Stale, Degraded and Not run keep their tags. The column
        takes the slack, so the figures sit together beside the name they describe. *@
-    <TemplateColumn T="SourceHealth" Title="State" Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
+    <DeskTemplateColumn T="SourceHealth" Title="State" Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
         <CellTemplate>
             @if (context.Item.NeverRun)
             {
@@ -422,10 +422,10 @@ else
             }
             else
             {
-                <span class="ops-ok"><MudIcon Icon="@Icons.Material.Filled.Check" aria-hidden="true" /><span class="sr-only">Healthy</span></span>
+                <span class="ops-ok"><MudIcon Icon="@DeskIcons.Check" aria-hidden="true" /><span class="sr-only">Healthy</span></span>
             }
         </CellTemplate>
-    </TemplateColumn>
+    </DeskTemplateColumn>
 </DeskGrid>
     </ChildContent>
 </FormGroup>
@@ -453,28 +453,28 @@ else
 <DeskGrid T="OddsProviderState" Items="_feeds" EmptyText="@NoFeedText">
     @* Live is the state a feed is meant to be in, so it is a check mark; Off keeps its tag,
        because it is the one an operator is looking for. *@
-    <PropertyColumn T="OddsProviderState" TProperty="bool" Property="f => f.IsLive" Title="State"
+    <DeskColumn T="OddsProviderState" TProperty="bool" Property="f => f.IsLive" Title="State"
                     InitialDirection="SortDirection.Descending" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             @if (context.Item.IsLive)
             {
-                <span class="ops-ok"><MudIcon Icon="@Icons.Material.Filled.Check" aria-hidden="true" /><span class="sr-only">Live</span></span>
+                <span class="ops-ok"><MudIcon Icon="@DeskIcons.Check" aria-hidden="true" /><span class="sr-only">Live</span></span>
             }
             else
             {
                 <Tag>Off</Tag>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="OddsProviderState" TProperty="string" Property="f => f.Name" Title="Provider"
+    <DeskColumn T="OddsProviderState" TProperty="string" Property="f => f.Name" Title="Provider"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit" />
 
     @* The books keep a reading width of their own. Beside Notes, which takes the slack, an
        unsized column was given its narrowest — one book a line, a stack one word wide down a
        window with room to spare. .opsbooks sets a floor (scoped CSS); each book holds its name
        on one line, so the list wraps between books, never inside one. *@
-    <TemplateColumn T="OddsProviderState" Title="Books" Sortable="false" HeaderClass="col--wide" CellClass="col--wide">
+    <DeskTemplateColumn T="OddsProviderState" Title="Books" Sortable="false" HeaderClass="col--wide" CellClass="col--wide">
         <CellTemplate>
             @{ var books = BookNames.MainFirst(context.Item.Books); }
             <span class="dim opsbooks">
@@ -484,12 +484,12 @@ else
                 }
             </span>
         </CellTemplate>
-    </TemplateColumn>
+    </DeskTemplateColumn>
 
-    <PropertyColumn T="OddsProviderState" TProperty="string" Property="f => f.Reason" Title="Notes"
+    <DeskColumn T="OddsProviderState" TProperty="string" Property="f => f.Reason" Title="Notes"
                     HeaderClass="ops-col--grow" CellClass="ops-col--grow">
         <CellTemplate><span class="trunc dim" title="@context.Item.Reason">@context.Item.Reason</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 </DeskGrid>
     @* The direct count of the main sportsbooks the feeds can price now (ADR 0033, addendum
        2026-11-27), from configuration and feed state: each of the five with its state, and the two
@@ -797,7 +797,7 @@ else
            fault in, it runs on the press. *@
         @if (_drillAsk is { } ask)
         {
-            <InlineConfirm ConfirmLabel="Run the drill" ConfirmIcon="@Icons.Material.Filled.PlayArrow"
+            <InlineConfirm ConfirmLabel="Run the drill" ConfirmIcon="@DeskIcons.PlayArrow"
                            Busy="@_drillBusy"
                            OnConfirm="DrillAsync" OnCancel="() => _drillAsk = null">
                 @DrillQuestion(ask)
@@ -807,7 +807,7 @@ else
         {
             <KeyRow Justify="DeskJustify.Start">
                 <Primary>
-                    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@Icons.Material.Filled.PlayArrow"
+                    <DeskButton Emphasis="DeskEmphasis.Tinted" Icon="@DeskIcons.PlayArrow"
                                 OnClick="AskDrillAsync" Busy="@_drillBusy">
                         @(_injectable.Any(s => s.FailureMode is not null) ? "Run the drill" : "Run the drill…")
                     </DeskButton>

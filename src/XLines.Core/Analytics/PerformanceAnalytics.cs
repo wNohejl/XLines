@@ -31,12 +31,6 @@ public readonly record struct ClvResult(
     /// </summary>
     public bool SameNumber => PointsGained is null or 0m;
 
-    /// <summary>Probability implied by the price taken.</summary>
-    public double TakenProbability => OddsMath.ImpliedProbability(PriceTaken);
-
-    /// <summary>Probability implied by the closing price.</summary>
-    public double ClosingProbability => OddsMath.ImpliedProbability(ClosingPrice);
-
     /// <summary>
     /// Percentage edge over the close: how much more a unit stake returns at the taken
     /// price than at the close. Positive means the price moved in your favour. Only a

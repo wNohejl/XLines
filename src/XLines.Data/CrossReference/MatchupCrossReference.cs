@@ -1,3 +1,4 @@
+using XLines.Core.Analytics;
 using XLines.Core.Contracts;
 using XLines.Core.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -154,17 +155,26 @@ public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null, T
         var since = now - window;
 
         var played = db.Games
-            .Include(g => g.HomeTeam)
-            .Include(g => g.AwayTeam)
             .Where(g => (g.HomeTeamId == teamId || g.AwayTeamId == teamId) && g.StartsAt <= now);
 
         played = seasonYear is { } year
             ? played.Where(g => g.SeasonYear == year)
             : played.Where(g => g.StartsAt >= since);
 
+        // The scalars a recent-game row reads, not the game entity with its state-of-play jsonb.
         var games = await played
             .OrderByDescending(g => g.StartsAt)
-            .AsNoTracking()
+            .Select(g => new
+            {
+                g.Id,
+                g.StartsAt,
+                g.HomeTeamId,
+                HomeName = g.HomeTeam!.Name,
+                AwayName = g.AwayTeam!.Name,
+                g.HomeScore,
+                g.AwayScore,
+                g.Status
+            })
             .ToListAsync(ct);
 
         var recent = games.Select(g =>
@@ -174,7 +184,7 @@ public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null, T
             return new TeamRecentGame(
                 GameId: g.Id,
                 StartsAt: g.StartsAt,
-                Opponent: (isHome ? g.AwayTeam?.Name : g.HomeTeam?.Name) ?? "—",
+                Opponent: (isHome ? g.AwayName : g.HomeName) ?? "—",
                 Home: isHome,
                 ScoreFor: isHome ? g.HomeScore : g.AwayScore,
                 ScoreAgainst: isHome ? g.AwayScore : g.HomeScore,

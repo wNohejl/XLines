@@ -67,7 +67,7 @@
             {
                 <span class="leaders__value">@leader.Value</span>
                 <span class="leaders__name">
-                    <DeskLink Destination="player" Icon="@Icons.Material.Filled.Person" Tooltip="@($"Open {leader.Name}")"
+                    <DeskLink Destination="player" Icon="@DeskIcons.Person" Tooltip="@($"Open {leader.Name}")"
                               OnClick="() => OnPlayer.InvokeAsync((leader.PlayerId, leader.Name))">@leader.Name</DeskLink>
                 </span>
                 @if (leader.Line is { } line)

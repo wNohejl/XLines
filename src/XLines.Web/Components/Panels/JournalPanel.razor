@@ -74,10 +74,10 @@ else
     <SecondaryActions>
         @* Parlays are logged from the slip (spec §5.4), the tab beside this one. Build parlay
            fills it leg by leg, from the same wager window Place wager opens. *@
-        <DeskButton Icon="@Icons.Material.Filled.Gavel" OnClick="SettleAsync" Busy="@_busy">
+        <DeskButton Icon="@DeskIcons.Gavel" OnClick="SettleAsync" Busy="@_busy">
             Settle finished games
         </DeskButton>
-        <DeskButton Icon="@Icons.Material.Filled.Link"
+        <DeskButton Icon="@DeskIcons.Link"
                     Title="Find each leg's game and add it to the slip as a parlay leg"
                     OnClick="BuildParlay">
             Build parlay
@@ -299,7 +299,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
            newest first, as the service reads it: a bet placed days ahead on
            a later game sits above one placed tonight. The placement is the dim second line; the
            Placed within filter still cuts by it. *@
-        <TemplateColumn T="JournalEntry" Title="Closes" Sortable="true" SortBy="@(e => JournalService.GameStart(e))"
+        <DeskTemplateColumn T="JournalEntry" Title="Closes" Sortable="true" SortBy="@(e => JournalService.GameStart(e))"
                         InitialDirection="SortDirection.Descending" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>
                 @* An untracked bet has no game to start; its game start falls back to the placement,
@@ -316,12 +316,12 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     <div class="dim">placed @Starts(context.Item.PlacedAt)</div>
                 </div>
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
         @* The selection is the row's sentence and takes the width the figures leave; every other
            column is a value held on one line (xlines.css, "Columns in the operations and
            analytics windows"). *@
-        <PropertyColumn T="JournalEntry" TProperty="string" Property="e => e.Outcome" Title="Selection"
+        <DeskColumn T="JournalEntry" TProperty="string" Property="e => e.Outcome" Title="Selection"
                         HeaderClass="ops-col--grow" CellClass="ops-col--grow">
             <CellTemplate>
                 @Selection(context.Item)
@@ -330,19 +330,19 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     <div class="meta">@note</div>
                 }
             </CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
         @* Market and Book fold away under 820px with CLV: at the Journal's usual width the figures
            and the selection fill the window, and the selection already says the side. *@
-        <PropertyColumn T="JournalEntry" TProperty="string" Property="e => e.Market" Title="Market" HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
+        <DeskColumn T="JournalEntry" TProperty="string" Property="e => e.Market" Title="Market" HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
             <CellTemplate><span class="dim">@SelectionText.MarketName(context.Item.Market)</span></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="JournalEntry" TProperty="string" Property="e => e.Book" Title="Book" HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
+        <DeskColumn T="JournalEntry" TProperty="string" Property="e => e.Book" Title="Book" HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
             <CellTemplate><span class="dim">@BookNames.Display(context.Item.Book)</span></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="JournalEntry" TProperty="decimal" Property="e => e.PriceTaken" Title="Price" Align="Align.Right">
+        <DeskColumn T="JournalEntry" TProperty="decimal" Property="e => e.PriceTaken" Title="Price" Align="Align.Right">
             <CellTemplate>
                 @* Said where the number is: a typed price is the operator's word, not an observation. *@
                 @if (context.Item.ManualPrice)
@@ -353,19 +353,19 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                 }
                 @Price(context.Item.PriceTaken)
             </CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="JournalEntry" TProperty="decimal" Property="e => e.Stake" Title="Stake" Align="Align.Right"
+        <DeskColumn T="JournalEntry" TProperty="decimal" Property="e => e.Stake" Title="Stake" Align="Align.Right"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>@OddsMath.Money(context.Item.Stake)</CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="JournalEntry" TProperty="EntryResult" Property="e => e.Result" Title="Result"
+        <DeskColumn T="JournalEntry" TProperty="EntryResult" Property="e => e.Result" Title="Result"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate><Tag State="@ResultState(context.Item.Result)">@context.Item.Result</Tag></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="JournalEntry" TProperty="decimal" Property="e => e.NetReturn" Title="Net" Align="Align.Right"
+        <DeskColumn T="JournalEntry" TProperty="decimal" Property="e => e.NetReturn" Title="Net" Align="Align.Right"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>
                 <span class="@(context.Item.NetReturn > 0 ? "up" : context.Item.NetReturn < 0 ? "down" : null)">
@@ -374,16 +374,16 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     @(context.Item.IsSettled ? PerformancePanel.SignedToTheCent(context.Item.NetReturn) : "—")
                 </span>
             </CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
         @* Sorts on the reading itself, so "worst CLV" is a click; an unresolved entry sorts below
-           every real one rather than as zero. A TemplateColumn because the key is computed. *@
-        <TemplateColumn T="JournalEntry" Sortable="true" Title="CLV" HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit" Align="Align.Right"
+           every real one rather than as zero. A template column because the key is computed. *@
+        <DeskTemplateColumn T="JournalEntry" Sortable="true" Title="CLV" HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit" Align="Align.Right"
                         SortBy="@(e => Clv(e)?.CentsPercent ?? double.MinValue)">
             <CellTemplate>@ClvCell(context.Item)</CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="JournalEntry" Title="" Sortable="false" Align="Align.Right"
+        <DeskTemplateColumn T="JournalEntry" Title="" Sortable="false" Align="Align.Right"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>
                 <DeskRow Justify="DeskJustify.End" Gap="DeskSpace.Space1">
@@ -405,7 +405,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                        destructive item, and its alert still confirms. Duplicate is the same door
                        the wager window's own uses: a new wager window on this bet, ready to log
                        at today's price — or at the typed one, if it was. *@
-                    <DeskPullDown Label="Actions" Icon="@Icons.Material.Filled.MoreHoriz" Emphasis="DeskEmphasis.Plain"
+                    <DeskPullDown Label="Actions" Icon="@DeskIcons.MoreHoriz" Emphasis="DeskEmphasis.Plain"
                                   Size="DeskKeySize.Small" Align="DeskPopoverAlign.End">
                         <DeskMenuItem Label="Edit" OnClick="() => EditEntry(context.Item)" />
                         @* A graded row has no Settle menu, so a result picked by mistake had no way
@@ -422,7 +422,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     </DeskPullDown>
                 </DeskRow>
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
     </DeskGrid>
     </ChildContent>
     <Notice>
@@ -438,7 +438,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
     <ChildContent>
     <DeskGrid T="Parlay" Items="_parlays" EmptyText="No parlays.">
         @* A parlay is ordered by its last leg's game: it is open until that one is. *@
-        <TemplateColumn T="Parlay" Title="Closes" Sortable="true" SortBy="@(p => JournalService.LastLegStart(p))"
+        <DeskTemplateColumn T="Parlay" Title="Closes" Sortable="true" SortBy="@(p => JournalService.LastLegStart(p))"
                         InitialDirection="SortDirection.Descending" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>
                 <div class="journal-when">
@@ -446,9 +446,9 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     <div class="dim">placed @Starts(context.Item.PlacedAt)</div>
                 </div>
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="Parlay" Title="Legs" Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
+        <DeskTemplateColumn T="Parlay" Title="Legs" Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
             <CellTemplate>
                 @foreach (var leg in context.Item.Legs.OrderBy(l => l.Id))
                 {
@@ -473,29 +473,29 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     <div class="meta">@reason</div>
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <PropertyColumn T="Parlay" TProperty="string" Property="p => p.Book" Title="Book"
+        <DeskColumn T="Parlay" TProperty="string" Property="p => p.Book" Title="Book"
                         HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
             <CellTemplate><span class="dim">@BookNames.Display(context.Item.Book)</span></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <TemplateColumn T="Parlay" Title="Price" Align="Align.Right" Sortable="false"
+        <DeskTemplateColumn T="Parlay" Title="Price" Align="Align.Right" Sortable="false"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>@(context.Item.PriceQuoted is { } q ? Price(q) : "—")</CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <PropertyColumn T="Parlay" TProperty="decimal" Property="p => p.Stake" Title="Stake" Align="Align.Right"
+        <DeskColumn T="Parlay" TProperty="decimal" Property="p => p.Stake" Title="Stake" Align="Align.Right"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>@OddsMath.Money(context.Item.Stake)</CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="Parlay" TProperty="EntryResult" Property="p => p.Result" Title="Result"
+        <DeskColumn T="Parlay" TProperty="EntryResult" Property="p => p.Result" Title="Result"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate><Tag State="@ResultState(context.Item.Result)">@context.Item.Result</Tag></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="Parlay" TProperty="decimal" Property="p => p.NetReturn" Title="Net" Align="Align.Right"
+        <DeskColumn T="Parlay" TProperty="decimal" Property="p => p.NetReturn" Title="Net" Align="Align.Right"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>
                 <span class="@(context.Item.NetReturn > 0 ? "up" : context.Item.NetReturn < 0 ? "down" : null)">
@@ -504,9 +504,9 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     @(context.Item.IsSettled ? PerformancePanel.SignedToTheCent(context.Item.NetReturn) : "—")
                 </span>
             </CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <TemplateColumn T="Parlay" Title="" Sortable="false" Align="Align.Right"
+        <DeskTemplateColumn T="Parlay" Title="" Sortable="false" Align="Align.Right"
                         HeaderClass="ops-col--fit" CellClass="ops-col--fit">
             <CellTemplate>
                 <DeskRow Justify="DeskJustify.End" Gap="DeskSpace.Space1">
@@ -527,7 +527,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     @* The menu an entry's row carries, in its order. Duplicate puts the legs back
                        on the slip as a parlay at the prices taken, to log again — the slip is where
                        a parlay is logged, as the wager window is where an entry is. *@
-                    <DeskPullDown Label="Actions" Icon="@Icons.Material.Filled.MoreHoriz" Emphasis="DeskEmphasis.Plain"
+                    <DeskPullDown Label="Actions" Icon="@DeskIcons.MoreHoriz" Emphasis="DeskEmphasis.Plain"
                                   Size="DeskKeySize.Small" Align="DeskPopoverAlign.End">
                         <DeskMenuItem Label="Edit" OnClick="() => EditParlay(context.Item)" />
                         <DeskMenuItem Label="Duplicate" Description="On the slip, as a parlay to log again"
@@ -537,7 +537,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
                     </DeskPullDown>
                 </DeskRow>
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
     </DeskGrid>
     </ChildContent>
     <Notice>

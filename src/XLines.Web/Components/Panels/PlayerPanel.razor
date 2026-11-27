@@ -60,7 +60,7 @@ else
                    club, the name is what is pressed. *@
                 <span class="playerteam">
                     <TeamMark Sport="@_player.Sport?.Key" Abbrev="@_player.Team.Abbrev" />
-                    <DeskLink Destination="team" Icon="@Icons.Material.Filled.Shield"
+                    <DeskLink Destination="team" Icon="@DeskIcons.Shield"
                               OnClick="() => Manager.OpenTeam(_player.TeamId!.Value, team, WindowId)">@team</DeskLink>
                 </span>
             }
@@ -137,31 +137,31 @@ else
         <FormGroup Title="Game log" Span="DeskCardSpan.Row" GroupClass="player-log">
             <DeskGrid T="PlayerGameRow" Items="_rows"
                       EmptyText="No appearances on record for this player.">
-                <PropertyColumn T="PlayerGameRow" TProperty="DateTimeOffset" Property="r => r.StartsAt"
+                <DeskColumn T="PlayerGameRow" TProperty="DateTimeOffset" Property="r => r.StartsAt"
                                 Title="Date" InitialDirection="SortDirection.Descending"
                                 HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                     <CellTemplate><span class="dim">@Day(context.Item.StartsAt)</span></CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
 
                 @* Only when the season was split between clubs; one team all season is already
                    said once above, and a column repeating it on every row says nothing. *@
                 @if (_playedFor.Count > 1)
                 {
-                    <PropertyColumn T="PlayerGameRow" TProperty="string" Property="r => r.Team" Title="For">
+                    <DeskColumn T="PlayerGameRow" TProperty="string" Property="r => r.Team" Title="For">
                         <CellTemplate><span class="dim">@context.Item.Team</span></CellTemplate>
-                    </PropertyColumn>
+                    </DeskColumn>
                 }
 
-                <PropertyColumn T="PlayerGameRow" TProperty="string" Property="r => r.Opponent" Title="Opponent" CellClass="logrow__opp">
+                <DeskColumn T="PlayerGameRow" TProperty="string" Property="r => r.Opponent" Title="Opponent" CellClass="logrow__opp">
                     <CellTemplate>
-                        <DeskLink Destination="game" Icon="@Icons.Material.Filled.SportsScore"
+                        <DeskLink Destination="game" Icon="@DeskIcons.SportsScore"
                                   OnClick="() => OpenGameAsync(context.Item.GameId)">
                             @(context.Item.Home ? "vs" : "at") <TeamMark Sport="@context.Item.SportKey" Abbrev="@context.Item.OpponentAbbrev" />@context.Item.Opponent
                         </DeskLink>
                     </CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
 
-                <PropertyColumn T="PlayerGameRow" TProperty="bool?" Property="r => r.Won"
+                <DeskColumn T="PlayerGameRow" TProperty="bool?" Property="r => r.Won"
                                 Title="Result" Align="Align.Right">
                     <CellTemplate>
                         @* The capsule the Team and Form windows draw, so a level final reads T
@@ -177,7 +177,7 @@ else
                             <span class="dim">—</span>
                         }
                     </CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
 
                 @* Stat columns are per-sport jsonb, so they are declared from the data. They sort
                    as numbers where the line parses as one and fall back to the raw text where it
@@ -186,12 +186,12 @@ else
                 @foreach (var c in _columns)
                 {
                     var key = c;
-                    <TemplateColumn T="PlayerGameRow" Sortable="true" Title="@StatLabels.StatLabel(key)" Align="Align.Right"
+                    <DeskTemplateColumn T="PlayerGameRow" Sortable="true" Title="@StatLabels.StatLabel(key)" Align="Align.Right"
                                     SortBy="@(r => StatSortKey(r, key))">
                         <CellTemplate>
                             <span class="mono">@(context.Item.Stats.TryGetValue(key, out var v) ? v : "—")</span>
                         </CellTemplate>
-                    </TemplateColumn>
+                    </DeskTemplateColumn>
                 }
             </DeskGrid>
         </FormGroup>

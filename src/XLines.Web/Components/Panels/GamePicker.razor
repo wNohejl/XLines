@@ -26,7 +26,7 @@
         @* The chosen game is the header, on the body as the Board door sets it — not a box: the
            game is the link that changes it, as a folded step's choice is. *@
         <div class="game-search__chosen">
-            <DeskLink Class="game-search__match" Destination="change" Icon="@Icons.Material.Filled.Search"
+            <DeskLink Class="game-search__match" Destination="change" Icon="@DeskIcons.Search"
                       Tooltip="Find a different game" OnClick="StartSearch">
                 @Marked(chosen)
             </DeskLink>
@@ -36,7 +36,7 @@
     else if (_noGame && !_searching)
     {
         <div class="game-search__chosen">
-            <DeskLink Class="game-search__match" Destination="search" Icon="@Icons.Material.Filled.Search"
+            <DeskLink Class="game-search__match" Destination="search" Icon="@DeskIcons.Search"
                       Tooltip="Find a game instead" OnClick="StartSearch">
                 No game
             </DeskLink>

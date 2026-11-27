@@ -96,7 +96,7 @@
         @* One of the two keys here that spend (Date range is the other), and a menu, so Tinted with
            a chevron rather than Filled: the spend is the entry chosen from it. The rest of this
            toolbar reads. *@
-        <DeskJobMenu @ref="_pull" Label="Pull data" Icon="@Icons.Material.Filled.CloudDownload" OnRan="LoadAsync" OnBusyChanged="OnPullBusy" />
+        <DeskJobMenu @ref="_pull" Label="Pull data" Icon="@DeskIcons.CloudDownload" OnRan="LoadAsync" OnBusyChanged="OnPullBusy" />
 
         @* A range of days is its own task, so its own key: a popover anchored here asks the league
            and the days, and the pull runs on this key, busy with the day it has reached. Tinted,
@@ -241,7 +241,7 @@ else if (_rows.Count == 0)
             @if (Manager.Access.CanOperate && Port == StatsPort.Espn)
             {
                 <DeskButton Size="DeskKeySize.Small"
-                            Icon="@Icons.Material.Filled.CalendarMonth"
+                            Icon="@DeskIcons.CalendarMonth"
                             OnClick="() => PullAsync(IngestionJobs.EspnSlate)">
                     Today's games
                 </DeskButton>
@@ -249,7 +249,7 @@ else if (_rows.Count == 0)
             else if (Manager.Access.CanOperate && Port == StatsPort.TheOddsApi)
             {
                 <DeskButton Size="DeskKeySize.Small"
-                            Icon="@Icons.Material.Filled.CalendarMonth"
+                            Icon="@DeskIcons.CalendarMonth"
                             Title="Calls The Odds API's events list, which does not count against your credits"
                             OnClick="() => PullAsync(IngestionJobs.OddsFixtures)">
                     Fixtures · free
@@ -258,7 +258,7 @@ else if (_rows.Count == 0)
             else if (Manager.Access.CanOperate)
             {
                 <DeskButton Size="DeskKeySize.Small"
-                            Icon="@Icons.Material.Filled.Key"
+                            Icon="@DeskIcons.Key"
                             OnClick="Manager.OpenOps">
                     Open Ops
                 </DeskButton>
@@ -274,7 +274,7 @@ else if (Visible.Count == 0)
         </ChildContent>
         <Action>
             <DeskButton Size="DeskKeySize.Small"
-                        Icon="@Icons.Material.Filled.FilterAltOff"
+                        Icon="@DeskIcons.FilterAltOff"
                         OnClick="() => SetPhase(BoardPhase.Any)">
                 Show every game
             </DeskButton>
@@ -291,7 +291,7 @@ else
               ChildRowIndent="1"
               EmptyText="@(string.IsNullOrWhiteSpace(_team) ? "No games in this window." : $"No game in this window matches \"{_team}\".")">
 
-        <TemplateColumn T="BoardRow" Sortable="true" Title="Starts" SortBy="@(r => r.Game.StartsAt)">
+        <DeskTemplateColumn T="BoardRow" Sortable="true" Title="Starts" SortBy="@(r => r.Game.StartsAt)">
             <CellTemplate>
                 @* The time on the away line and the league under it on the home line, each on its
                    own terms: the time in the cell's ink, the league a caption in secondary. Joined
@@ -309,7 +309,7 @@ else
                     }
                 </span>
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
         @*
             The matchup is where the open row's line starts.
@@ -338,7 +338,7 @@ else
             link's tooltip, and a hidden "at" keeps the link reading "Brewers at Rays". When a
             game is final the loser drops to secondary ink, as its score does beside it.
         *@
-        <TemplateColumn T="BoardRow" Sortable="true" Title="Matchup" SortBy="@(r => r.Game.HomeTeam!.Name)">
+        <DeskTemplateColumn T="BoardRow" Sortable="true" Title="Matchup" SortBy="@(r => r.Game.HomeTeam!.Name)">
             <CellTemplate>
                 @{ var leader = FinalLeader(context.Item.Game); }
                 <DeskLink Destination="game" Class="board__matchup-link" Tooltip="@MatchupTooltip(context.Item)"
@@ -397,7 +397,7 @@ else
                 }
 
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
         @*
             Score and state, in one column.
@@ -408,7 +408,7 @@ else
             (ADR 0008), so colouring a losing side negative would be a second vocabulary in the
             same table. The tag beside it carries the state, in a word.
         *@
-        <TemplateColumn T="BoardRow" Sortable="true" Title="Score" SortBy="@(r => (int)r.Game.Status)">
+        <DeskTemplateColumn T="BoardRow" Sortable="true" Title="Score" SortBy="@(r => (int)r.Game.Status)">
             <CellTemplate>
                 @if (context.Item.Game.Status == GameStatus.Scheduled)
                 {
@@ -466,12 +466,12 @@ else
                     </div>
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
         @* The row's best bet against the fair price, and the column the board sorts by when the
            question is where the value is. Read across every book, so it can name a book that
            holds no cell's best price; a close has nothing left to take and reads as a dash. *@
-        <TemplateColumn T="BoardRow" Sortable="true" Title="Value" Align="Align.Right"
+        <DeskTemplateColumn T="BoardRow" Sortable="true" Title="Value" Align="Align.Right"
                         SortBy="@(r => r.BestEv ?? double.MinValue)">
             <CellTemplate>
                 @if (context.Item.BestPick is { } pick)
@@ -494,7 +494,7 @@ else
                     <span class="dim">—</span>
                 }
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
         @* Home/over first in every market, so a column reads down consistently. StartsAt goes
            with each price so a closing one can say how long before first pitch it was taken.
@@ -505,7 +505,7 @@ else
            centred over both columns; the second shows nothing, since every cell already names
            its side (PHI, DAL; a total's line, o47.5 and u47.5, which names it). Each header still has a name of its own for a screen
            reader — "Moneyline, home", "Moneyline, away" — so no column is unlabelled. *@
-        <TemplateColumn T="BoardRow" Title="Moneyline, home" Align="Align.Right" Sortable="false"
+        <DeskTemplateColumn T="BoardRow" Title="Moneyline, home" Align="Align.Right" Sortable="false"
                         HeaderClass="board__ml board__pair" CellClass="board__ml board__pair">
             <HeaderTemplate>@MarketHeader("Moneyline", "home")</HeaderTemplate>
             <CellTemplate>
@@ -515,9 +515,9 @@ else
                            OnTake="() => Take(context.Item, context.Item.Moneyline, context.Item.Moneyline.First)"
                            OnBank="() => Bank(context.Item, context.Item.Moneyline, context.Item.Moneyline.First)" />
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="BoardRow" Title="Moneyline, away" Align="Align.Right" Sortable="false"
+        <DeskTemplateColumn T="BoardRow" Title="Moneyline, away" Align="Align.Right" Sortable="false"
                         HeaderClass="board__ml board__pair-end" CellClass="board__ml board__pair-end">
             <HeaderTemplate>@SideHeader("Moneyline", "away")</HeaderTemplate>
             <CellTemplate>
@@ -527,9 +527,9 @@ else
                            OnTake="() => Take(context.Item, context.Item.Moneyline, context.Item.Moneyline.Second)"
                            OnBank="() => Bank(context.Item, context.Item.Moneyline, context.Item.Moneyline.Second)" />
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="BoardRow" Title="Spread, home" Align="Align.Right" Sortable="false"
+        <DeskTemplateColumn T="BoardRow" Title="Spread, home" Align="Align.Right" Sortable="false"
                         HeaderClass="board__spread board__pair" CellClass="board__spread board__pair">
             <HeaderTemplate>@MarketHeader("Spread", "home")</HeaderTemplate>
             <CellTemplate>
@@ -539,9 +539,9 @@ else
                            OnTake="() => Take(context.Item, context.Item.Spread, context.Item.Spread.First)"
                            OnBank="() => Bank(context.Item, context.Item.Spread, context.Item.Spread.First)" />
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="BoardRow" Title="Spread, away" Align="Align.Right" Sortable="false" HeaderClass="board__spread board__pair-end" CellClass="board__spread board__pair-end">
+        <DeskTemplateColumn T="BoardRow" Title="Spread, away" Align="Align.Right" Sortable="false" HeaderClass="board__spread board__pair-end" CellClass="board__spread board__pair-end">
             <HeaderTemplate>@SideHeader("Spread", "away")</HeaderTemplate>
             <CellTemplate>
                 <PriceCell Offer="context.Item.Spread.Second" Selection="@Side(context.Item, false)"
@@ -550,9 +550,9 @@ else
                            OnTake="() => Take(context.Item, context.Item.Spread, context.Item.Spread.Second)"
                            OnBank="() => Bank(context.Item, context.Item.Spread, context.Item.Spread.Second)" />
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="BoardRow" Title="Total, over" Align="Align.Right" Sortable="false"
+        <DeskTemplateColumn T="BoardRow" Title="Total, over" Align="Align.Right" Sortable="false"
                         HeaderClass="board__total board__pair" CellClass="board__total board__pair">
             <HeaderTemplate>@MarketHeader("Total", "over")</HeaderTemplate>
             <CellTemplate>
@@ -562,9 +562,9 @@ else
                            OnTake="() => Take(context.Item, context.Item.Total, context.Item.Total.First)"
                            OnBank="() => Bank(context.Item, context.Item.Total, context.Item.Total.First)" />
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="BoardRow" Title="Total, under" Align="Align.Right" Sortable="false" HeaderClass="board__total board__pair-end" CellClass="board__total board__pair-end">
+        <DeskTemplateColumn T="BoardRow" Title="Total, under" Align="Align.Right" Sortable="false" HeaderClass="board__total board__pair-end" CellClass="board__total board__pair-end">
             <HeaderTemplate>@SideHeader("Total", "under")</HeaderTemplate>
             <CellTemplate>
                 <PriceCell Offer="context.Item.Total.Second" Selection="@TotalSide(context.Item.Total.Second, "U")"
@@ -573,7 +573,7 @@ else
                            OnTake="() => Take(context.Item, context.Item.Total, context.Item.Total.Second)"
                            OnBank="() => Bank(context.Item, context.Item.Total, context.Item.Total.Second)" />
             </CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
     </DeskGrid>
 
@@ -1290,13 +1290,13 @@ else
             // A starter ruled out says so: the tooltip is the injury and who stands in. A plain
             // basis — the last game's starter, or this game's own passer once it is under way —
             // is said with the name after it.
-            var plain = basis is XLines.Data.CrossReference.Starters.LastGameBasis
-                or XLines.Data.CrossReference.Starters.ThisGameBasis;
+            var plain = basis is XLines.Core.Analytics.Starters.LastGameBasis
+                or XLines.Core.Analytics.Starters.ThisGameBasis;
             var title = basis is not null && !plain
                 ? basis
                 : quarterback is null
                     ? "No passing on record for this club"
-                    : $"{basis ?? XLines.Data.CrossReference.Starters.LastGameBasis}: {quarterback}";
+                    : $"{basis ?? XLines.Core.Analytics.Starters.LastGameBasis}: {quarterback}";
 
             return ("QB", quarterback is null ? "—" : Surname(quarterback), title);
         }
@@ -1384,7 +1384,7 @@ else
             {
                 Key = "odds",
                 Label = "Odds",
-                Icon = Icons.Material.Filled.ShowChart,
+                Icon = DeskIcons.ShowChart,
                 Snippet = @<OddsSnippet GameId="id" />,
                 OpenLabel = "Movement",
                 OpenWindow = Command(() => Launch(WindowCatalog.Odds, "GameId", id, name))
@@ -1393,7 +1393,7 @@ else
             {
                 Key = "h2h",
                 Label = "H2H",
-                Icon = Icons.Material.Filled.CompareArrows,
+                Icon = DeskIcons.CompareArrows,
                 Snippet = @<HeadToHeadSnippet GameId="id" />,
                 OpenLabel = "Full history",
                 OpenWindow = Command(() => Launch(WindowCatalog.HeadToHead, "GameId", id, name))
@@ -1402,7 +1402,7 @@ else
             {
                 Key = "form",
                 Label = "Form",
-                Icon = Icons.Material.Filled.QueryStats,
+                Icon = DeskIcons.QueryStats,
                 Snippet = @<FormSnippet GameId="id" />,
                 OpenLabel = row.Bout is null ? "Both rosters" : "Tale of the tape",
                 OpenWindow = Command(() => Launch(WindowCatalog.Form, "GameId", id, name))
@@ -1418,7 +1418,7 @@ else
             {
                 Key = "gamecast",
                 Label = "Gamecast",
-                Icon = Icons.Material.Filled.SportsFootball,
+                Icon = DeskIcons.SportsFootball,
                 OpenWindow = Command(() => Manager.OpenGamecast(id, WindowShortcuts.Describe(row.Game)))
             });
         }
@@ -1437,7 +1437,7 @@ else
             {
                 Key = "bets",
                 Label = "More bets",
-                Icon = Icons.Material.Filled.ViewList,
+                Icon = DeskIcons.ViewList,
                 Snippet = @<BoardAllBets GameId="id" />,
                 // Its markets are section cards of their own, so the drawer is their pane header.
                 SnippetCards = true,
@@ -1479,7 +1479,7 @@ else
                 Label = _pullingKeys.Contains(IngestionJobs.OddsLinesPrefix + row.Game.Sport!.Key)
                     ? $"Pulling {row.Game.Sport!.Key.ToUpperInvariant()} lines"
                     : $"Pull {row.Game.Sport!.Key.ToUpperInvariant()} lines",
-                Icon = Icons.Material.Filled.CloudDownload,
+                Icon = DeskIcons.CloudDownload,
                 Emphasis = DeskEmphasis.Tinted,
                 Busy = _pullingKeys.Contains(IngestionJobs.OddsLinesPrefix + row.Game.Sport!.Key),
                 OpenWindow = Command(() => PullAsync(IngestionJobs.OddsLinesPrefix + row.Game.Sport!.Key))

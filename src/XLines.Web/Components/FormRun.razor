@@ -53,7 +53,7 @@ else
     /// <summary>
     /// The results, as the lookups produce them: newest first. This component reverses them
     /// rather than asking every call site to remember to. Use <see cref="FormResult.From(
-    /// IEnumerable{XLines.Data.CrossReference.TeamGameLogRow})"/> to narrow a log to these.
+    /// IEnumerable{XLines.Core.Analytics.TeamGameLogRow})"/> to narrow a log to these.
     /// </summary>
     [Parameter, EditorRequired] public IReadOnlyList<FormResult> Log { get; set; } = [];
 

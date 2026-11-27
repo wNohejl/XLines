@@ -22,30 +22,30 @@
         <ChildContent>
         <div class="gridwrap gameplayers boxside">
             <DeskGrid T="BoxScoreLine" Items="Side" EmptyText="No box score lines for this side.">
-                <PropertyColumn T="BoxScoreLine" TProperty="string" Property="p => p.Name"
+                <DeskColumn T="BoxScoreLine" TProperty="string" Property="p => p.Name"
                                 Title="Player" CellClass="trunc">
                     <CellTemplate>
                         <span title="@context.Item.Name">
-                            <DeskLink Destination="player" Icon="@Icons.Material.Filled.Person"
+                            <DeskLink Destination="player" Icon="@DeskIcons.Person"
                                       OnClick="() => OnPlayer.InvokeAsync((context.Item.PlayerId, context.Item.Name))">@context.Item.Name</DeskLink>
                         </span>
                     </CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
 
-                <PropertyColumn T="BoxScoreLine" TProperty="string" Property="p => p.Position!" Title="Pos" HeaderClass="col--wide" CellClass="col--wide">
+                <DeskColumn T="BoxScoreLine" TProperty="string" Property="p => p.Position!" Title="Pos" HeaderClass="col--wide" CellClass="col--wide">
                     <CellTemplate><span class="dim">@(context.Item.Position ?? "—")</span></CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
 
                 @foreach (var c in columns)
                 {
                     var key = c;
 
-                    <TemplateColumn T="BoxScoreLine" Sortable="true" Title="@StatLabels.StatLabel(key)" HeaderClass="boxside__num" CellClass="boxside__num"
+                    <DeskTemplateColumn T="BoxScoreLine" Sortable="true" Title="@StatLabels.StatLabel(key)" HeaderClass="boxside__num" CellClass="boxside__num"
                                     SortBy="@(p => p.Stats.GetValueOrDefault(key) ?? string.Empty)">
                         <CellTemplate>
                             <span class="mono">@(context.Item.Stats.TryGetValue(key, out var v) ? v : "—")</span>
                         </CellTemplate>
-                    </TemplateColumn>
+                    </DeskTemplateColumn>
                 }
             </DeskGrid>
         </div>

@@ -1,4 +1,4 @@
-namespace XLines.Data.CrossReference;
+namespace XLines.Core.Analytics;
 
 /// <summary>
 /// One name per measure across a player's lines, whatever groups each game happened to have.

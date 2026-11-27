@@ -1,6 +1,6 @@
 using XLines.Core.Entities;
 using XLines.Data.CrossReference;
-using static XLines.Data.CrossReference.GameLogSplits;
+using static XLines.Core.Analytics.GameLogSplits;
 
 namespace XLines.Tests.Analytics;
 

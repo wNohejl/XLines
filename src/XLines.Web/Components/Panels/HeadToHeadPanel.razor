@@ -43,7 +43,7 @@ else if (_rows.Count == 0)
         </ChildContent>
         <Action>
             <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                        Icon="@Icons.Material.Filled.History"
+                        Icon="@DeskIcons.History"
                         OnClick="() => Manager.OpenHistory()">
                 Walk further back
             </DeskButton>
@@ -85,32 +85,32 @@ else
         <DeskGrid T="HeadToHeadRow" Items="_rows"
                   EmptyText="No previous meeting on record between these sides.">
 
-            <PropertyColumn T="HeadToHeadRow" TProperty="DateTimeOffset" Property="r => r.StartsAt"
+            <DeskColumn T="HeadToHeadRow" TProperty="DateTimeOffset" Property="r => r.StartsAt"
                             Title="Date" InitialDirection="SortDirection.Descending">
                 <CellTemplate><span class="dim">@Day(context.Item.StartsAt)</span></CellTemplate>
-            </PropertyColumn>
+            </DeskColumn>
 
-            <PropertyColumn T="HeadToHeadRow" TProperty="string" Property="r => r.HomeTeam" Title="Meeting">
+            <DeskColumn T="HeadToHeadRow" TProperty="string" Property="r => r.HomeTeam" Title="Meeting">
                 <CellTemplate>
-                    <DeskLink Destination="game" Icon="@Icons.Material.Filled.SportsScore"
+                    <DeskLink Destination="game" Icon="@DeskIcons.SportsScore"
                               OnClick="() => OpenGameAsync(context.Item.GameId)">
                         <TeamMark Sport="@context.Item.SportKey" Abbrev="@context.Item.AwayAbbrev" />@context.Item.AwayTeam at <TeamMark Sport="@context.Item.SportKey" Abbrev="@context.Item.HomeAbbrev" />@context.Item.HomeTeam
                     </DeskLink>
                 </CellTemplate>
-            </PropertyColumn>
+            </DeskColumn>
 
-            <TemplateColumn T="HeadToHeadRow" Title="Score" Align="Align.Right" Sortable="false">
+            <DeskTemplateColumn T="HeadToHeadRow" Title="Score" Align="Align.Right" Sortable="false">
                 <CellTemplate>
                     <span class="mono">
                         @(context.Item.HasScore ? $"{context.Item.AwayScore}-{context.Item.HomeScore}" : "—")
                     </span>
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
             @* A meeting with no result sorts between the losses and the wins rather than with
                either — it is not evidence for one side, and burying it with the losses would
                make it read as one. *@
-            <TemplateColumn T="HeadToHeadRow" Sortable="true" Title="Winner" Align="Align.Right"
+            <DeskTemplateColumn T="HeadToHeadRow" Sortable="true" Title="Winner" Align="Align.Right"
                             SortBy="@(r => r.SubjectWon is { } w ? (w ? 2 : 0) : 1)">
                 <CellTemplate>
                     @if (ResultTag.Of(context.Item.SubjectWon, context.Item.HomeScore, context.Item.AwayScore) is { } result)
@@ -124,18 +124,18 @@ else
                         <span class="dim">—</span>
                     }
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
             @* Named for its market, as the Board and Every book name it: "Line" said nothing
                about which line, beside a Total column that is also one. *@
-            <TemplateColumn T="HeadToHeadRow" Sortable="true" Title="Spread" Align="Align.Right"
+            <DeskTemplateColumn T="HeadToHeadRow" Sortable="true" Title="Spread" Align="Align.Right"
                             SortBy="@(r => r.ClosingSpread ?? decimal.MinValue)">
                 <CellTemplate>
                     <span class="mono">@(context.Item.ClosingSpread is { } s ? Line(s) : "—")</span>
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
-            <TemplateColumn T="HeadToHeadRow" Sortable="true" Title="ATS" Align="Align.Right"
+            <DeskTemplateColumn T="HeadToHeadRow" Sortable="true" Title="ATS" Align="Align.Right"
                             SortBy="@(r => r.AtsResult is { } a ? (int)a : int.MinValue)">
                 <CellTemplate>
                     @if (context.Item.AtsResult is { } ats && ResultTag.Of(ats) is { } cover)
@@ -149,9 +149,9 @@ else
                         <span class="dim">—</span>
                     }
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
-            <TemplateColumn T="HeadToHeadRow" Sortable="true" Title="Total" Align="Align.Right"
+            <DeskTemplateColumn T="HeadToHeadRow" Sortable="true" Title="Total" Align="Align.Right"
                             SortBy="@(r => r.TotalResult is { } t ? (int)t : int.MinValue)">
                 <CellTemplate>
                     @if (context.Item.TotalResult is { } total && context.Item.ClosingTotal is { } line
@@ -168,7 +168,7 @@ else
                         <span class="dim">—</span>
                     }
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
         </DeskGrid>
     </div>
     </PanelSection>

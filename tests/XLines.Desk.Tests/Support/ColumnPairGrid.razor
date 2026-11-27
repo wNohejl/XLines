@@ -1,0 +1,55 @@
+@using MudBlazor
+@using XLines.Desk.Primitives
+
+@* One table written twice, once with the Desk's columns and once with MudDataGrid's, every
+   parameter the application's tables use on each. DeskGridColumnTests renders both and holds
+   them equal. *@
+
+@if (Desk)
+{
+    <DeskGrid Items="Rows">
+        <DeskColumn T="ColumnRow" TProperty="int" Property="r => r.Id" Title="Id" Align="Align.Right"
+                    InitialDirection="SortDirection.Descending" HeaderClass="h-id" CellClass="c-id" />
+        <DeskColumn T="ColumnRow" TProperty="decimal" Property="r => r.Price" Title="Price" Format="0.00" Align="Align.Right" />
+        <DeskColumn T="ColumnRow" TProperty="string" Property="r => r.Name" Title="Name" Sortable="false">
+            <CellTemplate><b>@context.Item.Name</b></CellTemplate>
+        </DeskColumn>
+        <DeskColumn T="ColumnRow" TProperty="string" Property="r => r.Group" Title="Group" Hidden="@HideGroup" />
+        <DeskTemplateColumn T="ColumnRow" Title="Score" Sortable="true" SortBy="@(r => r.Score)" Align="Align.Center"
+                            HeaderClass="h-score" CellClass="c-score">
+            <HeaderTemplate><i>Score</i></HeaderTemplate>
+            <CellTemplate>@context.Item.Score.ToString("N1")</CellTemplate>
+        </DeskTemplateColumn>
+        <DeskTemplateColumn T="ColumnRow" Title="Plain" SortBy="@(r => r.Score)">
+            <CellTemplate>@context.Item.Name.Length</CellTemplate>
+        </DeskTemplateColumn>
+    </DeskGrid>
+}
+else
+{
+    <DeskGrid Items="Rows">
+        <PropertyColumn T="ColumnRow" TProperty="int" Property="r => r.Id" Title="Id" Align="Align.Right"
+                        InitialDirection="SortDirection.Descending" HeaderClass="h-id" CellClass="c-id" />
+        <PropertyColumn T="ColumnRow" TProperty="decimal" Property="r => r.Price" Title="Price" Format="0.00" Align="Align.Right" />
+        <PropertyColumn T="ColumnRow" TProperty="string" Property="r => r.Name" Title="Name" Sortable="false">
+            <CellTemplate><b>@context.Item.Name</b></CellTemplate>
+        </PropertyColumn>
+        <PropertyColumn T="ColumnRow" TProperty="string" Property="r => r.Group" Title="Group" Hidden="@HideGroup" />
+        <TemplateColumn T="ColumnRow" Title="Score" Sortable="true" SortBy="@(r => r.Score)" Align="Align.Center"
+                        HeaderClass="h-score" CellClass="c-score">
+            <HeaderTemplate><i>Score</i></HeaderTemplate>
+            <CellTemplate>@context.Item.Score.ToString("N1")</CellTemplate>
+        </TemplateColumn>
+        <TemplateColumn T="ColumnRow" Title="Plain" SortBy="@(r => r.Score)">
+            <CellTemplate>@context.Item.Name.Length</CellTemplate>
+        </TemplateColumn>
+    </DeskGrid>
+}
+
+@code {
+    [Parameter] public bool Desk { get; set; }
+
+    [Parameter] public bool HideGroup { get; set; }
+
+    [Parameter] public IReadOnlyList<ColumnRow> Rows { get; set; } = [];
+}

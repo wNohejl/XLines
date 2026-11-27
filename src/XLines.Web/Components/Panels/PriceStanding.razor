@@ -61,7 +61,7 @@
         var books = BookRanking.Order(Books(Rows, Side), b => b.Book, Side, Other);
         <div class="standing__books" id="@_booksId">
         <DeskGrid T="BookStanding" Items="BookRanking.Visible(books, b => b.Book, IsExpanded)" Resizable="false" EmptyText="No prices on this side.">
-            <PropertyColumn T="BookStanding" TProperty="string" Property="b => b.Book" Title="Book"
+            <DeskColumn T="BookStanding" TProperty="string" Property="b => b.Book" Title="Book"
                             Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
                 <CellTemplate>
                     @BookNames.Display(context.Item.Book)@(" ")
@@ -70,14 +70,14 @@
                         <Tag State="DeskState.Positive">Best</Tag>
                     }
                 </CellTemplate>
-            </PropertyColumn>
+            </DeskColumn>
 
-            <TemplateColumn T="BookStanding" Title="Now" Align="Align.Right" Sortable="false"
+            <DeskTemplateColumn T="BookStanding" Title="Now" Align="Align.Right" Sortable="false"
                             HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                 <CellTemplate><span class="movement__quote">@OddsPanel.Quote(context.Item.Now)</span></CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
-            <TemplateColumn T="BookStanding" Title="Against fair" Align="Align.Right" Sortable="false"
+            <DeskTemplateColumn T="BookStanding" Title="Against fair" Align="Align.Right" Sortable="false"
                             HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                 <CellTemplate>
                     @if (context.Item.Ev is { } ev)
@@ -89,16 +89,16 @@
                         <span class="dim">no fair price at this number</span>
                     }
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
-            <TemplateColumn T="BookStanding" Title="Held for" Align="Align.Right" Sortable="false"
+            <DeskTemplateColumn T="BookStanding" Title="Held for" Align="Align.Right" Sortable="false"
                             HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                 <CellTemplate>
                     <DeskTooltip Text="@($"This number since {DisplayTime.Stamp(context.Item.Since)}")">
                         <span class="dim num" tabindex="0">@Held(context.Item.Since)</span>
                     </DeskTooltip>
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
         </DeskGrid>
         <MoreBooks Books="books.Select(b => b.Book)" First="Side" Second="Other" Expanded="IsExpanded" ExpandedChanged="SetExpandedAsync" Controls="@_booksId"
                    Polled="Polled" />
@@ -129,7 +129,7 @@
     {
         <div class="standing__keys">
             <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                        Icon="@Icons.Material.Filled.CloudDownload" OnClick="OnPull">
+                        Icon="@DeskIcons.CloudDownload" OnClick="OnPull">
                 @pull
             </DeskButton>
         </div>

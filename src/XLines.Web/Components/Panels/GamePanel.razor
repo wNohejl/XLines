@@ -148,7 +148,7 @@ else
                    because its plays stay stored. Tinted, as a key opening a window is. *@
                 @if (GamecastPanel.Offered(game))
                 {
-                    <DeskButton Icon="@Icons.Material.Filled.SportsFootball" Emphasis="DeskEmphasis.Tinted"
+                    <DeskButton Icon="@DeskIcons.SportsFootball" Emphasis="DeskEmphasis.Tinted"
                                 Title="Follow this game play by play in the Gamecast window"
                                 OnClick="() => Manager.OpenGamecast(game.Id, WindowShortcuts.Describe(game))">
                         Gamecast
@@ -484,7 +484,7 @@ else
             {
                 Key = "recent",
                 Label = "Last 5",
-                Icon = Icons.Material.Filled.Timeline,
+                Icon = DeskIcons.Timeline,
                 Snippet = @<PlayerRecentSnippet PlayerId="id" />,
                 OpenLabel = "Player window",
                 OpenWindow = EventCallback.Factory.Create(this, () => Manager.OpenPlayer(id, name, WindowId))
@@ -670,7 +670,7 @@ else
             <button type="button" class="gamelines__toggle disclosure__summary"
                     aria-expanded="@(open ? "true" : "false")" aria-controls="@region"
                     @onclick="() => ToggleMarket(key)">
-                <span class="disclosure__triangle" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.ArrowRight" /></span>
+                <span class="disclosure__triangle" aria-hidden="true"><Glyph Icon="@DeskIcons.ArrowRight" /></span>
                 <span>@market</span>
             </button>
             <div class="gamelines__sides">
@@ -933,7 +933,7 @@ else
                and a crest is not part of what is pressed. *@
             <span class="gameteam__name">
                 <TeamMark Sport="@_row?.Game.Sport?.Key" Abbrev="@abbrev" />
-                <DeskLink Destination="team" Icon="@Icons.Material.Filled.Shield"
+                <DeskLink Destination="team" Icon="@DeskIcons.Shield"
                           OnClick="() => Manager.OpenTeam(teamId, name, WindowId)">@name</DeskLink>
             </span>
 
@@ -1051,7 +1051,7 @@ else
                              OnRowClick="@((PlayerForm p) => TogglePlayer(p.PlayerId))">
                     <NameContent Context="player">
                         <span title="@player.Name">
-                            <DeskLink Destination="player" Icon="@Icons.Material.Filled.Person"
+                            <DeskLink Destination="player" Icon="@DeskIcons.Person"
                                       OnClick="() => Manager.OpenPlayer(player.PlayerId, player.Name, WindowId)">@player.Name</DeskLink>
                         </span>
 

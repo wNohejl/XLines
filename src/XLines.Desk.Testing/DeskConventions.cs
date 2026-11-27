@@ -144,13 +144,13 @@ public static partial class DeskConventions
 
     // ---- Grids -----------------------------------------------------------------------
 
-    [GeneratedRegex(@"<TemplateColumn\b[^>]*>", RegexOptions.Singleline)]
+    [GeneratedRegex(@"<(?:Desk)?TemplateColumn\b[^>]*>", RegexOptions.Singleline)]
     private static partial Regex TemplateColumnTag();
 
     /// <summary>
-    /// MudBlazor's <c>TemplateColumn</c> is not sortable unless it says so, whatever <c>SortBy</c> it
-    /// is given — and nothing warns. So a template column with a sort key says
-    /// <c>Sortable="true"</c>.
+    /// A template column — <c>DeskTemplateColumn</c>, or MudBlazor's <c>TemplateColumn</c> it forwards
+    /// to — is not sortable unless it says so, whatever <c>SortBy</c> it is given — and nothing warns.
+    /// So a template column with a sort key says <c>Sortable="true"</c>.
     /// </summary>
     public static void SortKeysAreSortable(string sourceRoot)
     {

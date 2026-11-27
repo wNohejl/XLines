@@ -39,7 +39,7 @@
     re-prices this too; a price that has gone to its close says so instead of logging it.
 *@
 
-<SnippetShell Title="Take this price" Icon="@Icons.Material.Filled.Bolt"
+<SnippetShell Title="Take this price" Icon="@DeskIcons.Bolt"
               Note="@Headline" OpenLabel="Full wager form" OnOpen="OpenFormAsync">
     @* A press or a key inside belongs to the take: the grid row's own click would close the
        row around it (RowActions stops the same way). *@
@@ -58,7 +58,7 @@
         else if (_receipt is { } receipt)
         {
             <div class="qtake__receipt" role="status">
-                <span class="qtake__receipt-mark" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.CheckCircle" /></span>
+                <span class="qtake__receipt-mark" aria-hidden="true"><Glyph Icon="@DeskIcons.CheckCircle" /></span>
                 <span class="qtake__receipt-text">@receipt</span>
                 <span class="qtake__receipt-keys">
                     <DeskButton Size="DeskKeySize.Small" OnClick="Again">Same bet again</DeskButton>

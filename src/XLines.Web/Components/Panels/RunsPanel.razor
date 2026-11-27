@@ -58,72 +58,72 @@
        kept for a screen reader; a run that failed or half-failed keeps its tag. Two hundred
        green capsules was a wall of colour, and two hundred "Success" in grey was a wall of
        words: either way the failed row it was there to show was hard to find. *@
-    <PropertyColumn T="IngestionRun" TProperty="RunStatus" Property="r => r.Status" Title="State"
+    <DeskColumn T="IngestionRun" TProperty="RunStatus" Property="r => r.Status" Title="State"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             @if (context.Item.Status == RunStatus.Success)
             {
-                <span class="ops-ok"><MudIcon Icon="@Icons.Material.Filled.Check" aria-hidden="true" /><span class="sr-only">Success</span></span>
+                <span class="ops-ok"><MudIcon Icon="@DeskIcons.Check" aria-hidden="true" /><span class="sr-only">Success</span></span>
             }
             else
             {
                 <Tag State="@StatusState(context.Item.Status)">@context.Item.Status</Tag>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* A source's runs are its own window, so the name is the way through to them. A name is
        one reading and does not break; in a narrow window the column gives way to the detail,
        which names the source itself on a row that has nothing else to say. *@
-    <PropertyColumn T="IngestionRun" TProperty="string" Property="r => r.Source!.Name" Title="Source"
+    <DeskColumn T="IngestionRun" TProperty="string" Property="r => r.Source!.Name" Title="Source"
                     HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
         <CellTemplate>
             <DeskLink Destination="source"
-                      Icon="@Icons.Material.Filled.MonitorHeart"
+                      Icon="@DeskIcons.MonitorHeart"
                       OnClick="() => Manager.OpenRuns(context.Item.SourceId, context.Item.Source?.Name)">
                 @context.Item.Source?.Name
             </DeskLink>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="IngestionRun" TProperty="string" Property="r => r.JobKey" Title="Job"
+    <DeskColumn T="IngestionRun" TProperty="string" Property="r => r.JobKey" Title="Job"
                     HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
         <CellTemplate><span class="mono quiet">@context.Item.JobKey</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* To the minute, on one line: the seconds broke the stamp over two lines in a window beside
        the Board, and how long a run took is the Took column's reading, not this one's. *@
-    <PropertyColumn T="IngestionRun" TProperty="DateTimeOffset" Property="r => r.StartedAt"
+    <DeskColumn T="IngestionRun" TProperty="DateTimeOffset" Property="r => r.StartedAt"
                     Title="@($"Started ({DisplayTime.Label})")" Align="Align.Right" InitialDirection="SortDirection.Descending"
                     HeaderClass="ops-col--fit" CellClass="ops-col--fit">
         <CellTemplate>
             <span class="quiet">@DisplayTime.Format(context.Item.StartedAt, "MMM d HH:mm")</span>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* Sorts on the real duration so "slowest run" is one click, not a scan of formatted text. *@
-    <PropertyColumn T="IngestionRun" TProperty="double?"
+    <DeskColumn T="IngestionRun" TProperty="double?"
                     Property="r => r.FinishedAt == null ? null : (r.FinishedAt - r.StartedAt)!.Value.TotalMilliseconds"
                     Title="Took" Align="Align.Right" HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
         <CellTemplate>
             <span class="quiet">@(context.Item.Duration is { } d ? Took(d) : "—")</span>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="IngestionRun" TProperty="int" Property="r => r.RowsIngested" Title="Rows" Align="Align.Right" Format="N0"
+    <DeskColumn T="IngestionRun" TProperty="int" Property="r => r.RowsIngested" Title="Rows" Align="Align.Right" Format="N0"
                     HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit" />
 
-    <PropertyColumn T="IngestionRun" TProperty="int" Property="r => r.RequestsMade" Title="Requests" Align="Align.Right"
+    <DeskColumn T="IngestionRun" TProperty="int" Property="r => r.RequestsMade" Title="Requests" Align="Align.Right"
                     HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
         <CellTemplate><span class="quiet">@context.Item.RequestsMade.ToString("N0")</span></CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
-    <PropertyColumn T="IngestionRun" TProperty="int" Property="r => r.CreditsSpent" Title="Credits" Align="Align.Right"
+    <DeskColumn T="IngestionRun" TProperty="int" Property="r => r.CreditsSpent" Title="Credits" Align="Align.Right"
                     HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
         <CellTemplate>
             <span class="quiet">@(context.Item.CreditsSpent > 0 ? context.Item.CreditsSpent.ToString("N0") : "—")</span>
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 
     @* What the run did, in its own sentence ("UFC: 37 asked, 0 answered; 37 set aside until
        Nov 23."), then what went wrong, if anything did. A failed run's error is said in the
@@ -133,7 +133,7 @@
        clipping at a third of the window. A row with nothing to say names its source, but only
        while the Source column is folded away (xlines.css, .opsrun__source): the cell is never
        blank, and never repeats a column beside it. *@
-    <PropertyColumn T="IngestionRun" TProperty="string" Property="r => r.Detail ?? r.Error!" Title="Detail"
+    <DeskColumn T="IngestionRun" TProperty="string" Property="r => r.Detail ?? r.Error!" Title="Detail"
                     HeaderClass="ops-col--grow" CellClass="ops-col--grow">
         <CellTemplate>
             @if (context.Item.Detail is not { Length: > 0 } && context.Item.Error is not { Length: > 0 })
@@ -149,7 +149,7 @@
                 <span class="trunc @ErrorTone(context.Item.Status)" title="@context.Item.Error">@context.Item.Error</span>
             }
         </CellTemplate>
-    </PropertyColumn>
+    </DeskColumn>
 </DeskGrid>
 
 @if (Loaded)

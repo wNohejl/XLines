@@ -122,7 +122,7 @@ else
                     }
                 </Tags>
                 <Detail>
-                    <DeskLink Destination="game" Icon="@Icons.Material.Filled.Scoreboard"
+                    <DeskLink Destination="game" Icon="@DeskIcons.Scoreboard"
                               OnClick="() => Manager.OpenGame(game)">
                         @DisplayTime.Stamp(game.StartsAt)
                     </DeskLink>
@@ -161,11 +161,11 @@ else
                 </span>
             </span>
             <span class="wlogged__keys">
-                <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.ContentCopy" OnClick="SameBetAgainAsync"
+                <DeskButton Size="DeskKeySize.Small" Icon="@DeskIcons.ContentCopy" OnClick="SameBetAgainAsync"
                             Title="Keep this side and book, and take another stake">
                     Same bet again
                 </DeskButton>
-                <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.MenuBook" OnClick="OpenJournalAsync"
+                <DeskButton Size="DeskKeySize.Small" Icon="@DeskIcons.MenuBook" OnClick="OpenJournalAsync"
                             Title="Open the Journal, where this bet is now recorded">
                     View in journal
                 </DeskButton>
@@ -319,7 +319,7 @@ else
                                "closing price"); a hover title repeating that never reached the
                                keyboard (HIG 12). *@
                             <span class="wager-offer__age">
-                                <Glyph Icon="@Icons.Material.Filled.Schedule" /> @Captured(priced)
+                                <Glyph Icon="@DeskIcons.Schedule" /> @Captured(priced)
                             </span>
                         </p>
                     }
@@ -486,7 +486,7 @@ else
            tinted box: the red check in the review already marks the price, and this says what
            to do about it. *@
         <p class="wstatus wstatus--warning" role="status">
-            <span class="wstatus__mark" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.Warning" /></span>
+            <span class="wstatus__mark" aria-hidden="true"><Glyph Icon="@DeskIcons.Warning" /></span>
             <span class="wstatus__text">This is the closing line, so it cannot be @(BuildParlay ? "a leg" : "logged"): Custom price… on the book records the one you got.</span>
         </p>
     }
@@ -496,7 +496,7 @@ else
            once, where the closing note would be: the number is a starting point, and the one to
            record is the one they got. *@
         <p class="wstatus wstatus--warning" role="status">
-            <span class="wstatus__mark" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.Edit" /></span>
+            <span class="wstatus__mark" aria-hidden="true"><Glyph Icon="@DeskIcons.Edit" /></span>
             <span class="wstatus__text">The game has started, so the price starts from its closing line. Change it to the one you got before you @(BuildParlay ? "add the leg" : "log it").</span>
         </p>
     }
@@ -1127,7 +1127,7 @@ else
     {
         if (_offer is not null)
         {
-            <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.ContentCopy" OnClick="Duplicate"
+            <DeskButton Size="DeskKeySize.Small" Icon="@DeskIcons.ContentCopy" OnClick="Duplicate"
                         Title="Open this bet again in a new window, to log it at another book or a second time">
                 Duplicate
             </DeskButton>

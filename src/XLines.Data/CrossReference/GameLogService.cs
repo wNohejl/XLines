@@ -52,9 +52,6 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
         var since = now - window;
 
         var played = db.Games
-            .Include(g => g.HomeTeam)
-            .Include(g => g.AwayTeam)
-            .Include(g => g.Sport)
             .Where(g => (g.HomeTeamId == teamId || g.AwayTeamId == teamId) && g.StartsAt <= now);
 
         // A season is the honest bound wherever the reader is about a record: "this season"
@@ -64,9 +61,11 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
             ? played.Where(g => g.SeasonYear == year)
             : played.Where(g => g.StartsAt >= since);
 
+        // The row reads a dozen scalars, so they are all the query brings back: not the game's
+        // state-of-play columns and jsonb, which a log of a season's games has no use for.
         var games = await played
             .OrderByDescending(g => g.StartsAt)
-            .AsNoTracking()
+            .Select(ToLogGame)
             .ToListAsync(ct);
 
         if (games.Count == 0)
@@ -116,7 +115,10 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
         int take = 5,
         CancellationToken ct = default)
     {
-        var game = await db.Games.AsNoTracking().FirstOrDefaultAsync(g => g.Id == gameId, ct);
+        var game = await db.Games
+            .Where(g => g.Id == gameId)
+            .Select(g => new { g.HomeTeamId, g.AwayTeamId, g.StartsAt })
+            .FirstOrDefaultAsync(ct);
 
         if (game is null)
             return [];
@@ -125,16 +127,13 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
         var away = game.AwayTeamId;
 
         var meetings = await db.Games
-            .Include(g => g.HomeTeam)
-            .Include(g => g.AwayTeam)
-            .Include(g => g.Sport)
             .Where(g => g.Id != gameId
                         && g.StartsAt < game.StartsAt
                         && ((g.HomeTeamId == home && g.AwayTeamId == away)
                             || (g.HomeTeamId == away && g.AwayTeamId == home)))
             .OrderByDescending(g => g.StartsAt)
             .Take(take)
-            .AsNoTracking()
+            .Select(ToLogGame)
             .ToListAsync(ct);
 
         if (meetings.Count == 0)
@@ -152,8 +151,8 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
             return new HeadToHeadRow(
                 GameId: g.Id,
                 StartsAt: g.StartsAt,
-                HomeTeam: g.HomeTeam?.Name ?? "—",
-                AwayTeam: g.AwayTeam?.Name ?? "—",
+                HomeTeam: g.HomeName ?? "—",
+                AwayTeam: g.AwayName ?? "—",
                 HomeScore: g.HomeScore,
                 AwayScore: g.AwayScore,
                 Status: g.Status,
@@ -163,9 +162,9 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
                 AtsResult: row.AtsResult,
                 ClosingTotal: row.ClosingTotal,
                 TotalResult: row.TotalResult,
-                SportKey: g.Sport?.Key,
-                HomeAbbrev: g.HomeTeam?.Abbrev,
-                AwayAbbrev: g.AwayTeam?.Abbrev);
+                SportKey: g.SportKey,
+                HomeAbbrev: g.HomeAbbrev,
+                AwayAbbrev: g.AwayAbbrev);
         }).ToList();
     }
 
@@ -182,14 +181,23 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
         // A visitor to a shared desk sees only lines from a displayable stats source (ADR 0024).
         var rows = await db.PlayerGameStats.FromVisible(await db.VisibleSourceIdsAsync(Tier, ct))
             .Where(s => s.PlayerId == playerId)
-            .Join(db.Games.Include(g => g.HomeTeam).Include(g => g.AwayTeam).Include(g => g.Sport),
+            .Join(db.Games,
                 s => s.GameId, g => g.Id,
                 (s, g) => new { s.StatLine, s.TeamId, Game = g })
             // A season, when named, bounds the log; the count is then the season's, not a cap.
             .Where(x => seasonYear == null || x.Game.SeasonYear == seasonYear)
             .OrderByDescending(x => x.Game.StartsAt)
             .Take(take)
-            .AsNoTracking()
+            // The game's scalars only, as in the team log: not its state-of-play columns.
+            .Select(x => new
+            {
+                x.StatLine,
+                x.TeamId,
+                Game = new LogGame(
+                    x.Game.Id, x.Game.StartsAt, x.Game.HomeTeamId, x.Game.AwayTeamId,
+                    x.Game.HomeTeam!.Name, x.Game.AwayTeam!.Name, x.Game.HomeTeam.Abbrev, x.Game.AwayTeam.Abbrev,
+                    x.Game.HomeScore, x.Game.AwayScore, x.Game.Status, x.Game.Sport!.Key)
+            })
             .ToListAsync(ct);
 
         if (rows.Count == 0)
@@ -212,15 +220,15 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
             return new PlayerGameRow(
                 GameId: g.Id,
                 StartsAt: g.StartsAt,
-                Team: (isHome ? g.HomeTeam?.Name : g.AwayTeam?.Name) ?? "—",
-                Opponent: (isHome ? g.AwayTeam?.Name : g.HomeTeam?.Name) ?? "—",
+                Team: (isHome ? g.HomeName : g.AwayName) ?? "—",
+                Opponent: (isHome ? g.AwayName : g.HomeName) ?? "—",
                 Home: isHome,
                 ScoreFor: isHome ? g.HomeScore : g.AwayScore,
                 ScoreAgainst: isHome ? g.AwayScore : g.HomeScore,
                 Status: g.Status,
                 Stats: ReadStatLine(x.StatLine),
-                SportKey: g.Sport?.Key,
-                OpponentAbbrev: isHome ? g.AwayTeam?.Abbrev : g.HomeTeam?.Abbrev);
+                SportKey: g.SportKey,
+                OpponentAbbrev: isHome ? g.AwayAbbrev : g.HomeAbbrev);
         }).ToList();
     }
 
@@ -343,11 +351,36 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
                     : null));
     }
 
+    /// <summary>
+    /// What a log row reads of a game: its teams' names and marks, the score and the status. Not
+    /// the game entity, whose state-of-play columns and jsonb (<c>LastPlay</c>, <c>Linescore</c>,
+    /// <c>Situation</c>) a list of games would carry for nothing. None of these is a column
+    /// <see cref="PersonalUseColumns.ForTier(Game, IDataTier)"/> blanks: they are the spine.
+    /// </summary>
+    private sealed record LogGame(
+        int Id,
+        DateTimeOffset StartsAt,
+        int HomeTeamId,
+        int AwayTeamId,
+        string? HomeName,
+        string? AwayName,
+        string? HomeAbbrev,
+        string? AwayAbbrev,
+        int? HomeScore,
+        int? AwayScore,
+        GameStatus Status,
+        string? SportKey);
+
+    private static readonly System.Linq.Expressions.Expression<Func<Game, LogGame>> ToLogGame = g => new LogGame(
+        g.Id, g.StartsAt, g.HomeTeamId, g.AwayTeamId,
+        g.HomeTeam!.Name, g.AwayTeam!.Name, g.HomeTeam.Abbrev, g.AwayTeam.Abbrev,
+        g.HomeScore, g.AwayScore, g.Status, g.Sport!.Key);
+
     private static TeamGameLogRow BuildRow(
-        Game game, int teamId, Dictionary<int, GameClosingLines> lines)
+        LogGame game, int teamId, Dictionary<int, GameClosingLines> lines)
     {
         var isHome = game.HomeTeamId == teamId;
-        var teamName = (isHome ? game.HomeTeam?.Name : game.AwayTeam?.Name) ?? string.Empty;
+        var teamName = (isHome ? game.HomeName : game.AwayName) ?? string.Empty;
 
         var scoreFor = isHome ? game.HomeScore : game.AwayScore;
         var scoreAgainst = isHome ? game.AwayScore : game.HomeScore;
@@ -368,8 +401,8 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
         if (game.Status == GameStatus.Final
             && game.HomeScore is { } h
             && game.AwayScore is { } a
-            && game.HomeTeam?.Name is { } homeName
-            && game.AwayTeam?.Name is { } awayName)
+            && game.HomeName is { } homeName
+            && game.AwayName is { } awayName)
         {
             if (spread is not null)
             {
@@ -387,7 +420,7 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
         return new TeamGameLogRow(
             GameId: game.Id,
             StartsAt: game.StartsAt,
-            Opponent: (isHome ? game.AwayTeam?.Name : game.HomeTeam?.Name) ?? "—",
+            Opponent: (isHome ? game.AwayName : game.HomeName) ?? "—",
             Home: isHome,
             ScoreFor: scoreFor,
             ScoreAgainst: scoreAgainst,
@@ -396,8 +429,8 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
             AtsResult: ats,
             ClosingTotal: total,
             TotalResult: overUnder,
-            SportKey: game.Sport?.Key,
-            OpponentAbbrev: isHome ? game.AwayTeam?.Abbrev : game.HomeTeam?.Abbrev);
+            SportKey: game.SportKey,
+            OpponentAbbrev: isHome ? game.AwayAbbrev : game.HomeAbbrev);
     }
 
     /// <summary>
@@ -438,52 +471,6 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null, TimeProv
         public decimal? SpreadFor(string teamName)
             => Spreads.TryGetValue(teamName, out var line) ? line : null;
     }
-}
-
-/// <summary>
-/// One game from a team's perspective, with what the market said about it.
-///
-/// <para>
-/// The two result fields are null when there is no reading — no closing line, or a game not
-/// yet final. Null is distinct from <see cref="EntryResult.Push"/>: a game with no stored
-/// number did not land on it.
-/// </para>
-/// </summary>
-public record TeamGameLogRow(
-    int GameId,
-    DateTimeOffset StartsAt,
-    string Opponent,
-    bool Home,
-    int? ScoreFor,
-    int? ScoreAgainst,
-    GameStatus Status,
-    decimal? ClosingSpread,
-    EntryResult? AtsResult,
-    decimal? ClosingTotal,
-    EntryResult? TotalResult,
-    // The sport and the opponent's abbreviation, so a log can draw the opponent's crest.
-    string? SportKey = null,
-    string? OpponentAbbrev = null)
-{
-    /// <summary>Null until the game is final — a game in progress has no result yet.</summary>
-    public bool? Won => Status == GameStatus.Final && ScoreFor is { } f && ScoreAgainst is { } a
-        ? f > a
-        : null;
-
-    /// <summary>Whether this row contributed any market data, for coverage counting.</summary>
-    public bool HasClosingLine => ClosingSpread is not null || ClosingTotal is not null;
-
-    /// <summary>
-    /// Whether the score means anything yet.
-    ///
-    /// A fixture that has not been played carries zeroes rather than nulls, so a null check
-    /// alone renders an unplayed game as a nil-nil draw — the exact confusion ADR 0003 is
-    /// about. The status is what distinguishes them, so it has to be part of the question.
-    /// </summary>
-    public bool HasScore
-        => Status is GameStatus.Final or GameStatus.Live
-           && ScoreFor is not null
-           && ScoreAgainst is not null;
 }
 
 /// <summary>

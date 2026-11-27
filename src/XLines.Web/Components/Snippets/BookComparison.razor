@@ -41,26 +41,26 @@ else
 {
     <DeskGrid T="string" Items="shown" Sortable="false" Resizable="false" Class="bookcmp" EmptyText="Not priced by any book yet.">
         @* The row's label: the book's own name ("DraftKings"), never the feed's key. *@
-        <PropertyColumn T="string" TProperty="string" Property="b => b" Title="Book" Sortable="false">
+        <DeskColumn T="string" TProperty="string" Property="b => b" Title="Book" Sortable="false">
             <CellTemplate>@BookNames.Display(context.Item)</CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
         @* A club's column is headed by its crest and name; Over and Under are words. *@
-        <TemplateColumn T="string" Title="@FirstSide" Align="Align.Right" Sortable="false">
+        <DeskTemplateColumn T="string" Title="@FirstSide" Align="Align.Right" Sortable="false">
             <HeaderTemplate><TeamMark Sport="@Sport" Abbrev="@FirstAbbrev" />@FirstSide</HeaderTemplate>
             <CellTemplate>@Cell(First, context.Item)</CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
-        <TemplateColumn T="string" Title="@SecondSide" Align="Align.Right" Sortable="false">
+        <DeskTemplateColumn T="string" Title="@SecondSide" Align="Align.Right" Sortable="false">
             <HeaderTemplate><TeamMark Sport="@Sport" Abbrev="@SecondAbbrev" />@SecondSide</HeaderTemplate>
             <CellTemplate>@Cell(Second, context.Item)</CellTemplate>
-        </TemplateColumn>
+        </DeskTemplateColumn>
 
         @if (ShowHold)
         {
             @* What the book keeps: its two prices' overshoot past certainty. The cheapest book to
                bet into over a season is the one with the lowest number here. *@
-            <TemplateColumn T="string" Title="Hold" Align="Align.Right" Sortable="false">
+            <DeskTemplateColumn T="string" Title="Hold" Align="Align.Right" Sortable="false">
                 <CellTemplate>
                     @if (BookRanking.Hold(context.Item, First, Second) is { } hold)
                     {
@@ -73,7 +73,7 @@ else
                         <span class="dim">no pair</span>
                     }
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
         }
     </DeskGrid>
 

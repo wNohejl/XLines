@@ -56,7 +56,7 @@ else
                 {
                     @(missing + ". ")
                     <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                                Icon="@Icons.Material.Filled.PersonSearch"
+                                Icon="@DeskIcons.PersonSearch"
                                 Busy="_reading"
                                 OnClick="ReadProfilesAsync">
                         Read fighter profiles
@@ -202,7 +202,7 @@ else
         <span class="tape__corner-name">
             @if (OnFighter.HasDelegate)
             {
-                <DeskLink Destination="team" Icon="@Icons.Material.Filled.Person"
+                <DeskLink Destination="team" Icon="@DeskIcons.Person"
                           OnClick="() => OnFighter.InvokeAsync((card.Team.Id, card.Team.Name))">@card.Team.Name</DeskLink>
             }
             else

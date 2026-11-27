@@ -31,7 +31,7 @@ else if (!_anySettled)
         </ChildContent>
         <Action>
             <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                        Icon="@Icons.Material.Filled.MenuBook"
+                        Icon="@DeskIcons.MenuBook"
                         OnClick="() => Manager.OpenJournal()">
                 Open the Journal
             </DeskButton>
@@ -222,20 +222,20 @@ else
 
             <FormGroup Title="What CLV was measured against" GroupClass="perf-card">
             <DeskGrid T="BasisRow" Items="_byBasis" Class="perf-table" EmptyText="No selections with a close.">
-                <PropertyColumn T="BasisRow" TProperty="string" Property="r => r.Basis" Title="Compared with"
+                <DeskColumn T="BasisRow" TProperty="string" Property="r => r.Basis" Title="Compared with"
                                 HeaderClass="perf-col--key" CellClass="perf-col--key" />
-                <PropertyColumn T="BasisRow" TProperty="int" Property="r => r.Count" Title="Selections" Align="Align.Right"
+                <DeskColumn T="BasisRow" TProperty="int" Property="r => r.Count" Title="Selections" Align="Align.Right"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate><span class="dim">@context.Item.Count.ToString("N0")</span></CellTemplate>
-                </PropertyColumn>
-                <TemplateColumn T="BasisRow" Title="Beat the close" Align="Align.Right" Sortable="false"
+                </DeskColumn>
+                <DeskTemplateColumn T="BasisRow" Title="Beat the close" Align="Align.Right" Sortable="false"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate>@(context.Item.BeatRate is { } r ? r.ToString("P0") : "—")</CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn T="BasisRow" Title="Average" Align="Align.Right" Sortable="false"
+                </DeskTemplateColumn>
+                <DeskTemplateColumn T="BasisRow" Title="Average" Align="Align.Right" Sortable="false"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate><span class="dim">@context.Item.Average</span></CellTemplate>
-                </TemplateColumn>
+                </DeskTemplateColumn>
             </DeskGrid>
             </FormGroup>
 
@@ -244,13 +244,13 @@ else
                one book, or a market that closed hours early. *@
             <FormGroup Title="What value was measured against" GroupClass="perf-card">
             <DeskGrid T="FairBasisRow" Items="_byFairBasis" Class="perf-table" EmptyText="No settled selections.">
-                <PropertyColumn T="FairBasisRow" TProperty="string" Property="r => r.Basis" Title="Fair close from"
+                <DeskColumn T="FairBasisRow" TProperty="string" Property="r => r.Basis" Title="Fair close from"
                                 HeaderClass="perf-col--key" CellClass="perf-col--key" />
-                <PropertyColumn T="FairBasisRow" TProperty="int" Property="r => r.Count" Title="Selections" Align="Align.Right"
+                <DeskColumn T="FairBasisRow" TProperty="int" Property="r => r.Count" Title="Selections" Align="Align.Right"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate><span class="dim">@context.Item.Count.ToString("N0")</span></CellTemplate>
-                </PropertyColumn>
-                <TemplateColumn T="FairBasisRow" Title="Value at close" Align="Align.Right" Sortable="true"
+                </DeskColumn>
+                <DeskTemplateColumn T="FairBasisRow" Title="Value at close" Align="Align.Right" Sortable="true"
                                 SortBy="@(r => r.Value?.Rate ?? double.MinValue)"
                                 HeaderClass="perf-col--wide" CellClass="perf-col--wide">
                     <CellTemplate>
@@ -264,7 +264,7 @@ else
                             <span class="dim">—</span>
                         }
                     </CellTemplate>
-                </TemplateColumn>
+                </DeskTemplateColumn>
             </DeskGrid>
             </FormGroup>
         </div>
@@ -582,18 +582,18 @@ else
                       Items="data"
                       Class="perf-table"
                       EmptyText="No settled bets.">
-                <PropertyColumn T="BreakdownRow" TProperty="string" Property="r => r.Label" Title="@by"
+                <DeskColumn T="BreakdownRow" TProperty="string" Property="r => r.Label" Title="@by"
                                 HeaderClass="perf-col--key" CellClass="perf-col--key" />
 
-                <PropertyColumn T="BreakdownRow" TProperty="int" Property="r => r.Summary.SettledCount"
+                <DeskColumn T="BreakdownRow" TProperty="int" Property="r => r.Summary.SettledCount"
                                 Title="Bets" Align="Align.Right"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate><span class="dim">@context.Item.Summary.SettledCount.ToString("N0")</span></CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
 
                 @* Best-earning first was the hand-written order; sorting keeps it as the default
                    rather than as the only one. *@
-                <PropertyColumn T="BreakdownRow" TProperty="decimal" Property="r => r.Summary.NetProfit"
+                <DeskColumn T="BreakdownRow" TProperty="decimal" Property="r => r.Summary.NetProfit"
                                 Title="Net" Align="Align.Right" InitialDirection="@(netFirst ? SortDirection.Descending : SortDirection.None)"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate>
@@ -601,13 +601,13 @@ else
                             @Signed(context.Item.Summary.NetProfit)
                         </span>
                     </CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
 
-                <PropertyColumn T="BreakdownRow" TProperty="decimal" Property="r => r.Summary.Roi"
+                <DeskColumn T="BreakdownRow" TProperty="decimal" Property="r => r.Summary.Roi"
                                 Title="ROI" Align="Align.Right"
                                 HeaderClass="perf-col--num" CellClass="perf-col--num">
                     <CellTemplate><span class="dim">@Percent(context.Item.Summary.Roi)</span></CellTemplate>
-                </PropertyColumn>
+                </DeskColumn>
             </DeskGrid>
         }
     </text>;

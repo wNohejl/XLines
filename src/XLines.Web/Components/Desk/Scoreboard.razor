@@ -85,7 +85,7 @@
                 @* The hero crest heads the Game window's two rows; the compact line in the wager
                    header is a title among other things and takes the large one. *@
                 <TeamMark Sport="@Game.Sport?.Key" Abbrev="@team?.Abbrev" Size="@(Compact ? TeamMarkSize.Large : TeamMarkSize.Hero)" />
-                <DeskLink Destination="team" Icon="@Icons.Material.Filled.Shield"
+                <DeskLink Destination="team" Icon="@DeskIcons.Shield"
                           OnClick="() => OnTeam.InvokeAsync(teamId)">
                     @(team?.Name ?? fallback)
                 </DeskLink>

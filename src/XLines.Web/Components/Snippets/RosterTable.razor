@@ -30,7 +30,7 @@
               OnRowClick="@(e => OnRowClick.InvokeAsync(e.Item))"
               EmptyText="No appearances on record.">
 
-        <PropertyColumn T="PlayerForm" TProperty="string" Property="p => p.Name" Title="Player"
+        <DeskColumn T="PlayerForm" TProperty="string" Property="p => p.Name" Title="Player"
                         HeaderClass="@(GrowName ? "ops-col--grow" : null)"
                         CellClass="@(GrowName ? "trunc ops-col--grow" : "trunc")">
             <CellTemplate>
@@ -43,21 +43,21 @@
                     <span title="@context.Item.Name">@context.Item.Name</span>
                 }
             </CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="PlayerForm" TProperty="string" Property="p => p.Position!" Title="Pos"
+        <DeskColumn T="PlayerForm" TProperty="string" Property="p => p.Position!" Title="Pos"
                         HeaderClass="col--wide" CellClass="col--wide">
             <CellTemplate><span class="dim">@(context.Item.Position ?? "—")</span></CellTemplate>
-        </PropertyColumn>
+        </DeskColumn>
 
-        <PropertyColumn T="PlayerForm" TProperty="int" Property="p => p.Appearances"
+        <DeskColumn T="PlayerForm" TProperty="int" Property="p => p.Appearances"
                         Title="GP" Align="Align.Right" />
 
         @foreach (var c in StatColumns.Pick(Side.Select(p => p.Totals.Keys), MaxColumns))
         {
             var key = c;
 
-            <TemplateColumn T="PlayerForm" Sortable="true"
+            <DeskTemplateColumn T="PlayerForm" Sortable="true"
                             Title="@(StatLabels.StatLabel(key) + (StatColumns.IsRate(Side, key) ? "/g" : ""))"
                             Align="Align.Right"
                             SortBy="@(p => p.Summary(key) ?? double.MinValue)">
@@ -66,18 +66,18 @@
                         ? v.ToString(context.Item.IsCounting(key) ? "#,0.##" : "0.000")
                         : "—")
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
         }
 
         @if (ShowLastPlayed)
         {
-            <PropertyColumn T="PlayerForm" TProperty="DateTimeOffset" Property="p => p.LastPlayed"
+            <DeskColumn T="PlayerForm" TProperty="DateTimeOffset" Property="p => p.LastPlayed"
                             Title="Last" Align="Align.Right"
                             HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                 <CellTemplate>
                     <span class="dim">@DisplayTime.Day(context.Item.LastPlayed)</span>
                 </CellTemplate>
-            </PropertyColumn>
+            </DeskColumn>
         }
     </DeskGrid>
 </div>

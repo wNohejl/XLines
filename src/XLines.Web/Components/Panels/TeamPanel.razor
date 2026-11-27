@@ -207,13 +207,13 @@ else
                                    the Game window's and the Gamecast's are. *@
                                 <DeskRow>
                                     <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                                                Icon="@Icons.Material.Filled.SportsScore"
+                                                Icon="@DeskIcons.SportsScore"
                                                 OnClick="() => OpenGameAsync(row.GameId)">
                                         Game
                                     </DeskButton>
 
                                     <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                                                Icon="@Icons.Material.Filled.ShowChart"
+                                                Icon="@DeskIcons.ShowChart"
                                                 OnClick="() => LaunchMovement(row)">
                                         Line movement
                                     </DeskButton>
@@ -258,7 +258,7 @@ else
 
                             <DeskRow>
                                 <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Tinted"
-                                            Icon="@Icons.Material.Filled.Person"
+                                            Icon="@DeskIcons.Person"
                                             Title="Open the player's full game log in the Player window"
                                             OnClick="() => LaunchPlayer(player)">
                                     Player

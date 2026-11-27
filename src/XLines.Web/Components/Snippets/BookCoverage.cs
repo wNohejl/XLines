@@ -61,7 +61,7 @@ public sealed record BookCoverage(int Priced, int Polled, IReadOnlyList<string> 
     }
 
     /// <summary>Every book priced on any side of any of a game's markets.</summary>
-    public static IEnumerable<string> Books(XLines.Data.CrossReference.BoardRow row)
+    public static IEnumerable<string> Books(XLines.Core.Analytics.BoardRow row)
         => new[] { row.Moneyline, row.Spread, row.Total }
             .SelectMany(m => new[] { m.First, m.Second })
             .SelectMany(o => o?.Rungs ?? [])

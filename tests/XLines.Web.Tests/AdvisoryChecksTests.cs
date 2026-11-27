@@ -149,11 +149,11 @@ public class AdvisoryChecksTests
     public void A_rung_at_another_book_is_that_books_price_and_age()
     {
         var captured = Now.AddMinutes(-40);
-        var best = new XLines.Data.CrossReference.BestOffer("Kansas City Chiefs", "draftkings", -128, null, Now.AddMinutes(-12),
+        var best = new XLines.Core.Analytics.BestOffer("Kansas City Chiefs", "draftkings", -128, null, Now.AddMinutes(-12),
             null, false, false,
             [
-                new XLines.Data.CrossReference.BookPrice("draftkings", -128, null, 0.56) { Ev = 0.027 },
-                new XLines.Data.CrossReference.BookPrice("fanduel", -135, null, 0.574) { Ev = -0.01, CapturedAt = captured }
+                new XLines.Core.Analytics.BookPrice("draftkings", -128, null, 0.56) { Ev = 0.027 },
+                new XLines.Core.Analytics.BookPrice("fanduel", -135, null, 0.574) { Ev = -0.01, CapturedAt = captured }
             ])
         { Fair = Pinnacle, Ev = 0.027 };
 

@@ -132,7 +132,7 @@ else
         </Detail>
         <Keys>
             @* One key, straight in the title's key slot, which spaces keys itself. *@
-            <DeskButton Icon="@Icons.Material.Filled.SportsScore" Emphasis="DeskEmphasis.Tinted"
+            <DeskButton Icon="@DeskIcons.SportsScore" Emphasis="DeskEmphasis.Tinted"
                         Title="Open this game's lines, team data and players in the Game window"
                         OnClick="() => Manager.OpenGame(game)">
                 Game
@@ -1342,7 +1342,7 @@ else
     };
 
     /// <summary>The field card's one key while a live game's past drive is on it.</summary>
-    private RenderFragment LiveDriveKey => @<DeskButton Icon="@Icons.Material.Filled.Replay" Size="DeskKeySize.Small"
+    private RenderFragment LiveDriveKey => @<DeskButton Icon="@DeskIcons.Replay" Size="DeskKeySize.Small"
                                                         Title="Put the drive in progress back on the field"
                                                         OnClick="FollowLiveDrive">Live drive</DeskButton>;
 
@@ -1542,7 +1542,7 @@ else
                             <button type="button" class="gc__toggle disclosure__summary"
                                     aria-expanded="@(isOpen ? "true" : "false")" aria-controls="@region"
                                     @onclick="() => ToggleDrive(sequence)">
-                                <span class="disclosure__triangle" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.ArrowRight" /></span>
+                                <span class="disclosure__triangle" aria-hidden="true"><Glyph Icon="@DeskIcons.ArrowRight" /></span>
                                 @RenderDriveLead(drive)
                             </button>
                         }
@@ -1598,7 +1598,7 @@ else
                             <button type="button" class="gc__toggle disclosure__summary"
                                     aria-expanded="@(isOpen ? "true" : "false")" aria-controls="@region"
                                     @onclick="() => ToggleDrive(OtherPlays)">
-                                <span class="disclosure__triangle" aria-hidden="true"><Glyph Icon="@Icons.Material.Filled.ArrowRight" /></span>
+                                <span class="disclosure__triangle" aria-hidden="true"><Glyph Icon="@DeskIcons.ArrowRight" /></span>
                                 <span class="gc__result">Other plays · @count filed under no drive</span>
                             </button>
                         }

@@ -85,7 +85,7 @@
     <Actions>
         @if (Loaded)
         {
-            <DeskJobMenu @ref="_pull" Label="Pull data" Icon="@Icons.Material.Filled.CloudDownload" OnRan="LoadAsync" />
+            <DeskJobMenu @ref="_pull" Label="Pull data" Icon="@DeskIcons.CloudDownload" OnRan="LoadAsync" />
         }
     </Actions>
 </PanelToolbar>
@@ -177,7 +177,7 @@ else
         <span class="slatewatch__following-text">
             Following <strong>@Matchup(followed)</strong> · @SelectionText.MarketWord(_market)@(_side is { } side ? $" · {SideLabel(side)}" : "")
         </span>
-        <DeskButton Size="DeskKeySize.Small" Icon="@Icons.Material.Filled.ArrowBack" OnClick="ShowOverviewAsync">
+        <DeskButton Size="DeskKeySize.Small" Icon="@DeskIcons.ArrowBack" OnClick="ShowOverviewAsync">
             Overview
         </DeskButton>
     </div>
@@ -242,21 +242,21 @@ else
                for joining rows, not for reading. *@
             @* Every value here holds one line; the trend takes what is left, so the book's name
                and its figures never break while the sparkline has room to draw its path. *@
-            <PropertyColumn T="MovementRow" TProperty="string" Property="r => r.Book" Title="Book"
+            <DeskColumn T="MovementRow" TProperty="string" Property="r => r.Book" Title="Book"
                             HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                 <CellTemplate>@BookNames.Display(context.Item.Book)</CellTemplate>
-            </PropertyColumn>
+            </DeskColumn>
 
             @* No colour and no axis: the numbers are in the next cells, and the shape only has
                to say which way and when. A book seen once draws a dash, not a flat line. *@
-            <TemplateColumn T="MovementRow" Title="Trend" Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
+            <DeskTemplateColumn T="MovementRow" Title="Trend" Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
                 <CellTemplate>
                     <DeskSparkline Values="context.Item.Trend" Positions="context.Item.Positions" Step="true"
                                    Label="@TrendLabel(context.Item)" />
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
-            <TemplateColumn T="MovementRow" Title="Open" Align="Align.Right" Sortable="true"
+            <DeskTemplateColumn T="MovementRow" Title="Open" Align="Align.Right" Sortable="true"
                             SortBy="@(r => Rank(r.Open))" HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
                 <CellTemplate>
                     @* When the open was seen is a tooltip on a trigger that takes focus, not a title
@@ -265,29 +265,29 @@ else
                         <span class="dim movement__quote" tabindex="0">@Quote(context.Item.Open)</span>
                     </DeskTooltip>
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
             @* Sorting on the current number is how you find the best one across books. *@
-            <TemplateColumn T="MovementRow" Title="Now" Align="Align.Right" Sortable="true"
+            <DeskTemplateColumn T="MovementRow" Title="Now" Align="Align.Right" Sortable="true"
                             SortBy="@(r => Rank(r.Now))" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                 <CellTemplate>
                     <span class="movement__quote">@Quote(context.Item.Now)</span>
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
             @* The arrow is the direction the number moved as it is written, the same way the
                sparkline draws it, and nothing more: the ink is neutral because a price moving
                is not good or bad. The tooltip says it in words — shortened or drifted. *@
-            <TemplateColumn T="MovementRow" Title="Move" Align="Align.Right" Sortable="true"
+            <DeskTemplateColumn T="MovementRow" Title="Move" Align="Align.Right" Sortable="true"
                             SortBy="@(r => MoveSize(r))" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
                 <CellTemplate>
                     <DeskTooltip Text="@MoveTitle(context.Item, _market)">
                         <span class="movement__move @(context.Item.Moved ? null : "dim")" tabindex="0">@MoveText(context.Item)</span>
                     </DeskTooltip>
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
 
-            <TemplateColumn T="MovementRow" Title="Last moved" Align="Align.Right" Sortable="true"
+            <DeskTemplateColumn T="MovementRow" Title="Last moved" Align="Align.Right" Sortable="true"
                             SortBy="@(r => r.LastMoved ?? DateTimeOffset.MinValue)"
                             HeaderClass="col--wide ops-col--fit" CellClass="col--wide ops-col--fit">
                 <CellTemplate>
@@ -304,7 +304,7 @@ else
                         <span class="dim">seen once</span>
                     }
                 </CellTemplate>
-            </TemplateColumn>
+            </DeskTemplateColumn>
         </DeskGrid>
         <MoreBooks Books="_rows.Select(r => r.Book)" First="SideOffer" Second="OtherOffer" Expanded="@_expanded.Contains(_market)" ExpandedChanged="@((bool open) => SetExpanded(open))" Controls="@_booksId"
                    Polled="_polled" />

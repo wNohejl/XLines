@@ -1,4 +1,4 @@
-namespace XLines.Data.CrossReference;
+namespace XLines.Core.Analytics;
 
 /// <summary>
 /// Slices a loaded game log by situation.
