@@ -237,7 +237,9 @@ public class OddsDefaultSourceTests(PostgresFixture fixture)
         {
             snapshot[table] = await db.Database
                 // The table names are this test's own constants, not input.
+#pragma warning disable EF1003
                 .SqlQueryRaw<string>("SELECT row_to_json(t)::text AS \"Value\" FROM \"" + table + "\" t ORDER BY 1")
+#pragma warning restore EF1003
                 .ToListAsync();
         }
 

@@ -388,8 +388,11 @@ public class BookComparisonTests : WagerTestContext
         var at = DateTimeOffset.UtcNow;
         var snaps = Ten.Select(b => new OddsSnapshot
         {
-            Book = b, Market = Markets.Moneyline, Outcome = BoardRows.Home,
-            PriceAmerican = b == "wynnbet" ? -110 : -125, CapturedAt = at.AddHours(-1)
+            Book = b,
+            Market = Markets.Moneyline,
+            Outcome = BoardRows.Home,
+            PriceAmerican = b == "wynnbet" ? -110 : -125,
+            CapturedAt = at.AddHours(-1)
         });
         var rows = OddsPanel.MovementRows(snaps, BoardRows.Home);
 

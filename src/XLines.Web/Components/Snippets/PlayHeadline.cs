@@ -62,35 +62,35 @@ public static partial class PlayHeadline
         switch (type.ToLowerInvariant())
         {
             case "rush":
-            {
-                if (Kneel().IsMatch(text))
-                    return "Kneel";
-
-                var yards = OwnYards(play, text);
-                var what = Scramble().IsMatch(text) ? "scramble" : "run";
-
-                return yards switch
                 {
-                    null => what == "run" ? "Run" : "Scramble",
-                    > 0 => $"{Yd(yards.Value)} {what}",
-                    0 when what == "run" => "No gain",
-                    0 => "Scramble, no gain",
-                    _ when what == "run" => $"{Yd(-yards.Value)} loss",
-                    _ => $"Scramble, {Yd(-yards.Value)} loss"
-                };
-            }
+                    if (Kneel().IsMatch(text))
+                        return "Kneel";
+
+                    var yards = OwnYards(play, text);
+                    var what = Scramble().IsMatch(text) ? "scramble" : "run";
+
+                    return yards switch
+                    {
+                        null => what == "run" ? "Run" : "Scramble",
+                        > 0 => $"{Yd(yards.Value)} {what}",
+                        0 when what == "run" => "No gain",
+                        0 => "Scramble, no gain",
+                        _ when what == "run" => $"{Yd(-yards.Value)} loss",
+                        _ => $"Scramble, {Yd(-yards.Value)} loss"
+                    };
+                }
 
             case "pass reception":
-            {
-                var yards = OwnYards(play, text);
-                return yards switch
                 {
-                    null => "Pass complete",
-                    > 0 => $"{Yd(yards.Value)} pass",
-                    0 => "Pass, no gain",
-                    _ => $"Pass, {Yd(-yards.Value)} loss"
-                };
-            }
+                    var yards = OwnYards(play, text);
+                    return yards switch
+                    {
+                        null => "Pass complete",
+                        > 0 => $"{Yd(yards.Value)} pass",
+                        0 => "Pass, no gain",
+                        _ => $"Pass, {Yd(-yards.Value)} loss"
+                    };
+                }
 
             case "pass incompletion":
                 if (Spike().IsMatch(text))

@@ -444,7 +444,8 @@ public class PriceCellTests : DeskTestContext
     private IRenderedComponent<PriceCell> Closing(string book = "betrivers", int american = 185)
         => RenderComponent<PriceCell>(p => p
             .Add(x => x.Offer, Offer(book: book, american: american, isClosing: true, rungs: TenBooks)
-                with { Fair = new FairPrice(0.346, 189, FairValue.SharpBook, 1) })
+                with
+            { Fair = new FairPrice(0.346, 189, FairValue.SharpBook, 1) })
             .Add(x => x.StartsAt, Captured.AddHours(3.6)));
 
     /// <summary>The fair line is spelt as every book table spells it: "Fair +189 (Pinnacle, no-vig)".</summary>

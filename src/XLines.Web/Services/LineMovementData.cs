@@ -168,8 +168,13 @@ public sealed class LineMovementData(
             .Where(r => wanted.Contains((r.GameId, r.Market, r.Outcome, r.Book, r.CapturedAt)))
             .Select(r => new OddsSnapshot
             {
-                GameId = r.GameId, Market = r.Market, Outcome = r.Outcome, Book = r.Book,
-                Line = r.Line, PriceAmerican = r.PriceAmerican, CapturedAt = r.CapturedAt
+                GameId = r.GameId,
+                Market = r.Market,
+                Outcome = r.Outcome,
+                Book = r.Book,
+                Line = r.Line,
+                PriceAmerican = r.PriceAmerican,
+                CapturedAt = r.CapturedAt
             })
             .OrderBy(s => s.CapturedAt)
             .ToList();

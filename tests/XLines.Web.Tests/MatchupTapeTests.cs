@@ -89,7 +89,12 @@ public class MatchupTapeTests : DeskTestContext
     private static OddsSnapshot Snap(string market, string outcome, string book, int price, decimal? line, int minutesAgo)
         => new()
         {
-            GameId = BoardRows.GameId, Market = market, Outcome = outcome, Book = book, PriceAmerican = price, Line = line,
+            GameId = BoardRows.GameId,
+            Market = market,
+            Outcome = outcome,
+            Book = book,
+            PriceAmerican = price,
+            Line = line,
             CapturedAt = DateTimeOffset.UtcNow.AddMinutes(-minutesAgo)
         };
 

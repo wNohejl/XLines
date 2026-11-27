@@ -527,7 +527,7 @@ public class WindowTabStripTests : SampleDeskTestContext
     }
 
     [Fact]
-    public void A_window_behind_a_tab_keeps_its_panel_and_its_input_across_switches()
+    public async Task A_window_behind_a_tab_keeps_its_panel_and_its_input_across_switches()
     {
         CountingDraft.Built = 0;
         var draft = new WindowDefinition { Key = "draft", Title = "Draft", Icon = "", ComponentType = typeof(CountingDraft) };
@@ -538,7 +538,7 @@ public class WindowTabStripTests : SampleDeskTestContext
         Win(desk, window).QuerySelector(".draft")!.Click();
         Assert.True(window.HasUnsavedInput);
 
-        var health = desk.InvokeAsync(() => manager.Open(Window(SampleCatalog.Health))).Result;
+        var health = await desk.InvokeAsync(() => manager.Open(Window(SampleCatalog.Health)));
         Assert.Contains("win--behind", Win(desk, window).ClassList);
         Assert.NotNull(Win(desk, window).QuerySelector(".draft"));
 

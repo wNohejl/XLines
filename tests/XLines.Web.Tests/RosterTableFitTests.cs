@@ -21,8 +21,12 @@ public class RosterTableFitTests : DeskTestContext
         id, name, "WR", true, 3, DateTimeOffset.UtcNow.AddDays(-4),
         new Dictionary<string, double>
         {
-            ["receiving.REC"] = 12, ["receiving.YDS"] = 140, ["receiving.TD"] = 1,
-            ["rushing.CAR"] = 4, ["rushing.YDS"] = 21, ["defensive.PD"] = 0,
+            ["receiving.REC"] = 12,
+            ["receiving.YDS"] = 140,
+            ["receiving.TD"] = 1,
+            ["rushing.CAR"] = 4,
+            ["rushing.YDS"] = 21,
+            ["defensive.PD"] = 0,
         },
         new Dictionary<string, int>(), new Dictionary<string, bool>());
 

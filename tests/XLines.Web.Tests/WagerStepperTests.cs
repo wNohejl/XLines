@@ -156,7 +156,7 @@ public class WagerStepperTests : WagerTestContext
         // The stake stays open: it is typed, and a step that folded on the first digit would
         // take the field away mid-number.
         Assert.Equal([false, true, true], Open(cut));
-        Assert.Contains("ML · Chiefs at -128 with DraftKings",cut.Find(".wreview").TextContent);
+        Assert.Contains("ML · Chiefs at -128 with DraftKings", cut.Find(".wreview").TextContent);
     }
 
     [Fact]

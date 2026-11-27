@@ -378,7 +378,12 @@ public class LineWatchTests : WagerTestContext
     private static OddsSnapshot Snapshot(string market, string outcome, string book, int price, decimal? line = null, int minutesAgo = 30)
         => new()
         {
-            GameId = BoardRows.GameId, Market = market, Outcome = outcome, Book = book, PriceAmerican = price, Line = line,
+            GameId = BoardRows.GameId,
+            Market = market,
+            Outcome = outcome,
+            Book = book,
+            PriceAmerican = price,
+            Line = line,
             CapturedAt = DateTimeOffset.UtcNow.AddMinutes(-minutesAgo)
         };
 
@@ -1064,7 +1069,9 @@ public class LineWatchTests : WagerTestContext
         Assert.True(LineWatch.IsActive(Desk));
         WindowManager.Aim(odds.Parameters, new Dictionary<string, object>
         {
-            ["GameId"] = BoardRows.GameId, ["Market"] = Markets.Moneyline, ["Press"] = "0123456789abcdef0123456789abcdef"
+            ["GameId"] = BoardRows.GameId,
+            ["Market"] = Markets.Moneyline,
+            ["Press"] = "0123456789abcdef0123456789abcdef"
         });
         odds.TitleOverride = "Bills at Chiefs";
 

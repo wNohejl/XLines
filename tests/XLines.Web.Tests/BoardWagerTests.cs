@@ -510,7 +510,7 @@ public class BoardWagerTests : WagerTestContext
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("-122", cut.Find(".wager-offer__price").TextContent.Trim());
-            Assert.Contains("Price moved since you opened this: -128 → -122 (DraftKings).",cut.Find(".wager-moved").TextContent);
+            Assert.Contains("Price moved since you opened this: -128 → -122 (DraftKings).", cut.Find(".wager-moved").TextContent);
         }, TimeSpan.FromSeconds(5));
     }
 

@@ -34,9 +34,14 @@ public class JournalBooksCacheTests(PostgresFixture fixture)
         var stranger = $"side-{Guid.NewGuid():N}"[..13];
         db.JournalEntries.Add(new JournalEntry
         {
-            Market = Markets.Moneyline, FreeTextMarket = "a described bet", Outcome = "Someone",
-            PriceTaken = -110, Stake = 1m, Book = stranger,
-            PlacedAt = DateTimeOffset.UtcNow, Result = EntryResult.Pending
+            Market = Markets.Moneyline,
+            FreeTextMarket = "a described bet",
+            Outcome = "Someone",
+            PriceTaken = -110,
+            Stake = 1m,
+            Book = stranger,
+            PlacedAt = DateTimeOffset.UtcNow,
+            Result = EntryResult.Pending
         });
         await db.SaveChangesAsync();
 

@@ -46,5 +46,6 @@ public static class DeskFocus
         catch (OperationCanceledException)
         {
             // The interop call timed out (a TaskCanceledException) or was called off.
-        }    }
+        }
+    }
 }

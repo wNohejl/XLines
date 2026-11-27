@@ -96,10 +96,18 @@ public class GameContextIngestionTests(PostgresFixture fixture)
         // Before the gates close: venue and forecast, no crowd.
         await IngestAsync(db, s, With(s.Game, new CanonicalGameContext(id)
         {
-            VenueName = "Lambeau Field", VenueCity = "Green Bay", VenueState = "WI", Indoor = false,
-            Surface = GameSurfaces.Grass, WeatherCondition = "Partly Cloudy", TemperatureF = 61,
-            WindSpeedMph = 9, WindDirection = "NW", PrecipitationPercent = 10,
-            HomeWinPercent = 58.4m, AwayWinPercent = 41.6m
+            VenueName = "Lambeau Field",
+            VenueCity = "Green Bay",
+            VenueState = "WI",
+            Indoor = false,
+            Surface = GameSurfaces.Grass,
+            WeatherCondition = "Partly Cloudy",
+            TemperatureF = 61,
+            WindSpeedMph = 9,
+            WindDirection = "NW",
+            PrecipitationPercent = 10,
+            HomeWinPercent = 58.4m,
+            AwayWinPercent = 41.6m
         }));
 
         // After: the crowd, and the temperature taken again.
@@ -127,7 +135,10 @@ public class GameContextIngestionTests(PostgresFixture fixture)
         var s = await SeedAsync(db);
         var stated = new CanonicalGameContext(s.Game.SourceGameId)
         {
-            VenueName = "Crypto.com Arena", Indoor = true, HomeWinPercent = 62.345m, MatchupQuality = 71.2m,
+            VenueName = "Crypto.com Arena",
+            Indoor = true,
+            HomeWinPercent = 62.345m,
+            MatchupQuality = 71.2m,
             Officials = [new("Scott Foster", "Crew Chief"), new("Tony Brothers", "Referee"), new("Ben Taylor", "Umpire")]
         };
 
@@ -335,8 +346,12 @@ public class GameContextIngestionTests(PostgresFixture fixture)
         var day = new DateOnly(2031, 1, 1).AddDays(Random.Shared.Next(3000, 6000));
         var game = new Game
         {
-            SportId = sport.Id, HomeTeamId = home.Id, AwayTeamId = away.Id, SeasonYear = day.Year,
-            StartsAt = LeagueClock.StartOf(day).AddHours(19), Status = GameStatus.Scheduled
+            SportId = sport.Id,
+            HomeTeamId = home.Id,
+            AwayTeamId = away.Id,
+            SeasonYear = day.Year,
+            StartsAt = LeagueClock.StartOf(day).AddHours(19),
+            Status = GameStatus.Scheduled
         };
         db.Games.Add(game);
         await db.SaveChangesAsync();
@@ -348,7 +363,10 @@ public class GameContextIngestionTests(PostgresFixture fixture)
         {
             Context = new CanonicalGameContext(pk.ToString())
             {
-                VenueName = "Wrigley Field", DayNight = GameDayNight.Night, WindSpeedMph = 14, WindDirection = "Out To LF",
+                VenueName = "Wrigley Field",
+                DayNight = GameDayNight.Night,
+                WindSpeedMph = 14,
+                WindDirection = "Out To LF",
                 Officials = [new("Pat Hoberg", "Home Plate")],
                 HomeLineup = [new(1, "1", "Leadoff Hitter", "CF")]
             }
