@@ -99,7 +99,7 @@ public class BoardWagerTests : WagerTestContext
         Assert.False(string.IsNullOrEmpty(id));
         Assert.Equal("Needs a stake above zero.", cut.Find($"#{id}").TextContent.Trim());
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
 
         Assert.Null(Log(cut).GetAttribute("aria-describedby"));
         Assert.Empty(cut.FindAll(".keyrow__reason"));
@@ -123,7 +123,7 @@ public class BoardWagerTests : WagerTestContext
     {
         var cut = Render();
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Log(cut).Click();
 
         var bet = Assert.Single(Data.Straights);
@@ -158,7 +158,7 @@ public class BoardWagerTests : WagerTestContext
     {
         var cut = Render(Markets.Spread, BoardRows.Away);
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         cut.Find("input[aria-label='Note']").Input("buy the hook");
         Log(cut).Click();
 
@@ -188,11 +188,11 @@ public class BoardWagerTests : WagerTestContext
     {
         var cut = Render();
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Log(cut).Click();
 
         cut.FindAll(".selection-chip").First(c => c.GetAttribute("aria-label") == "ML · Bills").Click();
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
         Log(cut).Click();
 
         Assert.Equal([(BoardRows.Home, 50m), (BoardRows.Away, 25m)], Data.Straights.Select(b => (b.Outcome, b.Stake)));
@@ -312,7 +312,7 @@ public class BoardWagerTests : WagerTestContext
         };
 
         var cut = Render();
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
 
         var warning = cut.Find(".check--warning").TextContent;
         Assert.Contains($"Already in the journal: {50m:C0} on ML · Chiefs at -130 (DraftKings)", warning);
@@ -326,7 +326,7 @@ public class BoardWagerTests : WagerTestContext
         Data.LatestFailWith = new InvalidOperationException("journal table locked");
 
         var cut = Render();
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
 
         var warning = cut.Find(".check--warning").TextContent;
         Assert.Contains("The journal could not be read, so a duplicate cannot be ruled out.", warning);
@@ -346,7 +346,7 @@ public class BoardWagerTests : WagerTestContext
         Data.Row = BoardRows.Row(closing: true, startsAt: DateTimeOffset.UtcNow.AddMinutes(-42));
         var cut = Render();
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Assert.False(Log(cut).HasAttribute("disabled"));
 
         cut.Find(".wager-manual-key").Click();
@@ -373,7 +373,7 @@ public class BoardWagerTests : WagerTestContext
         var cut = Render();
         Assert.Null(SlipCount(cut));
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Key(cut, "Add to slip").Click();
 
         Assert.Equal("1", SlipCount(cut));
@@ -386,7 +386,7 @@ public class BoardWagerTests : WagerTestContext
         Assert.Equal("On the slip", cut.Find(".wbanked .tag").TextContent.Trim());
 
         // A different stake is a different wager: the tag goes, and Add to slip banks a second card.
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
         Assert.Empty(cut.FindAll(".wbanked"));
 
         Key(cut, "Add to slip").Click();
@@ -401,7 +401,7 @@ public class BoardWagerTests : WagerTestContext
     {
         var cut = Render();
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Key(cut, "Add to slip").Click();
         cut.InvokeAsync(() => Slip.Clear());
 
@@ -418,7 +418,7 @@ public class BoardWagerTests : WagerTestContext
     {
         var cut = Render();
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Key(cut, "Add to slip").Click();
         Assert.Single(Slip.Items);
 
@@ -433,9 +433,9 @@ public class BoardWagerTests : WagerTestContext
     {
         var cut = Render();
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Key(cut, "Add to slip").Click();
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
 
         Log(cut).Click();
 
@@ -458,7 +458,7 @@ public class BoardWagerTests : WagerTestContext
         };
         var cut = Render();
 
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
         Key(cut, "Add to slip").Click();
 
         Assert.StartsWith($"{50m:C0} at -130 (DraftKings)", Slip.Items.Single().InJournal);
@@ -469,7 +469,7 @@ public class BoardWagerTests : WagerTestContext
     {
         var cut = Render();
 
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
         cut.Find("input[aria-label='Note']").Input("fade the public");
         Key(cut, "Add to slip").Click();
 

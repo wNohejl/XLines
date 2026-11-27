@@ -197,7 +197,7 @@ public class WagerPrefillTests : WagerTestContext
             .Add(x => x.Market, Markets.Moneyline)
             .Add(x => x.Outcome, BoardRows.Home));
 
-        cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith(50m.ToString("C0"), StringComparison.Ordinal)).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith(OddsText.Dollars(50m), StringComparison.Ordinal)).Click();
         cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith("Duplicate", StringComparison.Ordinal)).Click();
 
         var window = Assert.Single(Manager.Windows);

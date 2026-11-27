@@ -150,7 +150,7 @@ public class WagerStepperTests : WagerTestContext
     {
         var cut = Render(Markets.Moneyline, BoardRows.Home);
 
-        cut.FindAll("button").First(b => b.TextContent.Trim() == 50m.ToString("C0")).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim() == OddsText.Dollars(50m)).Click();
 
         Assert.Equal(["done", "done", "current"], States(cut));
         // The stake stays open: it is typed, and a step that folded on the first digit would

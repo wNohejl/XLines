@@ -26,7 +26,7 @@ public class WagerWindowTabsTests : WagerTestContext
 
     private static void Bank(IRenderedFragment cut)
     {
-        cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith(50m.ToString("C0"), StringComparison.Ordinal)).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith(OddsText.Dollars(50m), StringComparison.Ordinal)).Click();
         cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith("Add to slip", StringComparison.Ordinal)).Click();
     }
 
@@ -77,7 +77,7 @@ public class WagerWindowTabsTests : WagerTestContext
         var cut = RenderComponent<BoardWager>(p => p.Add(x => x.GameId, BoardRows.GameId));
 
         cut.FindAll(".selection-chip").First(c => c.GetAttribute("aria-label") == "ML · Bills").Click();
-        cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith(50m.ToString("C0"), StringComparison.Ordinal)).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith(OddsText.Dollars(50m), StringComparison.Ordinal)).Click();
 
         var bet = Squash(Step(cut, "Bet").QuerySelector(".wstep__summary")!.TextContent);
         var review = Squash(cut.Find(".wreview").TextContent);

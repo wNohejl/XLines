@@ -54,7 +54,7 @@ public class SharedControlsTests : DeskTestContext
             .Add(x => x.StakeChanged, (decimal s) => stake = s)
             .Add(x => x.PriceAmerican, -110));
 
-        cut.FindAll("button").First(b => b.TextContent.Trim() == 50m.ToString("C0")).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim() == OddsText.Dollars(50m)).Click();
 
         Assert.Equal(50m, stake);
     }

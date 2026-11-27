@@ -161,5 +161,5 @@ public static class Checks
     }
 
     private static string Signed(decimal amount)
-        => (amount >= 0 ? "+" : "\u2212") + Math.Abs(amount).ToString("C2", CultureInfo.CurrentCulture);
+        => (amount >= 0 ? "+" : "\u2212") + OddsText.DollarsAndCents(Math.Abs(amount));
 }

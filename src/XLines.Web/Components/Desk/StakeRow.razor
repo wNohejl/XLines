@@ -26,7 +26,7 @@
         var chosen = Stake == quick;
         <DeskButton Size="DeskKeySize.Small" Emphasis="DeskEmphasis.Plain"
                     aria-pressed="@(chosen ? "true" : "false")"
-                    OnClick="() => SetAsync(quick)">@quick.ToString("C0")</DeskButton>
+                    OnClick="() => SetAsync(quick)">@OddsText.Dollars(quick)</DeskButton>
     }
 
     @if (ShowReturns && PriceAmerican is { } price && price != 0 && Stake > 0)

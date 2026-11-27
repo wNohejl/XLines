@@ -106,11 +106,11 @@ public class WagerRecipeTests : WagerTestContext
     public void Quick_values_are_plain_keys_and_the_field_has_no_spinner()
     {
         var cut = Render();
-        cut.FindAll("button").First(b => b.TextContent.Trim() == 50m.ToString("C0")).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim() == OddsText.Dollars(50m)).Click();
 
         var quick = cut.FindAll(".stake-row button").ToList();
         Assert.All(quick, k => Assert.Contains("desk-btn--plain", k.ClassName));
-        Assert.Equal("true", quick.Single(k => k.TextContent.Trim() == 50m.ToString("C0")).GetAttribute("aria-pressed"));
+        Assert.Equal("true", quick.Single(k => k.TextContent.Trim() == OddsText.Dollars(50m)).GetAttribute("aria-pressed"));
 
         var css = Support.Sheets.App;
         Assert.Contains("::-webkit-inner-spin-button", css);
@@ -129,7 +129,7 @@ public class WagerRecipeTests : WagerTestContext
         Assert.True(log.HasAttribute("disabled"));
         Assert.Equal("Needs a stake above zero.", cut.Find(".waction .keyrow__reason").TextContent.Trim());
 
-        cut.FindAll("button").First(b => b.TextContent.Trim() == 50m.ToString("C0")).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim() == OddsText.Dollars(50m)).Click();
 
         Assert.NotNull(Key(cut, "Add to slip"));
         Assert.Empty(cut.FindAll(".keyrow__reason"));
@@ -173,7 +173,7 @@ public class WagerRecipeTests : WagerTestContext
         Assert.Null(Key(cut, "Add to slip"));
         Assert.Equal("Needs a stake above zero.", cut.Find(".waction .keyrow__reason").TextContent.Trim());
 
-        cut.FindAll("button").First(b => b.TextContent.Trim() == 50m.ToString("C0")).Click();
+        cut.FindAll("button").First(b => b.TextContent.Trim() == OddsText.Dollars(50m)).Click();
 
         Assert.NotNull(Key(cut, "Add to slip"));
         Assert.Empty(cut.FindAll(".keyrow__reason"));

@@ -21,6 +21,17 @@ public static class OddsText
     public static string Line(decimal value) => value.ToString("+0.##;-0.##;0");
 
     /// <summary>
+    /// A whole-dollar amount: "$25", "$1,000". Written out rather than "C0", which follows the
+    /// host's culture: a Linux container has none, and printed a stake key as "¤25".
+    /// </summary>
+    public static string Dollars(decimal amount)
+        => amount.ToString("$#,0", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>An amount to the cent: "$521.75", "$20.00". Not "C2", for the reason <see cref="Dollars"/> gives.</summary>
+    public static string DollarsAndCents(decimal amount)
+        => amount.ToString("$#,0.00", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
     /// What a bet gained on the close: cents in percent where it closed at the number taken
     /// ("+2.4%"), points where the line moved ("-1.5 pts").
     /// </summary>

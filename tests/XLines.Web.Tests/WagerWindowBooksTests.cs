@@ -128,7 +128,7 @@ public class WagerWindowBooksTests : WagerTestContext
         Assert.True(window.HasUnsavedInput);
         Assert.Equal("this wager", window.UnsavedInputLabel);
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Log(cut).Click();
 
         Assert.Single(Data.Straights);
@@ -152,7 +152,7 @@ public class WagerWindowBooksTests : WagerTestContext
 
         Assert.False(window.HasUnsavedInput);
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Assert.True(window.HasUnsavedInput);
 
         Key(cut, "Add to slip").Click();
@@ -172,7 +172,7 @@ public class WagerWindowBooksTests : WagerTestContext
         Assert.Equal("FanDuel", cut.Find(".wager-offer__book").TextContent.Trim());
         Assert.Contains("Price captured 40 min ago", cut.Markup);
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Log(cut).Click();
 
         var bet = Assert.Single(Data.Straights);
@@ -185,7 +185,7 @@ public class WagerWindowBooksTests : WagerTestContext
     public void Changing_the_book_clears_the_stake_and_the_note()
     {
         var cut = Render(Markets.Moneyline, BoardRows.Home);
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         cut.Find("input[aria-label='Note']").Input("fade the public");
         Assert.False(Log(cut).HasAttribute("disabled"));
 
@@ -202,7 +202,7 @@ public class WagerWindowBooksTests : WagerTestContext
     public void Choosing_the_book_already_chosen_keeps_the_stake()
     {
         var cut = Render(Markets.Moneyline, BoardRows.Home);
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
 
         OpenBooks(cut);
         Books(cut).First(r => r.TextContent.Contains("DraftKings")).Click();
@@ -254,7 +254,7 @@ public class WagerWindowBooksTests : WagerTestContext
 
         price.Input("-105");
         cut.Find("input[placeholder='-3']").Input("-3");
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Log(cut).Click();
 
         var bet = Assert.Single(Data.Straights);
@@ -294,7 +294,7 @@ public class WagerWindowBooksTests : WagerTestContext
         // Typed already, from the close, so the block never stands in the way.
         Assert.Equal("-128", cut.Find("input[placeholder='-110']").GetAttribute("value"));
 
-        Key(cut, 50m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(50m)).Click();
         Assert.False(Log(cut).HasAttribute("disabled"));
         Assert.Contains("the game started 42 min ago, so this records the price you took", cut.Markup);
 
@@ -398,7 +398,7 @@ public class WagerWindowBooksTests : WagerTestContext
         cut.Find("input[aria-label='The bet']").Input("Steelers to win the AFC North");
         cut.Find("input[placeholder='-110']").Input("250");
         cut.Find("input[placeholder='DraftKings']").Input("Caesars");
-        Key(cut, 25m.ToString("C0")).Click();
+        Key(cut, OddsText.Dollars(25m)).Click();
 
         Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Contains("Add to slip"));
         Log(cut).Click();
