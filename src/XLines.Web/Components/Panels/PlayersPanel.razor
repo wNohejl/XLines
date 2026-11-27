@@ -3,13 +3,10 @@
 @using XLines.Ingestion.Services
 @using XLines.Ingestion.Configuration
 @using XLines.Desk.Windowing
-@using Microsoft.EntityFrameworkCore
+@using XLines.Web.Services
 @using Microsoft.Extensions.Options
 @inherits PanelBase
-@inject IDbContextFactory<XLinesDbContext> DbFactory
-@inject IServiceScopeFactory ScopeFactory
-@inject IOptions<IngestionOptions> IngestionOptions
-@inject XLines.Core.Contracts.IDataTier Tier
+@inject IPlayersData Data
 
 @*
     The roster finder. It used to keep a game log of its own, a second and lesser copy of the
@@ -220,55 +217,23 @@ else
             // With the first load that succeeds, so a failed first read still gets its picker later.
             if (read.Sports is not null)
             {
-                _sports = read.Sports;
+                _sports = [.. read.Sports];
                 _sportsRead = true;
             }
 
             _capped = read.Capped;
-            _rows = read.Rows;
+            _rows = read.Rows.Select(r => new Row(r.Player, r.Games)).ToList();
             _anyPosition = _rows.Any(r => !string.IsNullOrWhiteSpace(r.Player.Position));
         });
     }
 
-    private async Task<(List<Sport>? Sports, List<Row> Rows, bool Capped)> ReadAsync(CancellationToken ct)
-    {
-        await using var db = await DbFactory.CreateDbContextAsync(ct);
-
-        var sports = _sportsRead
-            ? null
-            : await db.Sports.Where(s => s.Enabled).OrderBy(s => s.Name).ToListAsync(ct);
-
-        var query = db.Players.AsNoTracking()
-            .Include(p => p.Sport).Include(p => p.Team)
-            .Where(p => p.Sport!.Enabled);
-
-        if (int.TryParse(_sport, out var sportId))
-            query = query.Where(p => p.SportId == sportId);
-
-        // Every word must match the name or the team, with LIKE's own characters escaped, the
-        // same rule the command palette uses.
-        foreach (var pattern in SearchService.Patterns(_search))
-        {
-            query = query.Where(p => EF.Functions.ILike(p.FullName, pattern, @"\")
-                                     || (p.Team != null && (EF.Functions.ILike(p.Team.Name, pattern, @"\")
-                                                            || EF.Functions.ILike(p.Team.Abbrev, pattern, @"\"))));
-        }
-
-        var players = await query.OrderBy(p => p.FullName).Take(Limit + 1).ToListAsync(ct);
-        var capped = players.Count > Limit;
-        players = players.Take(Limit).ToList();
-
-        var ids = players.Select(p => p.Id).ToList();
-
-        // The lines this reader may see (ADR 0024): a visitor counts a displayable source's alone.
-        var counts = await db.PlayerGameStats.FromVisible(await db.VisibleSourceIdsAsync(Tier, ct))
-            .Where(s => ids.Contains(s.PlayerId))
-            .GroupBy(s => s.PlayerId)
-            .Select(g => new { g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
-
-        return (sports, players.Select(p => new Row(p, counts.GetValueOrDefault(p.Id, 0))).ToList(), capped);
-    }
+    private Task<PlayersRead> ReadAsync(CancellationToken ct)
+        => Data.ReadAsync(
+            withSports: !_sportsRead,
+            sportId: int.TryParse(_sport, out var sportId) ? sportId : null,
+            search: _search,
+            limit: Limit,
+            ct);
 
     private async Task SyncAsync()
     {
@@ -278,24 +243,7 @@ else
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
-            var stats = scope.ServiceProvider.GetRequiredService<StatsIngestionService>();
-
-            var yesterday = LeagueClock.Today().AddDays(-1);
-            var rows = 0;
-
-            // Box scores are ESPN's: the default source (ADR 0026) has none, and asking it would only
-            // write an empty run under a metered row. With ESPN on this is every stats source, as before.
-            foreach (var source in registry.StatsSources.Where(s => s is not XLines.Core.Contracts.IScoreSource))
-            {
-                foreach (var sport in IngestionOptions.Value.EffectiveSports)
-                {
-                    var outcome = await stats.IngestAsync(
-                        source, sport, "stats:manual", yesterday, CancellationToken.None);
-                    rows += outcome.RowsIngested;
-                }
-            }
+            var rows = await Data.SyncStatsAsync();
 
             await LoadAsync();
 

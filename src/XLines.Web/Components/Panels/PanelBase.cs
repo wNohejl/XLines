@@ -168,7 +168,5 @@ public abstract class PanelBase : DeskPanelBase
     /// newest held (seasons come newest first), or none for a subject with no season on record.
     /// </summary>
     protected static int? PickSeason(IReadOnlyList<int> seasons, int? asked)
-        => asked is { } year && seasons.Contains(year)
-            ? year
-            : seasons.Count > 0 ? seasons[0] : null;
+        => XLines.Web.Services.SubjectSeasons.Pick(seasons, asked);
 }

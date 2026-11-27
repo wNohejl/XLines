@@ -178,7 +178,7 @@ public class SubjectRefreshTests : WagerTestContext
     public void The_team_check_reads_games_by_id_on_either_side()
     {
         using var db = NoConnection();
-        var sql = TeamPanel.OwnGames(db, 7, [12, 30]).ToQueryString();
+        var sql = XLines.Web.Services.TeamData.OwnGames(db, 7, [12, 30]).ToQueryString();
 
         Assert.Contains("= ANY (", sql);
         Assert.Contains("\"HomeTeamId\"", sql);
@@ -190,7 +190,7 @@ public class SubjectRefreshTests : WagerTestContext
     public void The_player_check_reads_their_teams_games_or_their_stat_lines()
     {
         using var db = NoConnection();
-        var sql = PlayerPanel.OwnGames(db, 11, [12, 30]).ToQueryString();
+        var sql = XLines.Web.Services.PlayerData.OwnGames(db, 11, [12, 30]).ToQueryString();
 
         Assert.Contains("= ANY (", sql);
         Assert.Contains("\"HomeTeamId\"", sql);

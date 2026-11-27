@@ -2,11 +2,11 @@
 @using XLines.Data
 @using XLines.Data.CrossReference
 @using XLines.Desk.Primitives
-@using Microsoft.EntityFrameworkCore
+@using XLines.Web.Services
 @using XLines.Web.Components.Snippets
 @using XLines.Desk.Windowing
 @inherits PanelBase
-@inject IServiceScopeFactory ScopeFactory
+@inject ITeamData Data
 
 @*
     A team on its own — the destination for following a name off any board, slate or game view.
@@ -339,22 +339,12 @@ else
     public static int[]? AddressedGames(IReadOnlySet<string> heard)
         => NoticeTokens.Addressed(heard, DataTopics.Games, MostGamesChecked);
 
-    /// <summary>The check's query: those of the games that this team played in, by primary key.</summary>
-    public static IQueryable<Game> OwnGames(XLinesDbContext db, int teamId, int[] ids)
-        => db.Games.AsNoTracking()
-            .Where(g => ids.Contains(g.Id) && (g.HomeTeamId == teamId || g.AwayTeamId == teamId));
-
     /// <summary>
     /// Whether any of these games is this team's, on a context of its own. Virtual so a test
     /// bench can answer it without a database.
     /// </summary>
-    protected virtual async Task<bool> PlaysInAnyAsync(int[] ids, CancellationToken ct)
-    {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
-
-        return await OwnGames(db, TeamId, ids).AnyAsync(ct);
-    }
+    protected virtual Task<bool> PlaysInAnyAsync(int[] ids, CancellationToken ct)
+        => Data.PlaysInAnyAsync(TeamId, ids, ct);
 
     /// <summary>
     /// The load in flight, cancelled when the next starts: a season picked, or the window re-aimed,
@@ -445,25 +435,7 @@ else
 
             // Read into locals and handed over at once, and only by the latest load. The reads
             // share the scope's one context, so they stay one after another.
-            await LatestRead.HandOverAsync(ct, async () =>
-            {
-                await using var scope = ScopeFactory.CreateAsyncScope();
-                var lookup = scope.ServiceProvider.GetRequiredService<MatchupCrossReference>();
-                var log = scope.ServiceProvider.GetRequiredService<GameLogService>();
-
-                // The seasons this team has played in decide the gate; the newest is the default.
-                var seasons = await log.SeasonsForTeamAsync(teamId, ct);
-
-                var seasonYear = PickSeason(seasons, asked);
-
-                // The roster still comes from the aggregate side — per-player form over a season is
-                // exactly what it is for. Only the games are read at game grain.
-                var form = await lookup.GetTeamAsync(teamId, FallbackWindow, maxPlayers: 15, seasonYear: seasonYear, ct: ct);
-
-                var games = await log.TeamGameLogAsync(teamId, FallbackWindow, seasonYear, ct);
-
-                return (Seasons: seasons, SeasonYear: seasonYear, Form: form, Games: games);
-            },
+            await LatestRead.HandOverAsync(ct, () => Data.ReadAsync(teamId, asked, FallbackWindow, ct),
             read =>
             {
                 _seasons = read.Seasons;
@@ -547,10 +519,7 @@ else
 
     private async Task OpenGameAsync(int gameId)
     {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        var board = scope.ServiceProvider.GetRequiredService<BoardService>();
-
-        if (await board.GetRowAsync(gameId) is { } row)
+        if (await Data.RowAsync(gameId) is { } row)
             Manager.OpenGame(row.Game, WindowId);
     }
 }

@@ -3,13 +3,9 @@
 @using XLines.Web.Components.Snippets
 @using XLines.Desk.Windowing
 @using XLines.Web.Services
-@using Microsoft.EntityFrameworkCore
 @inherits PanelBase
-@inject IDbContextFactory<XLinesDbContext> DbFactory
 @inject IServiceScopeFactory ScopeFactory
-@inject XLines.Core.Contracts.IDataTier Tier
 @inject IServiceProvider Provider
-@inject Microsoft.Extensions.Options.IOptions<XLines.Ingestion.Configuration.IngestionOptions> IngestionOptions
 
 @*
     Line movement: how one side of a market moved at each book, a row per book.
@@ -393,9 +389,8 @@ else
     /// </summary>
     private (int? Game, string? Market, string? Outcome, string? Press)? _aimedAt;
 
-    /// <summary>The window's reads; the database's unless a test hands it others.</summary>
-    private ILineMovementData Reads => _reads ??= Provider.GetService<ILineMovementData>()
-        ?? new LineMovementData(DbFactory, ScopeFactory, Tier, IngestionOptions);
+    /// <summary>The window's reads (ILineMovementData, registered with the desk's services); a test hands it others.</summary>
+    private ILineMovementData Reads => _reads ??= Provider.GetRequiredService<ILineMovementData>();
 
     private ILineMovementData? _reads;
 

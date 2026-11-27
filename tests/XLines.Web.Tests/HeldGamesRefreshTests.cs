@@ -6,6 +6,7 @@ using XLines.Desk.Windowing;
 using XLines.Ingestion.Services;
 using XLines.Web.Components;
 using XLines.Web.Components.Panels;
+using XLines.Web.Services;
 using XLines.Web.Tests.Support;
 using XLines.Web.Windowing;
 using Microsoft.AspNetCore.Components;

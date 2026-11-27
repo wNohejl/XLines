@@ -2,10 +2,9 @@
 @using XLines.Data.CrossReference
 @using XLines.Desk.Primitives
 @using XLines.Desk.Windowing
-@using Microsoft.EntityFrameworkCore
+@using XLines.Web.Services
 @inherits PanelBase
-@inject IDbContextFactory<XLinesDbContext> DbFactory
-@inject IServiceScopeFactory ScopeFactory
+@inject IPlayerData Data
 
 @*
     A player on their own — the bottom of the drilldown chain, and until now the piece that was
@@ -223,37 +222,11 @@ else
     }
 
     /// <summary>
-    /// The check's query: those of the games, by primary key, that the player's current team played
-    /// in or that hold a stat line of theirs. The team is read in the query rather than taken from
-    /// the window, so a window whose load failed still asks the right question.
-    /// </summary>
-    public static IQueryable<Game> OwnGames(XLinesDbContext db, int playerId, int[] ids, int[]? visible = null)
-    {
-        // Only stat lines from sources this reader may see (ADR 0024), as the window's own reads are.
-        var lines = db.PlayerGameStats.FromVisible(visible);
-
-        return db.Games.AsNoTracking()
-            .Where(g => ids.Contains(g.Id))
-            .Where(g => db.Players.Any(p => p.Id == playerId && p.TeamId != null
-                                            && (p.TeamId == g.HomeTeamId || p.TeamId == g.AwayTeamId))
-                        || lines.Any(s => s.GameId == g.Id && s.PlayerId == playerId));
-    }
-
-    /// <summary>
     /// Whether any of these games is this player's, on a context of its own. Virtual so a test
     /// bench can answer it without a database.
     /// </summary>
-    protected virtual async Task<bool> PlaysInAnyAsync(int[] ids, CancellationToken ct)
-    {
-        await using var db = await DbFactory.CreateDbContextAsync(ct);
-        await using var scope = ScopeFactory.CreateAsyncScope();
-
-        // Who is reading, by tier; unregistered means a desk with one person at it.
-        XLines.Core.Contracts.IDataTier tier = scope.ServiceProvider.GetService<XLines.Core.Contracts.IDataTier>()
-            ?? XLines.Core.Contracts.FullDataTier.Instance;
-
-        return await OwnGames(db, PlayerId, ids, await db.VisibleSourceIdsAsync(tier, ct)).AnyAsync(ct);
-    }
+    protected virtual Task<bool> PlaysInAnyAsync(int[] ids, CancellationToken ct)
+        => Data.PlaysInAnyAsync(PlayerId, ids, ct);
 
     /// <summary>
     /// The load in flight, cancelled when the next starts: a season picked, or the window re-aimed,
@@ -316,35 +289,8 @@ else
 
             // Read into locals and handed over at once, and only by the latest load. Each read
             // needs the one before it, so they stay one after another.
-            await LatestRead.HandOverAsync(ct, async () =>
-            {
-                await using var db = await DbFactory.CreateDbContextAsync(ct);
-
-                var player = await db.Players
-                    .Include(p => p.Team)
-                    .Include(p => p.Sport)
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.Id == playerId, ct);
-
-                IReadOnlyList<int> seasons = [];
-                int? seasonYear = null;
-                IReadOnlyList<PlayerGameRow> rows = [];
-
-                if (player is not null)
-                {
-                    await using var scope = ScopeFactory.CreateAsyncScope();
-                    var log = scope.ServiceProvider.GetRequiredService<GameLogService>();
-
-                    seasons = await log.SeasonsForPlayerAsync(playerId, ct);
-
-                    seasonYear = PickSeason(seasons, asked);
-
-                    rows = await log.PlayerGameLogAsync(playerId, WholeSeason, seasonYear, ct);
-                }
-
-                return (Player: player, Seasons: seasons, SeasonYear: seasonYear, Rows: rows);
-            },
-            read => HandOver(read.Player, read.Seasons, read.SeasonYear, read.Rows));
+            await LatestRead.HandOverAsync(ct, () => Data.ReadAsync(playerId, asked, WholeSeason, ct),
+                read => HandOver(read.Player, read.Seasons, read.SeasonYear, read.Rows));
         },
         settle: () => _player is null ? PulseState.Idle : PulseState.Healthy,
         status: () => _player is null ? "not found" : $"{_rows.Count:N0} {(_rows.Count == 1 ? "game" : "games")}");
@@ -381,10 +327,7 @@ else
 
     private async Task OpenGameAsync(int gameId)
     {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        var board = scope.ServiceProvider.GetRequiredService<BoardService>();
-
-        if (await board.GetRowAsync(gameId) is { } row)
+        if (await Data.RowAsync(gameId) is { } row)
             Manager.OpenGame(row.Game, WindowId);
     }
 

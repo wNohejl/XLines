@@ -6,13 +6,11 @@
 @using XLines.Desk.Primitives
 @using XLines.Web.Components.Snippets
 @using XLines.Desk.Windowing
-@using Microsoft.EntityFrameworkCore
+@using XLines.Web.Services
 @using Microsoft.Extensions.Options
 @inherits PanelBase
-@inject IDbContextFactory<XLinesDbContext> DbFactory
-@inject IServiceScopeFactory ScopeFactory
+@inject IBoardData Data
 @inject IOptions<IngestionOptions> IngestionOptions
-@inject XLines.Core.Contracts.IDataTier Tier
 @inject XLines.Web.Services.WagerSlip Slip
 @inject DeskToasts Toasts
 @inject RangePull Ranges
@@ -928,38 +926,14 @@ else
             var ct = _reads.Next();
             var sport = _sport;
 
-            await LatestRead.HandOverAsync(ct, async () =>
-            {
-                await using var scope = ScopeFactory.CreateAsyncScope();
-                var board = scope.ServiceProvider.GetRequiredService<BoardService>();
-
-                var rowsRead = board.GetAsync(
+            await LatestRead.HandOverAsync(ct,
+                () => Data.ReadAsync(
                     string.IsNullOrEmpty(sport) ? null : sport,
                     TimeSpan.FromHours(_windowHours),
                     Lookback,
-                    ct);
-                var movesRead = MovesTodayAsync(ct);
-                var alertsRead = AlertCountsAsync(ct);
-                var namesRead = SportNamesAsync(ct);
-
-                // A failure in any of them still reaches WithActivityAsync, so the window says
-                // the board did not load exactly as it did when they ran one after another.
-                await Task.WhenAll(rowsRead, movesRead, alertsRead, namesRead);
-
-                var rows = (await rowsRead).ToList();
-
-                // Which stats source fills the board (ADR 0026), for the empty state's sentence and key.
-                var port = scope.ServiceProvider.GetService<SourceRegistry>()?.Port;
-
-                // The books the desk polls (PolledBooks), so an unpriced row and the Priced tile
-                // account for them; empty with no odds provider live, and both read as before.
-                var feeds = XLines.Web.Services.PolledBooks.Feeds(scope.ServiceProvider);
-                var polled = XLines.Web.Services.PolledBooks.Of(feeds);
-                var paidOnly = MainCoverage.PaidOnlyOf(feeds);
-
-                return (Rows: rows, Port: port, Moves: await movesRead, Alerts: await alertsRead, Names: await namesRead, Polled: polled, PaidOnly: paidOnly);
-            },
-            read => HandOver(read.Rows, read.Port, read.Moves, read.Alerts, read.Names, read.Polled, read.PaidOnly));
+                    ct),
+                read => HandOver([.. read.Rows], read.Port, read.Moves, (read.Alerts.Open, read.Alerts.Critical),
+                    read.Names, read.Polled, read.PaidOnly));
         },
         settle: () => _rows.Count == 0 ? PulseState.Idle : PulseState.Healthy,
         status: () => _rows.Count == 0 ? "no games" : $"{_priced}/{_rows.Count} priced");
@@ -967,7 +941,7 @@ else
 
     /// <summary>What the latest load read, onto the board at once.</summary>
     private void HandOver(
-        List<BoardRow> rows, StatsPort? port, long moves, (int Open, int Critical) alerts, Dictionary<string, string> names,
+        List<BoardRow> rows, StatsPort? port, long moves, (int Open, int Critical) alerts, IReadOnlyDictionary<string, string> names,
         IReadOnlyList<string>? polled = null, IReadOnlyList<string>? paidOnly = null)
     {
         _rows = rows;
@@ -992,35 +966,6 @@ else
         ApplyFilter();
     }
 
-    /// <summary>Price moves written today, counted over the scans this reader may see (ADR 0024), as the rows are priced.</summary>
-    private async Task<long> MovesTodayAsync(CancellationToken ct)
-    {
-        await using var db = await DbFactory.CreateDbContextAsync(ct);
-
-        var dayStart = LeagueClock.StartOf(LeagueClock.Today());
-        return await db.OddsSnapshots.FromVisible(await db.VisibleSourceIdsAsync(Tier, ct))
-            .LongCountAsync(s => s.CapturedAt >= dayStart, ct);
-    }
-
-    /// <summary>Open alerts and the critical ones among them, each counted on a context of its own so they go out together.</summary>
-    private async Task<(int Open, int Critical)> AlertCountsAsync(CancellationToken ct)
-    {
-        var open = CountAlertsAsync(critical: false, ct);
-        var critical = CountAlertsAsync(critical: true, ct);
-        await Task.WhenAll(open, critical);
-
-        return (await open, await critical);
-    }
-
-    private async Task<int> CountAlertsAsync(bool critical, CancellationToken ct)
-    {
-        await using var db = await DbFactory.CreateDbContextAsync(ct);
-
-        return critical
-            ? await db.Alerts.CountAsync(a => a.ResolvedAt == null && a.Severity == AlertSeverity.Critical, ct)
-            : await db.Alerts.CountAsync(a => a.ResolvedAt == null, ct);
-    }
-
     /// <summary>
     /// The alert tile after a notice of alerts alone (<see cref="RefreshAsync(IReadOnlySet{string})"/>).
     /// Outside <c>WithActivityAsync</c> on purpose: it neither cancels a load in flight nor
@@ -1028,18 +973,7 @@ else
     /// </summary>
     private async Task RecountAlertsAsync()
     {
-        (_alerts, _criticalAlerts) = await AlertCountsAsync(_reads.Gone);
-    }
-
-    /// <summary>The enabled leagues' names by key, for the league filter.</summary>
-    private async Task<Dictionary<string, string>> SportNamesAsync(CancellationToken ct)
-    {
-        await using var db = await DbFactory.CreateDbContextAsync(ct);
-
-        return await db.Sports
-            .Where(s => s.Enabled)
-            .AsNoTracking()
-            .ToDictionaryAsync(s => s.Key, s => s.Name, StringComparer.OrdinalIgnoreCase, ct);
+        (_alerts, _criticalAlerts) = await Data.AlertCountsAsync(_reads.Gone);
     }
 
     private void ApplyFilter()
@@ -1096,7 +1030,7 @@ else
     /// before it is chosen.
     /// </para>
     /// </summary>
-    private void BuildSportOptions(Dictionary<string, string> names)
+    private void BuildSportOptions(IReadOnlyDictionary<string, string> names)
     {
 
         // Counts only mean anything on an unfiltered load; once a league is selected the board

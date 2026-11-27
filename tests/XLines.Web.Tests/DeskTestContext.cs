@@ -19,5 +19,9 @@ public abstract class DeskTestContext : XLines.Desk.Testing.DeskTestContext
         // The tier a panel reads to (ADR 0024): everything, as AddXLinesData answers for a host
         // that says nothing about who is reading.
         Services.AddSingleton<XLines.Core.Contracts.IDataTier>(XLines.Core.Contracts.FullDataTier.Instance);
+        // The windows' data services, over whichever IDbContextFactory a test registers.
+        XLines.Web.Services.PanelDataRegistration.AddXLinesPanelData(Services);
+        // Line movement's, as Program.cs registers it; a test that hands the window its own replaces it.
+        Services.AddScoped<XLines.Web.Services.ILineMovementData, XLines.Web.Services.LineMovementData>();
     }
 }

@@ -1,10 +1,8 @@
 @using XLines.Data
 @using XLines.Ingestion.Services
 @using XLines.Desk.Windowing
-@using Microsoft.EntityFrameworkCore
 @inherits PanelBase
-@inject IDbContextFactory<XLinesDbContext> DbFactory
-@inject IServiceScopeFactory ScopeFactory
+@inject IJournalData Data
 @inject IDeskAlerts Alerts
 @using XLines.Web.Services
 @using XLines.Web.Windowing
@@ -949,74 +947,18 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
         });
     }
 
-    /// <summary>Everything one load of the Journal shows: the rows under the filter, and the lists its pickers offer.</summary>
-    protected sealed record JournalRead(
-        IReadOnlyList<JournalEntry> Entries,
-        IReadOnlyList<Parlay> Parlays,
-        IReadOnlyList<string> Books,
-        IReadOnlyList<string> Sports,
-        int Pending);
-
     /// <summary>
     /// The Journal's one read of the database. Virtual so a render test can hand the panel a
     /// journal: the test project has no database, and a row's keys are only drawn on a row
     /// that loaded.
     /// </summary>
-    protected virtual async Task<JournalRead> FetchAsync(JournalFilter filter)
-    {
-        var ct = ReadToken;
-
-        // Two strands, each on a context of its own, so the wait is the slower one's. The
-        // journal's three reads share the scope's one context and stay one after another, as do
-        // the picker and the pending count on theirs. A failure in either still propagates.
-        var journalRead = ReadJournalAsync(filter, ct);
-        var pickerRead = ReadPickerAsync(ct);
-
-        await Task.WhenAll(journalRead, pickerRead);
-
-        var (entries, parlays, books) = await journalRead;
-        var (sports, pending) = await pickerRead;
-
-        return new JournalRead(entries, parlays, books, sports, pending);
-    }
-
-    private async Task<(IReadOnlyList<JournalEntry>, IReadOnlyList<Parlay>, IReadOnlyList<string>)> ReadJournalAsync(
-        JournalFilter filter, CancellationToken ct)
-    {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        var journal = scope.ServiceProvider.GetRequiredService<JournalService>();
-
-        var entries = await journal.EntriesAsync(filter, ct);
-        var parlays = await journal.ParlaysAsync(filter, ct);
-        var books = await journal.KnownBooksAsync(ct);
-
-        return (entries, parlays, books);
-    }
-
-    private async Task<(IReadOnlyList<string>, int)> ReadPickerAsync(CancellationToken ct)
-    {
-        await using var db = await DbFactory.CreateDbContextAsync(ct);
-        var sports = await db.Sports.AsNoTracking().Where(s => s.Enabled).OrderBy(s => s.Key).Select(s => s.Key).ToListAsync(ct);
-
-        var pending = await db.JournalEntries.CountAsync(e => e.Result == EntryResult.Pending && e.ParlayGroupId == null, ct)
-                      + await db.Parlays.CountAsync(p => p.Result == EntryResult.Pending, ct);
-
-        return (sports, pending);
-    }
+    protected virtual Task<JournalRead> FetchAsync(JournalFilter filter) => Data.ReadAsync(filter, ReadToken);
 
     /// <summary>The write behind the parlay form's Save. Virtual for the same render tests.</summary>
-    protected virtual async Task WriteParlayAsync(Guid id, ParlayEdit edit)
-    {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<JournalService>().UpdateParlayAsync(id, edit);
-    }
+    protected virtual Task WriteParlayAsync(Guid id, ParlayEdit edit) => Data.UpdateParlayAsync(id, edit);
 
     /// <summary>The write behind the entry form's Save. Virtual for the same render tests.</summary>
-    protected virtual async Task WriteEntryAsync(EntryDraft draft, int? id)
-    {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<JournalService>().SaveEntryAsync(draft, id);
-    }
+    protected virtual Task WriteEntryAsync(EntryDraft draft, int? id) => Data.SaveEntryAsync(draft, id);
 
     private async Task FilterAsync(Action change)
     {
@@ -1254,8 +1196,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<JournalService>().DeleteEntryAsync(entry.Id);
+            await Data.DeleteEntryAsync(entry.Id);
         }
         catch (Exception ex)
         {
@@ -1280,8 +1221,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<JournalService>().DeleteParlayAsync(parlay.Id);
+            await Data.DeleteParlayAsync(parlay.Id);
         }
         catch (Exception ex)
         {
@@ -1298,11 +1238,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
     {
         try
         {
-            await using var db = await DbFactory.CreateDbContextAsync();
-            var entry = await db.JournalEntries.FirstAsync(e => e.Id == entryId);
-
-            PerformanceAnalytics.ApplyResult(entry, result);
-            await db.SaveChangesAsync();
+            await Data.SetResultAsync(entryId, result);
         }
         catch (Exception ex)
         {
@@ -1322,8 +1258,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<JournalService>().SetParlayResultAsync(parlay.Id, result, payout);
+            await Data.SetParlayResultAsync(parlay.Id, result, payout);
         }
         catch (Exception ex)
         {
@@ -1342,9 +1277,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            var summary = await scope.ServiceProvider
-                .GetRequiredService<SettlementService>().SettleAsync();
+            var summary = await Data.SettleAsync();
 
             // A sentence, not counts strung on middle dots, which read as a row of tags.
             _message = $"{summary.Graded} graded, {summary.Voided} voided, {summary.ParlaysSettled} "
@@ -1544,11 +1477,7 @@ else if (_entries.Count == 0 && _parlays.Count == 0)
 
     private async Task OpenGameAsync(int gameId)
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-
-        var game = await db.Games
-            .Include(g => g.HomeTeam).Include(g => g.AwayTeam)
-            .FirstOrDefaultAsync(g => g.Id == gameId);
+        var game = await Data.GameAsync(gameId);
 
         if (game is not null)
             Manager.OpenGame(game);

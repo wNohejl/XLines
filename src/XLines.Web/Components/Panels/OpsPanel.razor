@@ -5,10 +5,10 @@
 @using XLines.Ingestion.Configuration
 @using XLines.Core.Contracts
 @using XLines.Desk.Windowing
-@using Microsoft.EntityFrameworkCore
+@using XLines.Web.Services
 @using Microsoft.Extensions.Options
 @inherits PanelBase
-@inject IServiceScopeFactory ScopeFactory
+@inject IOpsData Data
 @inject IOptions<ReliabilityOptions> Options
 @inject IOptions<XLines.Ingestion.Configuration.IngestionOptions> Ingestion
 @inject DeskToasts Toasts
@@ -545,11 +545,7 @@ else
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
-
-            await db.SetSettingAsync(AppSetting.LinePolling,
-                automatic ? AppSetting.LinePollingScheduled : AppSetting.LinePollingManual);
+            await Data.SetLinePollingAsync(automatic);
 
             _confirmAutomatic = false;
             Toasts.Success(automatic
@@ -850,10 +846,7 @@ else
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            var sport = IngestionJobs.DrillSport(
-                await UpcomingBySportAsync(scope.ServiceProvider),
-                Ingestion.Value.EffectiveSports);
+            var sport = await Data.DrillSportAsync();
 
             if (sport is null)
             {
@@ -1049,23 +1042,6 @@ else
 
     protected override void OnDispose() => _reads.Cancel();
 
-    /// <summary>What one load read, handed over at once.</summary>
-    private sealed record OpsRead(
-        IReadOnlyList<OddsProviderState> Feeds,
-        XLines.Web.Services.DeskOddsKey? OddsKey,
-        bool PollingSetHere,
-        bool Unattended,
-        PollPlan? Plan,
-        IReadOnlyList<SportMarkets> MarketsBySport,
-        StatsPort Port,
-        ScoresPlan? Scores,
-        AllowanceState? Allowance,
-        IReadOnlyList<SourceHealth> Health,
-        IReadOnlyList<Alert> Alerts,
-        int OpenIncidents,
-        long RowsToday,
-        List<Source> Injectable);
-
     /// <summary>
     /// Everything read into locals and handed over at once, and only by the latest load. The
     /// reads share the scope's one context, so they stay one after another. The token is taken
@@ -1078,54 +1054,7 @@ else
         await LatestRead.HandOverAsync(ct, () => FetchAsync(ct), HandOver);
     }
 
-    private async Task<OpsRead> FetchAsync(CancellationToken ct)
-    {
-        await using var scope = ScopeFactory.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
-
-        var pollingSetHere = await db.GetSettingAsync(AppSetting.LinePolling, ct) is not null;
-        var unattended = await db.LinesRunUnattendedAsync(LinePolling.RunsUnattended, ct);
-
-        var kpi = scope.ServiceProvider.GetRequiredService<KpiCalculator>();
-        var alertEngine = scope.ServiceProvider.GetRequiredService<AlertEngine>();
-        var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
-
-        var feeds = scope.ServiceProvider.GetRequiredService<OddsFeedStatus>().Describe();
-        var oddsKey = scope.ServiceProvider.GetService<XLines.Web.Services.DeskOddsKey>();
-
-        // Recomputed here rather than read off the scheduler: it is a pure function of the
-        // budget already spent, so the panel and the scheduler reach the same answer without
-        // the panel needing a handle on a background service.
-        var planner = scope.ServiceProvider.GetRequiredService<LinePollPlanner>();
-        var oddsKeys = registry.OddsSources.Select(s => s.Key).ToList();
-        var plan = await planner.PlanAsync(oddsKeys, ct);
-        IReadOnlyList<SportMarkets> marketsBySport = oddsKeys.Count == 0 ? [] : planner.MarketsBySport(oddsKeys);
-
-        var scores = await planner.ScoresPlanAsync(ct);
-        var allowance = registry.FindOdds(XLines.Ingestion.Adapters.TheOddsApiAdapter.SourceKey) is not null || registry.Scores is not null
-            ? await scope.ServiceProvider.GetRequiredService<CreditAllowance>().ReadAsync(ct)
-            : null;
-
-        var o = Options.Value;
-
-        var health = await kpi.GetAllHealthAsync(o.SuccessRateWindow, o.VolumeBaselineDays, ct);
-        var alerts = await alertEngine.GetOpenAlertsAsync(ct);
-        var openIncidents = await db.Incidents.CountAsync(i => i.Status != IncidentStatus.Resolved, ct);
-
-        var dayStart = new DateTimeOffset(DateTime.UtcNow.Date, TimeSpan.Zero);
-        var rowsToday = await db.IngestionRuns
-            .Where(r => r.StartedAt >= dayStart)
-            .SumAsync(r => (long?)r.RowsIngested, ct) ?? 0;
-
-        var keys = registry.OddsSources.OfType<IFailureInjectable>().Cast<IOddsSource>().Select(s => s.Key)
-            .Concat(registry.StatsSources.OfType<IFailureInjectable>().Cast<IStatsSource>().Select(s => s.Key))
-            .ToList();
-
-        var injectable = await db.Sources.Where(s => keys.Contains(s.Key)).OrderBy(s => s.Name).ToListAsync(ct);
-
-        return new OpsRead(feeds, oddsKey, pollingSetHere, unattended, plan, marketsBySport, registry.Port,
-            scores, allowance, health, alerts, openIncidents, rowsToday, injectable);
-    }
+    private Task<OpsRead> FetchAsync(CancellationToken ct) => Data.ReadAsync(ct);
 
     private void HandOver(OpsRead read)
     {
@@ -1149,7 +1078,7 @@ else
         _criticals = _alerts.Count(a => a.Severity == AlertSeverity.Critical);
         _openIncidents = read.OpenIncidents;
         _rowsToday = read.RowsToday;
-        _injectable = read.Injectable;
+        _injectable = [.. read.Injectable];
     }
 
     // Identity, not arithmetic. The same EvaluateAsync pass that opens an alert also
@@ -1177,9 +1106,7 @@ else
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<KpiCalculator>().RollupDailyAsync();
-            await scope.ServiceProvider.GetRequiredService<AlertEngine>().EvaluateAsync();
+            await Data.EvaluateAsync();
 
             var seen = OpenAlertIds();
             await LoadAsync();
@@ -1212,25 +1139,6 @@ else
         }
     }
 
-    /// <summary>
-    /// Games inside the movement window, by sport slug — what the drill reads to decide which
-    /// league is worth spending a credit on. The window is the ingestion one so the drill and a
-    /// real pull agree about which fixtures are still priceable.
-    /// </summary>
-    private async Task<IReadOnlyDictionary<string, int>> UpcomingBySportAsync(IServiceProvider provider)
-    {
-        var db = provider.GetRequiredService<XLinesDbContext>();
-        var horizon = DateTimeOffset.UtcNow + Ingestion.Value.MovementWindow;
-
-        var counts = await db.Games
-            .Where(g => g.StartsAt > DateTimeOffset.UtcNow && g.StartsAt <= horizon)
-            .GroupBy(g => g.Sport!.Key)
-            .Select(g => new { Sport = g.Key, Count = g.Count() })
-            .ToListAsync();
-
-        return counts.ToDictionary(c => c.Sport, c => c.Count, StringComparer.OrdinalIgnoreCase);
-    }
-
     private async Task SetModeAsync(int sourceId, string? mode)
     {
         if (!Manager.Access.CanOperate)
@@ -1238,12 +1146,7 @@ else
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            var db = scope.ServiceProvider.GetRequiredService<XLinesDbContext>();
-
-            var source = await db.Sources.FirstAsync(s => s.Id == sourceId);
-            source.FailureMode = string.IsNullOrEmpty(mode) ? null : mode;
-            await db.SaveChangesAsync();
+            await Data.SetFailureModeAsync(sourceId, mode);
 
             await LoadAsync();
         }
@@ -1268,25 +1171,13 @@ else
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            var registry = scope.ServiceProvider.GetRequiredService<SourceRegistry>();
-            var ingestion = scope.ServiceProvider.GetRequiredService<OddsIngestionService>();
-
-            var sport = asked ?? IngestionJobs.DrillSport(
-                await UpcomingBySportAsync(scope.ServiceProvider),
-                Ingestion.Value.EffectiveSports);
+            var sport = await Data.DrillAsync(asked);
 
             if (sport is null)
             {
                 Toasts.Warn("Drill skipped — no league is configured to scan.");
                 return;
             }
-
-            foreach (var source in registry.OddsSources)
-                await ingestion.IngestAsync(source, sport, "odds:drill", CancellationToken.None);
-
-            await scope.ServiceProvider.GetRequiredService<KpiCalculator>().RollupDailyAsync();
-            await scope.ServiceProvider.GetRequiredService<AlertEngine>().EvaluateAsync();
 
             var seen = OpenAlertIds();
             await LoadAsync();
@@ -1328,10 +1219,7 @@ else
 
         try
         {
-            await using var scope = ScopeFactory.CreateAsyncScope();
-            var incidents = scope.ServiceProvider.GetRequiredService<IncidentService>();
-
-            await incidents.PromoteAsync(alertId);
+            await Data.PromoteAsync(alertId);
             await LoadAsync();
         }
         catch (Exception ex)

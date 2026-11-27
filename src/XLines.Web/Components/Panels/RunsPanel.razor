@@ -1,8 +1,8 @@
 @using XLines.Data
 @using XLines.Desk.Windowing
-@using Microsoft.EntityFrameworkCore
+@using XLines.Web.Services
 @inherits PanelBase
-@inject IDbContextFactory<XLinesDbContext> DbFactory
+@inject IRunsData Data
 
 @* The quiet columns here are .quiet, not .dim. .dim is --text-tertiary — the tier for an
    annotation nobody has to read — and it measures 2.70:1 on the panel, below WCAG AA. A job
@@ -281,34 +281,21 @@
             // gets its source picker once a filter or a retry gets through.
             if (read.Sources is not null)
             {
-                _sources = read.Sources;
+                _sources = [.. read.Sources];
                 _sourcesRead = true;
             }
 
-            _runs = read.Runs;
+            _runs = [.. read.Runs];
         });
     }
 
-    private async Task<(List<Source>? Sources, List<IngestionRun> Runs)> ReadAsync(CancellationToken ct)
-    {
-        await using var db = await DbFactory.CreateDbContextAsync(ct);
-
-        var sources = _sourcesRead
-            ? null
-            : await db.Sources.AsNoTracking().OrderBy(s => s.Name).ToListAsync(ct);
-
-        var query = db.IngestionRuns.AsNoTracking().Include(r => r.Source).AsQueryable();
-
-        if (int.TryParse(_sourceFilter, out var sourceId))
-            query = query.Where(r => r.SourceId == sourceId);
-
-        if (Enum.TryParse<RunStatus>(_statusFilter, out var status))
-            query = query.Where(r => r.Status == status);
-
-        var runs = await query.OrderByDescending(r => r.StartedAt).Take(RunLimit).ToListAsync(ct);
-
-        return (sources, runs);
-    }
+    private Task<RunsRead> ReadAsync(CancellationToken ct)
+        => Data.ReadAsync(
+            withSources: !_sourcesRead,
+            sourceId: int.TryParse(_sourceFilter, out var sourceId) ? sourceId : null,
+            status: Enum.TryParse<RunStatus>(_statusFilter, out var status) ? status : null,
+            limit: RunLimit,
+            ct);
 
     // Recent failures are what this window is for, so they drive its pulse.
     private int RecentFailures => _runs.Take(20).Count(r => r.Status == RunStatus.Failed);
