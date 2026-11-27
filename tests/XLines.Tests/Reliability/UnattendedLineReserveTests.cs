@@ -7,6 +7,7 @@ using XLines.Ingestion.Adapters;
 using XLines.Ingestion.Configuration;
 using XLines.Ingestion.Services;
 using XLines.Reliability;
+using XLines.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -61,7 +62,7 @@ public class UnattendedLineReserveTests(PostgresFixture fixture)
 
     private static ServiceProvider Host(string connection, Wire wire)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Ingestion:Sports:0"] = "mlb",
             ["Ingestion:Espn:Enabled"] = "false",

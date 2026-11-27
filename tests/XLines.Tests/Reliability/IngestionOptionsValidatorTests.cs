@@ -63,13 +63,16 @@ public class IngestionOptionsValidatorTests
         return keys;
     }
 
-    private static IOptions<IngestionOptions> Bound(IConfiguration configuration)
+    private static ServiceProvider Provider(IConfiguration configuration)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddXLinesIngestion(configuration);
-        return services.BuildServiceProvider().GetRequiredService<IOptions<IngestionOptions>>();
+        return services.BuildServiceProvider();
     }
+
+    private static IOptions<IngestionOptions> Bound(IConfiguration configuration)
+        => Provider(configuration).GetRequiredService<IOptions<IngestionOptions>>();
 
     private static IngestionOptions Valid() => new()
     {
@@ -98,13 +101,41 @@ public class IngestionOptionsValidatorTests
         var options = Bound(configuration).Value;
 
         Assert.Empty(IngestionOptionsValidator.Failures(options));
-        Assert.Empty(IngestionOptionsValidator.SeasonFailures(options));
         Assert.Equal(["mlb", "nba", "nfl", "ufc"], options.Sports);
+        Assert.Equal(["mlb", "nba", "nfl", "ufc"], IngestionOptionsValidator.BackfillLeagues(options));
+    }
+
+    [Theory]
+    [InlineData("src/XLines.Web/appsettings.json")]
+    [InlineData("src/XLines.Worker/appsettings.json")]
+    public void AHostOnTheShippedConfigurationStarts(string file)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(Flatten(File.ReadAllText(Path.Combine(Root(), file))))
+            .Build();
+
+        using var provider = Provider(configuration);
+
+        // What the host runs before its first hosted service (ValidateOnStart): it does not throw.
+        provider.GetRequiredService<IStartupValidator>().Validate();
     }
 
     [Fact]
-    public void TheDefaultsPass()
-        => Assert.Empty(IngestionOptionsValidator.Failures(new IngestionOptions()));
+    public void TheDefaultsPassOnceTheirLeaguesHaveSeasonStarts()
+    {
+        // Naming no leagues walks the default ones, so a bare section owes each of them a start.
+        var options = new IngestionOptions();
+
+        var failures = IngestionOptionsValidator.Failures(options).ToList();
+        Assert.Equal(IngestionOptions.DefaultSports.Length, failures.Count);
+        Assert.All(IngestionOptions.DefaultSports, league =>
+            Assert.Contains(failures, f => f.StartsWith($"Ingestion:Backfill:Seasons:{league} must be set", StringComparison.Ordinal)));
+
+        foreach (var league in IngestionOptions.DefaultSports)
+            options.Backfill.Seasons[league] = new DateOnly(2025, 9, 1);
+
+        Assert.Empty(IngestionOptionsValidator.Failures(options));
+    }
 
     [Fact]
     public void AConfigurationWithItsSeasonsPasses()
@@ -162,27 +193,66 @@ public class IngestionOptionsValidatorTests
     }
 
     [Fact]
-    public void ALeagueWithoutASeasonStartIsNamedWhicheverListNamesIt()
+    public void ALeagueTheBackfillNamesWithoutASeasonStartIsRefusedByItsKey()
     {
         var options = Valid();
-        options.Sports = ["mlb", "nfl", "nba"];
         options.Backfill.Sports = ["mlb", "ufc"];
 
-        var failures = IngestionOptionsValidator.SeasonFailures(options).ToList();
-
-        Assert.Equal(2, failures.Count);
-        Assert.Contains(failures, f => f.Contains("'nba'", StringComparison.Ordinal));
-        Assert.Contains(failures, f => f.Contains("'ufc'", StringComparison.Ordinal));
+        var failure = Assert.Single(IngestionOptionsValidator.Failures(options));
+        Assert.StartsWith("Ingestion:Backfill:Seasons:ufc must be set", failure);
+        Assert.Contains("'ufc'", failure);
+        Assert.False(new IngestionOptionsValidator().Validate(null, options).Succeeded);
     }
 
     [Fact]
-    public void ALeagueWithoutASeasonStartDoesNotFailTheOptions()
+    public void WithNoBackfillListTheLeaguesPolledAreTheLeaguesWalkedAndEachNeedsASeasonStart()
     {
-        // The repository's rule, not the code's: a host naming a league with no season start still starts.
         var options = Valid();
-        options.Sports = ["nba"];
+        options.Sports = ["mlb", "nfl", "nba"];
+        options.Backfill.Sports = [];
+
+        var failure = Assert.Single(IngestionOptionsValidator.Failures(options));
+        Assert.StartsWith("Ingestion:Backfill:Seasons:nba must be set", failure);
+    }
+
+    [Fact]
+    public void ALeaguePolledButLeftOutOfTheBackfillNeedsNoSeasonStart()
+    {
+        // No walk takes it, so nothing can reach back for want of its start.
+        var options = Valid();
+        options.Sports = ["mlb", "nba"];
+        options.Backfill.Sports = ["mlb"];
 
         Assert.True(new IngestionOptionsValidator().Validate(null, options).Succeeded);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AHostWithALeagueAndABackfillButNoSeasonStartRefusesToStartNamingTheLeague(bool enabled)
+    {
+        // Off as well as on: Enabled only starts the walk by itself, and the History window's press
+        // starts the same walk. Since and Days are set and are no substitute for a season's start.
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Ingestion:Sports:0"] = "mlb",
+                ["Ingestion:Sports:1"] = "nba",
+                ["Ingestion:Backfill:Enabled"] = enabled ? "true" : "false",
+                ["Ingestion:Backfill:Since"] = "2026-03-01",
+                ["Ingestion:Backfill:Days"] = "180",
+                ["Ingestion:Backfill:Sports:0"] = "mlb",
+                ["Ingestion:Backfill:Sports:1"] = "nba",
+                ["Ingestion:Backfill:Seasons:mlb"] = "2026-03-25"
+            })
+            .Build();
+
+        using var provider = Provider(configuration);
+
+        var refused = Assert.Throws<OptionsValidationException>(() => provider.GetRequiredService<IStartupValidator>().Validate());
+        var failure = Assert.Single(refused.Failures);
+        Assert.StartsWith("Ingestion:Backfill:Seasons:nba must be set", failure);
+        Assert.Contains("'nba'", failure);
     }
 
     [Fact]
@@ -190,6 +260,7 @@ public class IngestionOptionsValidatorTests
     {
         var options = Valid();
         options.Sports = ["MLB", "nfl"];
+        options.Backfill.Sports = [];
 
         Assert.Empty(IngestionOptionsValidator.SeasonFailures(options));
     }

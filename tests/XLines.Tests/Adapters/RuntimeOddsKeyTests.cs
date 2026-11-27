@@ -19,7 +19,7 @@ public class RuntimeOddsKeyTests
 {
     private static ServiceProvider Container(bool runtimeKey, Dictionary<string, string?>? settings = null)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings ?? []).Build();
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(settings ?? []).Build();
 
         var services = new ServiceCollection();
         services.AddLogging();

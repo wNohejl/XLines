@@ -243,7 +243,7 @@ public class SportsGameOddsAdapterTests
 
     private static ServiceProvider Container(Dictionary<string, string?> settings)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddXLinesIngestion(configuration);

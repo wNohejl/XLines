@@ -1,5 +1,6 @@
 using XLines.Ingestion;
 using XLines.Ingestion.Configuration;
+using XLines.Tests.Support;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -23,7 +24,7 @@ public class IngestionOptionsBindingTests
 {
     private static IngestionOptions Bind(Dictionary<string, string?> settings)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(settings).Build();
 
         var services = new ServiceCollection();
         services.AddLogging();
@@ -104,7 +105,7 @@ public class IngestionOptionsBindingTests
 
     private static IServiceProvider Container(Dictionary<string, string?> settings)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(settings).Build();
 
         var services = new ServiceCollection();
         services.AddLogging();

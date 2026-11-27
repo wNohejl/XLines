@@ -41,8 +41,8 @@ public static class IngestionServiceCollectionExtensions
         services.PostConfigure<IngestionOptions>(Normalise);
 
         // What the services take for granted about the section (IngestionOptionsValidator): a zero
-        // cadence, a pacing floor above its ceiling or a reserve beyond its allowance is
-        // refused by name rather than worked around — at host start, not at the first pull that reads
+        // cadence, a pacing floor above its ceiling, a reserve beyond its allowance or a league the
+        // backfill would walk with no season start is refused by name rather than worked around — at host start, not at the first pull that reads
         // them. Both shipped appsettings.json pass it (IngestionOptionsValidatorTests).
         services.TryAddEnumerable(
             ServiceDescriptor.Singleton<IValidateOptions<IngestionOptions>, IngestionOptionsValidator>());

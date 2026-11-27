@@ -5,6 +5,7 @@ using XLines.Ingestion.Configuration;
 using XLines.Ingestion.Services;
 using XLines.Ingestion.Services.Jobs;
 using XLines.Reliability;
+using XLines.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -83,7 +84,7 @@ public class SchedulerLongPassTests(PostgresFixture fixture)
 
     private static ServiceProvider Host(string connection, RecordingJobs jobs, TimeProvider clock)
     {
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Ingestion:Sports:0"] = "mlb",
             ["Ingestion:Sports:1"] = "ufc",

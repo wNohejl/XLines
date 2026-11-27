@@ -54,7 +54,7 @@ public class LinesJobSingleReadTests(PostgresFixture fixture)
             ["Ingestion:TheOddsApi:ApiKey"] = configKey ?? ""
         };
 
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(connection));
@@ -213,7 +213,7 @@ public class LinesJobSingleReadTests(PostgresFixture fixture)
             ["Ingestion:TheOddsApi:ApiKey"] = "test-key"
         };
 
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+        var configuration = new ConfigurationBuilder().AddSeasonStarts().AddInMemoryCollection(settings).Build();
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(connection));

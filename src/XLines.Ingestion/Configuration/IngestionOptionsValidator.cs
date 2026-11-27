@@ -15,8 +15,20 @@ namespace XLines.Ingestion.Configuration;
 /// </para>
 ///
 /// <para>
-/// The repository's rule that every configured league has a season start (CLAUDE.md, Scope) is
-/// <see cref="SeasonFailures"/>, checked against the shipped files by a test rather than here.
+/// <b>Every league the history backfill would walk has a season start</b> (CLAUDE.md, Scope: no
+/// league without a season start in <c>Ingestion:Backfill:Seasons</c>). The leagues it would walk
+/// are the ones <see cref="Services.HistoryBackfillService"/> walks: <c>Ingestion:Backfill:Sports</c>
+/// when it names any, else <c>Ingestion:Sports</c>, else <see cref="IngestionOptions.DefaultSports"/>.
+/// With no start such a league is walked from <see cref="BackfillOptions.Since"/>, else
+/// <see cref="BackfillOptions.Days"/> back from today — the one way configuration can pull a league's
+/// history from before its season (the NBA before 2026-10-20, UFC before UFC 300). The rule holds
+/// with <see cref="BackfillOptions.Enabled"/> off, because Enabled only starts the walk by itself and
+/// the History window starts the same walk on a press; and whatever the stats source, because which
+/// sources are eligible is read from the source rows and the registry when the walk runs.
+/// A league in <c>Ingestion:Sports</c> that a non-empty <c>Ingestion:Backfill:Sports</c> leaves out
+/// needs none: no walk takes it (a range walk is limited to the backfill's leagues too), and the
+/// other readers of <c>Seasons</c> — The Odds API's season floor and the gamecast backport — only
+/// narrow what they keep where a start is given and never reach back for want of one.
 /// </para>
 /// </summary>
 public sealed class IngestionOptionsValidator : IValidateOptions<IngestionOptions>
@@ -99,32 +111,35 @@ public sealed class IngestionOptionsValidator : IValidateOptions<IngestionOption
             yield return $"{root}:SportsGameOdds:ObjectReserve ({options.SportsGameOdds.ObjectReserve}) must not exceed "
                          + $"{root}:SportsGameOdds:MonthlyObjects ({options.SportsGameOdds.MonthlyObjects}).";
 
+        foreach (var failure in SeasonFailures(options))
+            yield return failure;
     }
 
     /// <summary>
-    /// Each league <c>Ingestion:Sports</c> or <c>Ingestion:Backfill:Sports</c> names, as written rather
-    /// than through their fallbacks, that has no season start in <c>Ingestion:Backfill:Seasons</c>.
-    ///
-    /// <para>
-    /// Not part of <see cref="Validate"/>: the code itself does not depend on it (a league with no
-    /// season start backfills from <see cref="BackfillOptions.Since"/>, then <see cref="BackfillOptions.Days"/>),
-    /// and hosts built in tests name leagues with no seasons. It is the repository's rule for the
-    /// shipped configuration, and a test holds both shipped files to it.
-    /// </para>
+    /// The leagues the history backfill walks, picked as <see cref="Services.HistoryBackfillService"/>
+    /// picks them: <c>Backfill:Sports</c> when it names any, else <see cref="IngestionOptions.EffectiveSports"/>.
+    /// </summary>
+    public static IEnumerable<string> BackfillLeagues(IngestionOptions options)
+        => (options.Backfill.Sports.Length > 0 ? options.Backfill.Sports : options.EffectiveSports)
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Each league the history backfill would walk (<see cref="BackfillLeagues"/>) with no season start
+    /// in <c>Ingestion:Backfill:Seasons</c>, as a sentence naming the league and the key to set. Part of
+    /// <see cref="Failures"/>; the class summary says why this is the rule.
     /// </summary>
     public static IEnumerable<string> SeasonFailures(IngestionOptions options)
     {
         const string root = IngestionOptions.SectionName;
 
-        var leagues = options.Sports.Concat(options.Backfill.Sports)
-            .Where(s => !string.IsNullOrWhiteSpace(s))
-            .Distinct(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var league in leagues)
+        foreach (var league in BackfillLeagues(options))
         {
             if (!options.Backfill.Seasons.ContainsKey(league))
-                yield return $"{root}:Backfill:Seasons has no season start for '{league}', which "
-                             + $"{root}:Sports or {root}:Backfill:Sports names.";
+                yield return $"{root}:Backfill:Seasons:{league} must be set: the history backfill walks '{league}' "
+                             + $"({root}:Backfill:Sports, else {root}:Sports, else the default leagues), and with no "
+                             + $"season start it would reach back to {root}:Backfill:Since or {root}:Backfill:Days "
+                             + $"rather than the season's opening day. Set its opening day, or leave it out of {root}:Backfill:Sports.";
         }
     }
 }
