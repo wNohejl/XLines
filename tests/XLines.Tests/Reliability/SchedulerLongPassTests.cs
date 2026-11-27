@@ -127,13 +127,21 @@ public class SchedulerLongPassTests(PostgresFixture fixture)
         db.Games.AddRange(
             new Game
             {
-                SportId = mlb.Id, HomeTeamId = teams[0].Id, AwayTeamId = teams[1].Id,
-                StartsAt = now.AddMinutes(-30), SeasonYear = 2026, Status = GameStatus.Live
+                SportId = mlb.Id,
+                HomeTeamId = teams[0].Id,
+                AwayTeamId = teams[1].Id,
+                StartsAt = now.AddMinutes(-30),
+                SeasonYear = 2026,
+                Status = GameStatus.Live
             },
             new Game
             {
-                SportId = mlb.Id, HomeTeamId = teams[2].Id, AwayTeamId = teams[3].Id,
-                StartsAt = now.AddMinutes(5), SeasonYear = 2026, Status = GameStatus.Scheduled
+                SportId = mlb.Id,
+                HomeTeamId = teams[2].Id,
+                AwayTeamId = teams[3].Id,
+                StartsAt = now.AddMinutes(5),
+                SeasonYear = 2026,
+                Status = GameStatus.Scheduled
             });
 
         var oddsApi = await db.Sources.Where(s => s.Key == SourceAccounts.TheOddsApi).Select(s => s.Id).SingleAsync();
@@ -142,14 +150,24 @@ public class SchedulerLongPassTests(PostgresFixture fixture)
             // The month: 390 of 500 spent leaves a little above the 100 held back.
             new IngestionRun
             {
-                SourceId = oddsApi, JobKey = "odds:lines", StartedAt = now.AddDays(-2), FinishedAt = now.AddDays(-2),
-                Status = RunStatus.Success, RequestsMade = 1, CreditsSpent = 388
+                SourceId = oddsApi,
+                JobKey = "odds:lines",
+                StartedAt = now.AddDays(-2),
+                FinishedAt = now.AddDays(-2),
+                Status = RunStatus.Success,
+                RequestsMade = 1,
+                CreditsSpent = 388
             },
             // The league's last paced scan, before the closing lead began.
             new IngestionRun
             {
-                SourceId = oddsApi, JobKey = IngestionJobs.OddsLinesPrefix + "mlb", StartedAt = now.AddMinutes(-7),
-                FinishedAt = now.AddMinutes(-7), Status = RunStatus.Success, RequestsMade = 1, CreditsSpent = 2
+                SourceId = oddsApi,
+                JobKey = IngestionJobs.OddsLinesPrefix + "mlb",
+                StartedAt = now.AddMinutes(-7),
+                FinishedAt = now.AddMinutes(-7),
+                Status = RunStatus.Success,
+                RequestsMade = 1,
+                CreditsSpent = 2
             });
 
         await db.SaveChangesAsync();
