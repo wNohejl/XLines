@@ -183,7 +183,7 @@ first, then five of the ten moves above.
 | 4. One clock | `TimeProvider` registered and injected through the ingestion and the Data readers | `DateTimeOffset.UtcNow` **71 → 0** in Ingestion and **8 → 0** in the readers. Two reads remain in Data outside the readers (`JournalAuditInterceptor`, `DatabaseInitializer`), and Reliability and Observability were not touched. `BoardServiceTests` pins the stale-pull line at a fixed instant; `ResultsBackOffClockTests` pins the sweep's back-off |
 | 5. `WindowManager` | `RowLayout` (pure), `DeskRow`, `ViewportFit`, `LayoutStore`, `DeskHistory`; the manager still raises every event in the order it did | `WindowManager.cs` **2185 → 1094** lines, every new file under 700 (not the 700 hoped for the manager: what is left is its public members and their comments). Its public declarations diff as identical and no existing test was edited. `RowLayout` is public, not internal: `InternalsVisibleTo` made `DeskLayout` ambiguous in a test |
 
-Not started: 6 (the grid's columns), 7 (pure analytics into Core), 8 (the build skeleton), 9 (tests
+Left for round three, below: 6 (the grid's columns), 7 (pure analytics into Core), 8 (the build skeleton), 9 (tests
 by category), 10 (CSS in layers, which waits on the ADR 0034 work), and the smaller items.
 
 Behaviour that changed on purpose, beyond the defects: `BoardRow.Age` and `FighterCard.Age` are
@@ -238,3 +238,67 @@ On the merged tree: build 0 errors; XLines.Tests 1308, XLines.Web.Tests 1516, XL
 2820, XLines.Desk.Hosting.Tests 26, 5670 passed and none failed; no pending model changes; CI's
 format step exits 0. The Worker start and the Docker images were run on the branch before the
 merge, not again after it.
+
+## Round three: the rest of the moves
+
+Eight commits on `arch-review-2`, on top of the merge above.
+
+| Move | Done | Its check |
+|---|---|---|
+| 6. The grid's columns belong to the Desk | `DeskColumn` and `DeskTemplateColumn` forward to Mud's columns with the parameters the call site wrote; `DeskIcons` names each glyph. Every call site in the app, and the Desk's own Windowing and Layout, use them | `<PropertyColumn\|<TemplateColumn` in `src/XLines.Web` **126 → 0**; `Icons.Material` there **119 → 0**, and in the Desk's Windowing and Layout **52 → 0**. Two convention tests fail if either returns. Left: 26 glyph references in fifteen primitives the MudBlazor exit is working in (listed in a test that can only shrink), 2 in the template, which pins the published 0.5.0. `InitialDirection` still takes Mud's `SortDirection` |
+| 7. Pure analytics live in Core | `BoardComposer` (Compose, ExplainGap, BestPair, Best), the board's records, `Starters`, `GameLogSplits` and `StatLineKeys` are in `XLines.Core.Analytics`. Four list readers project to row records; the three that hand a `Game` to a caller still load it, because `ForTier` needs it | `BoardService.cs` **718 → 342** lines; nine ranking tests with no Postgres; `Include(` in the two readers **16 → 5** |
+| 8. A build skeleton | `Directory.Build.props`, `tests/Directory.Build.props`, `global.json` (10.0.4xx); both Dockerfiles copy them. No warnings-as-errors, no analyzers, no `.editorconfig` | Properties duplicated across three or more csprojs **7 → 0**; evaluated properties and items of all sixteen projects identical before and after; both images build |
+| 9. Tests run by category | 46 Testcontainers classes carry `[Trait("Category", "Integration")]`; `IntegrationTraitTests` refuses a new one without it. CI runs unit then integration, each writing trx and coverage, uploaded always | `--filter Category!=Integration` on XLines.Tests: 824 tests in 11 s, no container started; integration 508 in 1 m 20 s; 824 + 508 = 1332 |
+| 10. CSS | A file split only. `desk.css` is six files, `themes.css` three, `xlines.css` two, cut at their banners and linked in the order their contents had | Largest stylesheet **6282 → 1685** lines; each set concatenated in link order is byte for byte the original. `@layer` is not attempted: it changes precedence against MudBlazor's unlayered sheet and belongs with ADR 0034 step 8 |
+| 2 and 5, their size targets | `IngestionJobs.cs` 461 → **288** (keys in `JobKeys`, records a partial). `WindowManager.cs` 1094 → **358**, seven partial files by concern | No file in `Desk/Windowing` over 664 lines; in Ingestion only `GamecastFeed.cs` (759) and `IngestionOptions.cs` (700) reach 700 |
+| Smaller items | The ESPN adapter and `StatsIngestionService` are partial files by concern (1268 → 295, 1260 → 411; `PersistAsync` about 50 lines). `IngestionOptionsValidator` with `ValidateOnStart`. `PartsPanel.razor` 2028 → 88 plus thirteen group components, the largest 348. `X`, `Weight`, `Maximised`, `Pulse`, `StatusText` on `WindowInstance` are internal. `EspnPacer` arrived with the Gamecast work | Both shipped `appsettings.json` pass the validator; the gallery's markup is unchanged before and after |
+
+Not done, and why:
+
+- **Compose healthchecks.** The runtime image has no `curl`, `wget` or `nc`, and the container is
+  read-only and non-root; a probe needs either a tool in the image or a `--health` mode in the
+  app. Neither was added.
+- **The season-start rule at startup.** It is a check the shipped files are held to by a test,
+  not a startup failure: thirty tests configure sports with no seasons, and the backfill has a
+  fallback.
+- **`Width`, `Minimised`, `Sequence`** on `WindowInstance` stay public: tests write them and
+  there is no `InternalsVisibleTo`.
+- **Scoped CSS and layers**, the shared read cache, bUnit 2, measuring `PassingLinesAsync`, and
+  the two clock reads in `JournalAuditInterceptor` and `DatabaseInitializer`.
+- **The panels are still large**: `GamecastPanel.razor` 2079, `BoardPanel.razor` 1742,
+  `BoardWager.razor` 1495, `JournalPanel.razor` 1494. Their queries are out; their view-model
+  shaping and markup are one file each.
+
+### Checklist, run on the round-three branch
+
+| Check | Result |
+|---|---|
+| `dotnet build XLines.slnx` | 0 errors |
+| `dotnet test XLines.slnx`, in the worktree | XLines.Tests 1332, XLines.Web.Tests 1518, XLines.Desk.Tests 2827, XLines.Desk.Hosting.Tests 26: 5703 passed, 0 failed |
+| Flaky tests seen | Three, each failing once under the whole solution in parallel and passing on rerun, none in code these rounds changed in a way that explains it: `GameWindowCardsTests.An_opened_market_keeps_view_more_across_closing_and_reopening` (twice), `BoardWagerTests.While_the_row_loads_the_body_is_a_skeleton_not_an_empty_state` (once in ten runs), `DeskPanelBaseTests.A_refresh_the_panel_asked_for_itself_names_nothing` (once). All wait on a one-second bUnit assertion |
+| CI's format step (Linux, LF) | Exit 0 |
+| Pending model changes | None |
+| The Worker host | Starts against a throwaway Postgres, 23 migrations, "Ingestion scheduler started", options validated; `--job settle` succeeds; `espn:` off exits 5 |
+| Docker images | Web and Worker build with the new props and `global.json`; the Worker image refuses an `espn:` job with exit 5 |
+| The desk in a browser | Started from the branch against an empty throwaway database with the scheduler off: all fifteen stylesheets load in order with status 200, no console errors, the Morning triage workspace opens Ops, Incidents and Runs with their grids, headers and icons drawn. Not seen with real games in it |
+| Not run | CI itself: the new workflow steps were read, not executed, and their first run on GitHub is the test of them. The scheduler against live providers |
+
+### Metrics, start of the day to now
+
+| Metric | `022a1d1` | Now |
+|---|---|---|
+| Razor files touching a DbContext | 10 | 0 |
+| Mud column tags in the app | 126 | 0 |
+| `Icons.Material` in the app / in the Desk outside `DeskIcons` | 119 / 78 | 0 / 26 |
+| `IngestionJobs.cs` | 1638 lines | 288 |
+| `WindowManager.cs` | 2111 | 358 |
+| `PartsPanel.razor` | 2028 | 88 |
+| `BoardService.cs` | 716 | 342 |
+| `EspnStatsAdapter.cs` / `StatsIngestionService.cs` | 1239 / 1259 | 295 / 411 |
+| Largest stylesheet | 6282 | 1685 |
+| Direct clock reads, Ingestion / readers | 71 / 8 | 0 / 0 |
+| csproj properties duplicated across three or more projects | 7 | 0 |
+| Tests that can run without Docker, by a filter | none | 824 of XLines.Tests, 11 s |
+| Projects whose references a test pins | 4 | 11 |
+| CI format step | exit 2 | exit 0 |
+| New test methods | | 210 |
