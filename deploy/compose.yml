@@ -174,8 +174,8 @@ services:
         condition: service_healthy
     environment:
       PGHOST: postgres
-      PGUSER: xlines
-      PGDATABASE: xlines
+      PGUSER: lineops
+      PGDATABASE: lineops
       PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
     volumes:

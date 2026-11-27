@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, LineX_Development]
   pull_request:
     branches: [main]
 

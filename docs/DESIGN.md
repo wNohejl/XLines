@@ -555,7 +555,7 @@ The app migrates itself on startup, so this is only needed when *authoring* a sc
 
 ## 9. Engineering practices
 
-- **Repo layout:** `src/` (11 projects), `tests/` (4), `docs/adr/`, `docs/runbook.md`, `scripts/`, `data/snapshots/` (the committed database snapshot), `.github/workflows/`.
+- **Repo layout:** `src/` (11 projects), `tests/` (4), `docs/adr/`, `docs/runbook.md`, `scripts/`, `data/snapshots/` (gitignored: the database snapshot travels in the private journal clone at `data/personal/snapshots/`, never in this repository), `.github/workflows/`.
 - **Central package management** — `Directory.Packages.props` pins every version once, with transitive pinning on. Added after a real EF Core 10.0.4-vs-10.0.10 mismatch broke the build; this is the fix that stops it recurring.
 - **Tests (2,000+):** hand-checked odds maths; grading including every push case; adapter parsing against recorded fixtures containing the awkward real shapes (nested team objects, string prices, an unmodelled market, a malformed row); Testcontainers integration covering freshness, success rate, volume anomaly, alert reconciliation, auto-resolution, rollup idempotency, and full settlement with CLV; bUnit component tests covering the desk design system.
 - **CI:** GitHub Actions — restore, build, `dotnet format --verify-no-changes`, test, plus a job that fails if the model has pending migrations.
