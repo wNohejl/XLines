@@ -773,10 +773,17 @@
    the ink (as every Desk control deepens rather than lightens), and pressed — a fold that is open,
    a filter that is on — is the deeper fill with the primary ink and a semibold word, told to a
    reader by aria-expanded or aria-pressed. The accent is spent only on the focus ring. The key is
-   a little taller than a tag (a 22px target), and the base chip's 4px Mud margin is gone. */
+   a little taller than a tag (a 22px target), and the base chip's 4px Mud margin is gone.
+
+   Height and type size are restated here, not left to .mud-chip above: Mud sizes a chip with a
+   two-class rule (".mud-chip.mud-chip-size-medium": 32px, 14px), which outweighs the one-class
+   .mud-chip and drew this key 32px tall at body size. Two classes here, later in the cascade. */
 .desk-chip.mud-chip-text {
     margin: 0;
+    height: auto;
     min-height: 22px;
+    font-size: var(--text-footnote);
+    line-height: var(--leading-tight);
     padding: 3px var(--space-3);
     gap: var(--space-1);
     background-color: var(--surface-3);
