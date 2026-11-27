@@ -305,8 +305,8 @@ public class FieldGraphicTests : DeskTestContext
         var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Snippets", "FieldGraphic.razor.css"));
 
         Assert.DoesNotContain("border:", css);
-        // The accent reaches the field only as the home side's ink, a series' colour; nothing else wears it.
-        Assert.DoesNotMatch(@"var\(--accent(?!-ink\))", css);
+        // The accent reaches the field only through the home side's chart tone, a series' colour; nothing wears it directly.
+        Assert.DoesNotContain("var(--accent", css);
         Assert.Contains("max-width: 760px", css);
         Assert.Contains("prefers-reduced-motion: reduce", css);
 
@@ -316,11 +316,56 @@ public class FieldGraphicTests : DeskTestContext
         Assert.Contains(".fieldgraphic__arc--draw", reduced);
         Assert.Contains("animation: none", reduced);
 
-        // The sides spend DeskChart's pair for two series with no state: away the chart neutral,
-        // home the accent's ink (the dim neutral all but vanished on a dark field); no literal colour.
-        Assert.Contains("var(--chart-neutral)", css);
-        Assert.Contains("var(--accent-ink)", css);
-        Assert.DoesNotContain("var(--chart-neutral-dim)", css);
+        // The sides spend the desk's chart-side pair — DeskChart's two series with no state, the
+        // accent's ink and the chart neutral, re-pointed on Graphite — never the raw tokens; no literal colour.
+        Assert.Contains("var(--chart-side-home)", css);
+        Assert.Contains("var(--chart-side-away)", css);
+        Assert.DoesNotContain("var(--chart-neutral", css);
         Assert.DoesNotMatch(@"#[0-9A-Fa-f]{3,8}\b|rgba?\(", css);
+
+        // The away side's hollow core draws in with its arc, and stops with it.
+        Assert.Contains(".fieldgraphic__core--draw", reduced);
+    }
+
+    /// <summary>
+    /// Not by colour alone: an away drive's solid arcs are hollow — each a core in the field's own
+    /// fill laid down its middle — and its dots and landing rings, while a home drive's are solid.
+    /// A dashed penalty or a dotted kick is already told by its dashes, and gets no core.
+    /// </summary>
+    [Fact]
+    public void An_away_drive_is_drawn_hollow_and_a_home_drive_solid()
+    {
+        var plays = new[]
+        {
+            Play(1, 75, 71, type: "Rush"),
+            Play(2, 71, 71, type: "Pass Incompletion"),
+            Play(3, 71, 66, penalty: true, type: "Penalty"),
+            Play(4, 66, 34),
+        };
+
+        var away = Render(p => p.Add(s => s.YardLine, 34).Add(s => s.Distance, 10).Add(s => s.HomeBall, false)
+            .Add(s => s.DrivePlays, plays).Add(s => s.DriveStartYardLine, 75));
+
+        var cores = away.FindAll(".fieldgraphic__core");
+        Assert.Equal(2, cores.Count);
+        var arcs = away.FindAll(".fieldgraphic__arc");
+        Assert.Equal(arcs[0].GetAttribute("d"), cores[0].GetAttribute("d"));
+        Assert.Equal(arcs[^1].GetAttribute("d"), cores[1].GetAttribute("d"));
+        Assert.Contains("fieldgraphic__arc--hollow", arcs[0].ClassName);
+        Assert.DoesNotContain("fieldgraphic__arc--hollow", arcs[2].ClassName);
+
+        // The latest's core draws in with it: one unit long, as its arc is.
+        Assert.Contains("fieldgraphic__core--draw", cores[1].ClassName);
+        Assert.Equal("1", cores[1].GetAttribute("pathLength"));
+        Assert.Single(away.FindAll(".fieldgraphic__arc--draw"));
+
+        var home = Render(p => p.Add(s => s.YardLine, 40).Add(s => s.Distance, 10).Add(s => s.HomeBall, true)
+            .Add(s => s.DrivePlays, [Play(1, 25, 40, type: "Rush")]).Add(s => s.DriveStartYardLine, 25));
+        Assert.Empty(home.FindAll(".fieldgraphic__core"));
+
+        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Snippets", "FieldGraphic.razor.css"));
+        Assert.Matches(@"\.fieldgraphic__core\s*\{[^}]*stroke:\s*var\(--surface-1\)", css);
+        Assert.Matches(@"\.fieldgraphic__arc--nogain\.fieldgraphic__arc--away\s*\{[^}]*fill:\s*var\(--surface-1\)[^}]*stroke:\s*var\(--chart-side-away\)", css);
+        Assert.Matches(@"\.fieldgraphic__end--home\s*\{[^}]*fill:\s*var\(--chart-side-home\)", css);
     }
 }

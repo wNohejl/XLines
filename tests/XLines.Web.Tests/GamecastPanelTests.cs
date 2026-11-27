@@ -22,7 +22,7 @@ namespace XLines.Web.Tests;
 /// result lines, draws the field from the home goal line, and is reached from a live NFL game's
 /// window and the catalogue.
 /// </summary>
-public class GamecastPanelTests : DeskTestContext
+public partial class GamecastPanelTests : DeskTestContext
 {
     /// <summary>
     /// The window with no settle to wait out, and a clock the test can set: a notice is heard at
@@ -118,13 +118,12 @@ public class GamecastPanelTests : DeskTestContext
 
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".gc__plays .gc__play").Count), TimeSpan.FromSeconds(5));
 
-        // The opening read asked for every play; the notice asked for what came after play 4,
-        // and then the drive in progress again (from its first play) for corrections. Nothing
-        // read the whole game again, and the header waits for its own notice.
-        Assert.Null(_data.PlaysReadsAfter[0]);
-        Assert.Equal(4, _data.PlaysReadsAfter[1]);
-        Assert.Equal(2, _data.PlaysReadsAfter[2]);
-        Assert.Single(_data.PlaysReadsAfter, after => after is null);
+        // The opening read was the snapshot; the notice made one read, of what was written since
+        // the newest stamp the snapshot held. Nothing read the whole game again, and the header
+        // waits for its own notice.
+        Assert.Equal(1, _data.SnapshotReads);
+        var since = Assert.Single(_data.ChangeReadsSince);
+        Assert.NotNull(since);
         Assert.Equal(headers, _data.HeaderReads);
 
         // Newest first, and the rows already drawn are the same rows, keyed by the play.
@@ -136,7 +135,7 @@ public class GamecastPanelTests : DeskTestContext
     {
         var source = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Snippets", "PlayLog.razor"));
 
-        Assert.Contains("<li class=\"gc__play @(play.IsScoring ? \"gc__play--score\" : null)\" @key=\"play.Id\"", source);
+        Assert.Contains("<li class=\"gc__play @(play.IsScoring ? \"gc__play--score\" : null) @(play.Id == Fresh ? \"gc__play--new\" : null)\" @key=\"play.Id\"", source);
     }
 
     [Fact]
@@ -207,7 +206,7 @@ public class GamecastPanelTests : DeskTestContext
     {
         TwoDrives();
         var cut = Render();
-        var (plays, drives, headers) = (_data.PlaysReadsAfter.Count, _data.DriveReads, _data.HeaderReads);
+        var (rows, headers) = (_data.RowReads, _data.HeaderReads);
 
         Signal("plays", "4123");
         Signal("games", "4123");
@@ -218,7 +217,7 @@ public class GamecastPanelTests : DeskTestContext
         Signal("games", Id);
         cut.WaitForAssertion(() => Assert.Contains("14", cut.Find(".ptitle").TextContent), TimeSpan.FromSeconds(5));
 
-        Assert.Equal((plays, drives, headers + 1), (_data.PlaysReadsAfter.Count, _data.DriveReads, _data.HeaderReads));
+        Assert.Equal((rows, headers + 1), (_data.RowReads, _data.HeaderReads));
     }
 
     [Fact]
@@ -226,14 +225,14 @@ public class GamecastPanelTests : DeskTestContext
     {
         TwoDrives();
         var cut = Render();
-        var (plays, headers) = (_data.PlaysReadsAfter.Count, _data.HeaderReads);
+        var (rows, headers) = (_data.RowReads, _data.HeaderReads);
 
         _data.Header = FakeGamecastData.Live() with { AwayScore = 14 };
         Signal("games", Id);
 
         cut.WaitForAssertion(() => Assert.Contains("14", cut.Find(".ptitle").TextContent), TimeSpan.FromSeconds(5));
         Assert.Equal(headers + 1, _data.HeaderReads);
-        Assert.Equal(plays, _data.PlaysReadsAfter.Count);
+        Assert.Equal(rows, _data.RowReads);
     }
 
     // ---- Overlapping loads -----------------------------------------------------------------
@@ -899,7 +898,7 @@ public class GamecastPanelTests : DeskTestContext
         var cut = Render();
 
         Assert.Contains("The gamecast covers NFL games.", cut.Markup);
-        Assert.Empty(_data.PlaysReadsAfter);
+        Assert.Equal(0, _data.RowReads);
     }
 
     [Fact]

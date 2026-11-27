@@ -7,8 +7,10 @@ namespace XLines.Web.Tests.Support;
 
 /// <summary>
 /// The Gamecast window's data seam, in memory: a header, the plays and drives a test sets, and a
-/// record of every read — the sequence each plays read asked after, null for every play — so a
-/// test can say whether a notice appended, corrected or reloaded.
+/// record of every read — the snapshots, and the watermark each change read asked after — so a
+/// test can say whether a notice appended, corrected or reloaded. Every row is stamped as the
+/// writer stamps it when it is new or differs from what was read last (<c>Stamp</c>), so the
+/// change reads return what moved, in any drive, as the database does.
 ///
 /// <para>
 /// <see cref="Gate"/> holds every plays read until the test releases it, so two loads really
@@ -43,11 +45,19 @@ public sealed class FakeGamecastData : IGamecastData
     private int _waiting;
 
     public int HeaderReads { get; private set; }
-    public int DriveReads { get; private set; }
     public int BoxReads { get; private set; }
 
-    /// <summary>The <c>afterSequence</c> of every plays read, in order; null for a read of every play.</summary>
-    public List<long?> PlaysReadsAfter { get; } = [];
+    /// <summary>Snapshot reads: every play and drive, as a window's open asks.</summary>
+    public int SnapshotReads { get; private set; }
+
+    /// <summary>The <c>settled</c> each snapshot read was asked with, in order.</summary>
+    public List<bool> SnapshotSettled { get; } = [];
+
+    /// <summary>The watermark every change read asked after, in order; null for one asking every row.</summary>
+    public List<DateTimeOffset?> ChangeReadsSince { get; } = [];
+
+    /// <summary>Every read of plays and drives, snapshots and changes alike.</summary>
+    public int RowReads => SnapshotReads + ChangeReadsSince.Count;
 
     public Task<GamecastHeader?> HeaderAsync(int gameId, CancellationToken ct = default)
     {
@@ -55,16 +65,75 @@ public sealed class FakeGamecastData : IGamecastData
         return HeaderError is { } error ? Task.FromException<GamecastHeader?>(error) : Task.FromResult(Header);
     }
 
-    public Task<IReadOnlyList<GamecastPlay>> PlaysAsync(int gameId, CancellationToken ct = default)
-        => Read(null);
+    // ---- The stamps: a row's UpdatedAt, as the writer would have set it ---------------------
 
-    public Task<IReadOnlyList<GamecastPlay>> PlaysSinceAsync(int gameId, long afterSequence, CancellationToken ct = default)
-        => Read(afterSequence);
+    /// <summary>Where the stamps start: any fixed instant, so a watermark never reads this machine's clock.</summary>
+    public static readonly DateTimeOffset Epoch = new(2026, 11, 1, 18, 0, 0, TimeSpan.Zero);
 
-    private async Task<IReadOnlyList<GamecastPlay>> Read(long? after)
+    private long _ticks;
+    private readonly Dictionary<long, (GamecastPlay Row, DateTimeOffset At)> _playStamps = [];
+    private readonly Dictionary<long, (GamecastDrive Row, DateTimeOffset At)> _driveStamps = [];
+
+    /// <summary>
+    /// Stamps every play and drive that is new or differs from what was last stamped, a second
+    /// apart, the way the writer stamps a row it inserts or changes; so a test edits
+    /// <see cref="Plays"/> and <see cref="Drives"/> as it always has and the change reads find it.
+    /// </summary>
+    private void Stamp()
     {
-        PlaysReadsAfter.Add(after);
+        foreach (var play in Plays)
+        {
+            if (!_playStamps.TryGetValue(play.Id, out var held) || held.Row != play)
+                _playStamps[play.Id] = (play, Epoch.AddSeconds(++_ticks));
+        }
 
+        foreach (var drive in Drives)
+        {
+            var key = DriveKey(drive);
+            if (!_driveStamps.TryGetValue(key, out var held) || held.Row != drive)
+                _driveStamps[key] = (drive, Epoch.AddSeconds(++_ticks));
+        }
+    }
+
+    private static long DriveKey(GamecastDrive d) => d.Id != 0 ? d.Id : -1L - d.Sequence;
+
+    /// <summary>The newest stamp held, null before any row.</summary>
+    private DateTimeOffset? Newest()
+        => _playStamps.Values.Select(s => (DateTimeOffset?)s.At).Concat(_driveStamps.Values.Select(s => (DateTimeOffset?)s.At)).Max();
+
+    public async Task<GamecastRows> SnapshotAsync(int gameId, bool settled, CancellationToken ct = default)
+    {
+        SnapshotReads++;
+        SnapshotSettled.Add(settled);
+        await PassAsync();
+
+        Stamp();
+        var plays = Ordered(Plays);
+        return new GamecastRows(plays, GamecastDrives.WithSpans(Drives.OrderBy(d => d.Sequence).ToList(), plays), Newest());
+    }
+
+    /// <summary>
+    /// The rows stamped at or after <paramref name="since"/> — the service's own rule, less its
+    /// overlap, which a second's stamps never need — and the newest stamp as the next watermark.
+    /// </summary>
+    public async Task<GamecastRows> ChangesSinceAsync(int gameId, DateTimeOffset? since, CancellationToken ct = default)
+    {
+        ChangeReadsSince.Add(since);
+        await PassAsync();
+
+        Stamp();
+        var plays = Ordered(Plays.Where(p => since is not { } at || _playStamps[p.Id].At >= at));
+        var drives = Drives.Where(d => since is not { } at || _driveStamps[DriveKey(d)].At >= at).OrderBy(d => d.Sequence).ToList();
+        var newest = Newest();
+
+        return new GamecastRows(plays, drives, since is { } s && newest is { } n && s > n ? s : newest ?? since);
+    }
+
+    private static List<GamecastPlay> Ordered(IEnumerable<GamecastPlay> plays)
+        => plays.OrderBy(p => p.Sequence).ThenBy(p => p.Id).ToList();
+
+    private async Task PassAsync()
+    {
         if (PlaysError is { } error)
             throw error;
 
@@ -74,22 +143,23 @@ public sealed class FakeGamecastData : IGamecastData
             await gate.Task;
             Interlocked.Decrement(ref _waiting);
         }
-
-        return Plays.Where(p => after is not { } a || p.Sequence > a)
-            .OrderBy(p => p.Sequence).ThenBy(p => p.Id)
-            .ToList();
-    }
-
-    public Task<IReadOnlyList<GamecastDrive>> DrivesAsync(int gameId, CancellationToken ct = default)
-    {
-        DriveReads++;
-        return Task.FromResult<IReadOnlyList<GamecastDrive>>(Drives.ToList());
     }
 
     public Task<GameBoxScore?> BoxScoreAsync(int gameId, CancellationToken ct = default)
     {
         BoxReads++;
         return Task.FromResult(Box);
+    }
+
+    /// <summary>What <see cref="BackportMissAsync"/> answers: by default the backport has missed nothing.</summary>
+    public GamecastMiss? Miss { get; set; }
+
+    public int MissReads { get; private set; }
+
+    public Task<GamecastMiss?> BackportMissAsync(int gameId, CancellationToken ct = default)
+    {
+        MissReads++;
+        return Task.FromResult(Miss);
     }
 
     /// <summary>What <see cref="Feed"/> answers: by default the feed does not run in this process.</summary>

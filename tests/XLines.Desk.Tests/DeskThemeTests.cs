@@ -499,20 +499,30 @@ public class DeskThemeTests
     {
         string[] expected =
         [
-            "--accent-wash", "--accent-wash-strong", "--control-fill", "--control-fill-hover", "--control-fill-press",
+            "--accent-wash", "--accent-wash-strong", "--chart-side-away", "--chart-side-home",
+            "--control-fill", "--control-fill-hover", "--control-fill-press",
             "--key-gloss", "--key-highlight", "--material-blur",
             "--state-negative-wash", "--state-positive-wash", "--state-warning-wash"
         ];
         Assert.Equal(expected, DeskCss.DerivedTokens);
 
+        // The one exception: a neutral accent re-points the two chart sides in its own blocks
+        // (Graphite_s_two_chart_sides_part_at_three_to_one), because its ink sits on the neutral.
+        bool ReDeclarable(string accent, string token) => accent == GraphiteKey && ChartSideTokens.Contains(token);
+
         foreach (var (name, tokens) in DeskCss.ThemeBlocks())
             Assert.All(expected, token => Assert.False(tokens.ContainsKey(token), $"{name} declares the derived {token}"));
         foreach (var (theme, accent, tokens) in DeskCss.AccentBlocks())
-            Assert.All(expected, token => Assert.False(tokens.ContainsKey(token), $"{theme} {accent} declares the derived {token}"));
+            Assert.All(expected.Where(t => !ReDeclarable(accent, t)), token => Assert.False(tokens.ContainsKey(token), $"{theme} {accent} declares the derived {token}"));
 
-        // Nowhere in themes.css at all, inside a block or out of one.
-        foreach (var token in expected)
+        // Nowhere in themes.css at all, inside a block or out of one — the chart sides only in a
+        // Graphite block, so as many times as there are Graphite blocks there.
+        foreach (var token in expected.Except(ChartSideTokens))
             Assert.DoesNotMatch(Regex.Escape(token) + @"\s*:", ThemesCss);
+
+        Assert.Equal(
+            DeskCss.AccentBlocks().Count(b => b.Accent == GraphiteKey && b.Tokens.ContainsKey("--chart-side-home")),
+            Regex.Matches(ThemesCss, @"--chart-side-home\s*:").Count);
 
         // Both appearances default every alpha, so <html> never takes the other appearance's from :root.
         Assert.Equal(DeskCss.AlphaTokens, DeskCss.LightDefaults.Keys.Where(DeskCss.IsAlpha).Order(StringComparer.Ordinal));
@@ -883,6 +893,55 @@ public class DeskThemeTests
     /// <summary>What an accent block may add: the strength of its washes, where its hue wants another than its family's.</summary>
     private static readonly string[] AccentAlphas = ["--accent-wash-alpha", "--accent-wash-strong-alpha"];
 
+    /// <summary>The two sides of a two-sided chart, derived from the ink and the neutral, re-pointed only by Graphite.</summary>
+    private static readonly string[] ChartSideTokens = ["--chart-side-home", "--chart-side-away"];
+
+    private const string GraphiteKey = "graphite";
+
+    /// <summary>
+    /// The two chart sides default to DeskChart's own pair for two series that carry no state: one
+    /// side the accent's ink, the other the chart neutral — on every desk and every accent but
+    /// Graphite, so a hued accent's chart looks as it did before the pair had a name.
+    /// </summary>
+    [Fact]
+    public void The_two_chart_sides_are_the_ink_and_the_neutral_but_on_Graphite()
+    {
+        Assert.Equal("var(--accent-ink)", DeskCss.DerivedRule["--chart-side-home"]);
+        Assert.Equal("var(--chart-neutral)", DeskCss.DerivedRule["--chart-side-away"]);
+
+        var blocks = DeskCss.ResolvedThemeBlocks().Select(b => (Where: b.Name, b.Tokens))
+            .Concat(DeskCss.ResolvedAccentBlocks().Where(b => b.Accent != GraphiteKey).Select(b => (Where: $"{b.Theme} {b.Accent}", b.Tokens)));
+
+        foreach (var (where, t) in blocks)
+        {
+            Assert.True(t["--chart-side-home"] == t["--accent-ink"], $"{where} home side is {t["--chart-side-home"]}, not its ink {t["--accent-ink"]}");
+            Assert.True(t["--chart-side-away"] == t["--chart-neutral"], $"{where} away side is {t["--chart-side-away"]}, not its neutral {t["--chart-neutral"]}");
+        }
+    }
+
+    /// <summary>
+    /// Graphite's ink is a grey a step from the chart neutral (#A1A1A6 over #8E8E93 on the Standard
+    /// dark desk, 1.27:1), so its two chart sides read as one. Every Graphite block re-points the
+    /// home side to a second tone at 3:1 or more against both the panel and the away side, and its
+    /// catalogue row carries it — the away side too, where the neutral is too light for any tone to
+    /// clear it (Primer and Zenburn by night).
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(EveryGraphite))]
+    public void Graphite_s_two_chart_sides_part_at_three_to_one(DeskThemeFamily family, string key, bool isDark)
+    {
+        var where = $"{DeskThemeFamilies.Attribute(family, isDark)} {key}";
+        var t = ResolvedAccent(family, key, isDark);
+        var panel = t["--surface-1"];
+        var home = t["--chart-side-home"];
+        var away = t["--chart-side-away"];
+
+        Assert.True(DeskThemeFamilies.Info(family).FindAccent(key)!.For(isDark)!.SideHome is not null, $"{where} row carries no home side");
+        Assert.True(Contrast(home, panel) >= 3, $"{where} home side {home} measures {Contrast(home, panel):0.00}:1 on the panel {panel}");
+        Assert.True(Contrast(home, away) >= 3, $"{where} home side {home} measures {Contrast(home, away):0.00}:1 against the away side {away}");
+        Assert.True(Contrast(away, panel) >= 3 || away == t["--chart-neutral"], $"{where} re-pointed its away side to {away}, under 3:1 on the panel");
+    }
+
 
     /// <summary>Every compound accent block in both stylesheets: its theme, its accent, its tokens.</summary>
     private static List<(string Theme, string Accent, Dictionary<string, string> Tokens)> AccentBlocks()
@@ -921,6 +980,20 @@ public class DeskThemeTests
                 accents.Add(info.Family, accent.Key, true);
                 accents.Add(info.Family, accent.Key, false);
             }
+        }
+
+        return accents;
+    }
+
+    /// <summary>Every family's Graphite, on each of its desks.</summary>
+    public static TheoryData<DeskThemeFamily, string, bool> EveryGraphite()
+    {
+        var accents = new TheoryData<DeskThemeFamily, string, bool>();
+
+        foreach (var info in DeskThemeFamilies.Catalog.Where(i => i.Accents.Skip(1).Any(a => a.Key == GraphiteKey)))
+        {
+            accents.Add(info.Family, GraphiteKey, true);
+            accents.Add(info.Family, GraphiteKey, false);
         }
 
         return accents;
@@ -966,7 +1039,9 @@ public class DeskThemeTests
         var block = AccentBlock(family, key, isDark);
         var beneath = Resolved(family, isDark);
 
-        Assert.Equal(AccentTokens.Order(StringComparer.Ordinal), block.Keys.Where(k => !AccentAlphas.Contains(k)).Order(StringComparer.Ordinal));
+        // Graphite alone may also re-point the two chart sides (Graphite_s_two_chart_sides_part_at_three_to_one).
+        var extras = key == GraphiteKey ? AccentAlphas.Concat(ChartSideTokens).ToArray() : AccentAlphas;
+        Assert.Equal(AccentTokens.Order(StringComparer.Ordinal), block.Keys.Where(k => !extras.Contains(k)).Order(StringComparer.Ordinal));
         foreach (var alpha in AccentAlphas.Where(block.ContainsKey))
             Assert.True(block[alpha] != beneath[alpha], $"{DeskThemeFamilies.Attribute(family, isDark)} {key} restates its family's {alpha} {block[alpha]}");
     }
@@ -998,7 +1073,9 @@ public class DeskThemeTests
         [
             ("--accent", palette.Accent),
             ("--accent-hover", palette.Hover),
-            ("--accent-ink", palette.Ink ?? tokens["--accent-ink"])
+            ("--accent-ink", palette.Ink ?? tokens["--accent-ink"]),
+            ("--chart-side-home", palette.SideHome ?? tokens["--accent-ink"]),
+            ("--chart-side-away", palette.SideAway ?? tokens["--chart-neutral"])
         ];
 
         foreach (var (token, value) in pairs)

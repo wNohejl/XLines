@@ -40,14 +40,34 @@ public class GamecastFeedTests(PostgresFixture fixture)
         /// <summary>Summaries read with their box score parsed too — the same one request.</summary>
         public Dictionary<string, int> LiveBoxReads { get; } = [];
 
-        public Task<CanonicalGamecast?> FetchGamecastAsync(string sportKey, string sourceGameId, CancellationToken ct)
+        /// <summary>Every summary asked, in order, and whether it was asked as a watched game's.</summary>
+        public List<(string Id, bool? Watched)> Reads { get; } = [];
+
+        /// <summary>When each summary was asked, on the real clock: how the steady-cadence test reads the loop.</summary>
+        public List<TimeSpan> ReadTimes { get; } = [];
+
+        private readonly System.Diagnostics.Stopwatch _clock = System.Diagnostics.Stopwatch.StartNew();
+
+        /// <summary>How long a summary takes to come back.</summary>
+        public TimeSpan ReadDelay { get; set; }
+
+        public async Task<CanonicalGamecast?> FetchGamecastAsync(string sportKey, string sourceGameId, CancellationToken ct)
         {
             Count(GamecastCalls, sourceGameId);
+
+            lock (Reads)
+            {
+                Reads.Add((sourceGameId, GamecastRequest.Current?.Watched));
+                ReadTimes.Add(_clock.Elapsed);
+            }
+
+            if (ReadDelay > TimeSpan.Zero)
+                await Task.Delay(ReadDelay, ct);
 
             if (Failing.Contains(sourceGameId))
                 throw new HttpRequestException("ESPN said no.");
 
-            return Task.FromResult(Games.TryGetValue(sourceGameId, out var game) ? game() : null);
+            return Games.TryGetValue(sourceGameId, out var game) ? game() : null;
         }
 
         public async Task<GamecastRead?> FetchGamecastWithBoxAsync(string sportKey, string sourceGameId, CancellationToken ct)
@@ -183,7 +203,32 @@ public class GamecastFeedTests(PostgresFixture fixture)
         }
     }
 
-    private ServiceProvider Services(FakeGamecasts source, List<(int Instance, string Request)>? perScope = null)
+    /// <summary>Counts the writer's calls, and fails the next one when asked to.</summary>
+    private sealed class Writes
+    {
+        public int Calls;
+        public bool FailNext;
+    }
+
+    /// <summary>The writer as the host registers it, counted: how a test sees a write the feed skipped.</summary>
+    private sealed class CountingWriter(XLinesDbContext db, Writes writes) : GamecastWriter(db)
+    {
+        public override Task<GamecastWriteResult> WriteAsync(int gameId, string sourceKey, CanonicalGamecast gamecast, CancellationToken ct)
+        {
+            Interlocked.Increment(ref writes.Calls);
+
+            if (writes.FailNext)
+            {
+                writes.FailNext = false;
+                throw new InvalidOperationException("The database went away.");
+            }
+
+            return base.WriteAsync(gameId, sourceKey, gamecast, ct);
+        }
+    }
+
+    private ServiceProvider Services(
+        FakeGamecasts source, List<(int Instance, string Request)>? perScope = null, Writes? writes = null)
     {
         var services = new ServiceCollection();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(fixture.ConnectionString));
@@ -192,7 +237,10 @@ public class GamecastFeedTests(PostgresFixture fixture)
         services.AddScoped(sp => new BudgetCalculator(sp.GetRequiredService<XLinesDbContext>()));
         services.AddScoped<CreditBudgetGuard>();
         services.AddScoped<StatsIngestionService>();
-        services.AddScoped<GamecastWriter>();
+        if (writes is null)
+            services.AddScoped<GamecastWriter>();
+        else
+            services.AddScoped<GamecastWriter>(sp => new CountingWriter(sp.GetRequiredService<XLinesDbContext>(), writes));
 
         if (perScope is null)
         {
@@ -210,12 +258,20 @@ public class GamecastFeedTests(PostgresFixture fixture)
     private GamecastFeed Feed(
         Scaffold s, FakeGamecasts source, int maxFollowed = 4,
         Action<GamecastOptions>? configure = null, List<(int Instance, string Request)>? perScope = null,
-        GamecastLanes? lanes = null)
+        GamecastLanes? lanes = null, bool adaptive = false, Writes? writes = null)
     {
         var gamecast = new GamecastOptions { Sports = [s.Sport.Key], MaxFollowedGames = maxFollowed };
         configure?.Invoke(gamecast);
 
-        return new(Services(source, perScope).GetRequiredService<IServiceScopeFactory>(),
+        // Most tests here are about what one read does, and read an unwatched game every poll as
+        // the feed did before its cadence adapted; the adaptive cadence has tests of its own.
+        if (!adaptive)
+        {
+            gamecast.UnwatchedPoll = gamecast.Poll;
+            gamecast.BreakPoll = gamecast.Poll;
+        }
+
+        return new(Services(source, perScope, writes).GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new IngestionOptions { Gamecast = gamecast }),
             lanes ?? new GamecastLanes(),
             NullLogger<GamecastFeed>.Instance);
@@ -1085,5 +1141,267 @@ public class GamecastFeedTests(PostgresFixture fixture)
         Assert.Equal(at, snapshot.LastReadAt[games[1].Id]);
         Assert.True(snapshot.LastReadAt[games[2].Id] <= at);
         Assert.Equal(GamecastLane.Slow, lanes.LaneOf(games[2].Id));
+    }
+
+    /// <summary>A live game at a break: ESPN's header says "Halftime" or "End of 1st" there.</summary>
+    private static CanonicalGamecast AtBreak(string eventId, string detail = "Halftime")
+        => Live(eventId) with { StatusDetail = detail };
+
+    [Fact]
+    public async Task A_watched_game_is_read_first_in_the_poll_and_asked_as_watched()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var games = await SlateAsync(s, source, 3);
+
+        // The latest start, so start order alone would read it last.
+        var lanes = new GamecastLanes();
+        lanes.Watch(games[2].Id, Now);
+
+        await Feed(s, source, lanes: lanes).PollAsync(Now, CancellationToken.None);
+
+        Assert.Equal([("e-3", (bool?)true), ("e-1", false), ("e-2", false)], source.Reads);
+    }
+
+    [Fact]
+    public async Task A_watched_game_leaving_play_is_still_read_before_the_unwatched()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var games = await SlateAsync(s, source, 3);
+        source.BoxScores["e-3"] = () => NoBoxScore;
+
+        var lanes = new GamecastLanes();
+        lanes.Watch(games[2].Id, Now);
+        var feed = Feed(s, source, lanes: lanes);
+        await feed.PollAsync(Now, CancellationToken.None);
+
+        // The scoreboard pass marked it final; its summary, cached apart, still says live.
+        await MarkAsync(games[2], GameStatus.Final);
+        source.Reads.Clear();
+        await feed.PollAsync(Now.AddSeconds(15), CancellationToken.None);
+
+        Assert.Equal(("e-3", (bool?)true), source.Reads[0]);
+    }
+
+    [Fact]
+    public async Task Every_watched_game_is_read_every_poll_however_many_the_ceiling_allows()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var games = await SlateAsync(s, source, 4);
+
+        var lanes = new GamecastLanes();
+        foreach (var g in games.Skip(1))
+            lanes.Watch(g.Id, Now);
+
+        var feed = Feed(s, source, maxFollowed: 2, configure: NoSlowLane, lanes: lanes);
+
+        for (var p = 0; p < 3; p++)
+            await feed.PollAsync(Now.AddSeconds(15 * p), CancellationToken.None);
+
+        Assert.All(new[] { "e-2", "e-3", "e-4" }, id => Assert.Equal(3, source.GamecastCalls[id]));
+        Assert.All(games.Skip(1), g => Assert.Equal(GamecastLane.Fast, lanes.LaneOf(g.Id)));
+    }
+
+    [Fact]
+    public async Task A_watched_game_whose_reads_keep_failing_is_never_backed_off()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var game = await GameAsync(s, "e-404", Now.AddHours(-1), GameStatus.Live);
+        source.Failing.Add("e-404");
+
+        var lanes = new GamecastLanes();
+        lanes.Watch(game.Id, Now);
+        var feed = Feed(s, source, lanes: lanes);
+
+        var polls = GamecastFeed.FailuresBeforeBackOff + 3;
+
+        for (var p = 0; p < polls; p++)
+        {
+            // The window renews its lease as it does while open.
+            lanes.Renew(game.Id, Now.AddSeconds(15 * p));
+            await feed.PollAsync(Now.AddSeconds(15 * p), CancellationToken.None);
+        }
+
+        // Someone has it open: every poll is its retry.
+        Assert.Equal(polls, source.GamecastCalls["e-404"]);
+        Assert.Equal(GamecastLane.Fast, lanes.LaneOf(game.Id));
+    }
+
+    [Fact]
+    public async Task A_watched_game_at_a_break_is_read_every_poll()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var game = await GameAsync(s, "e-half", Now.AddHours(-1), GameStatus.Live);
+        source.Games["e-half"] = () => AtBreak("e-half");
+
+        var lanes = new GamecastLanes();
+        lanes.Watch(game.Id, Now);
+        var feed = Feed(s, source, lanes: lanes, adaptive: true);
+
+        for (var p = 0; p < 5; p++)
+            await feed.PollAsync(Now.AddSeconds(15 * p), CancellationToken.None);
+
+        Assert.Equal(5, source.GamecastCalls["e-half"]);
+    }
+
+    [Theory]
+    [InlineData("Halftime")]
+    [InlineData("End of 3rd")]
+    public async Task An_unwatched_game_at_a_break_is_read_once_a_minute(string detail)
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        await GameAsync(s, "e-break", Now.AddHours(-1), GameStatus.Live);
+        source.Games["e-break"] = () => AtBreak("e-break", detail);
+
+        var feed = Feed(s, source, adaptive: true);
+
+        // Polls at 0, 15 … 60 seconds: read at 0 and at 60.
+        for (var p = 0; p <= 4; p++)
+            await feed.PollAsync(Now.AddSeconds(15 * p), CancellationToken.None);
+
+        Assert.Equal(2, source.GamecastCalls["e-break"]);
+    }
+
+    [Fact]
+    public async Task An_unwatched_live_game_is_read_every_thirty_seconds_and_held_between()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var game = await GameAsync(s, "e-open", Now.AddHours(-1), GameStatus.Live);
+        source.Games["e-open"] = () => Live("e-open");
+
+        var lanes = new GamecastLanes();
+        var feed = Feed(s, source, lanes: lanes, adaptive: true);
+
+        for (var p = 0; p <= 4; p++)
+            await feed.PollAsync(Now.AddSeconds(15 * p), CancellationToken.None);
+
+        // Read at 0, 30 and 60; between, still followed and still in its lane.
+        Assert.Equal(3, source.GamecastCalls["e-open"]);
+        Assert.Contains(game.Id, feed.Following);
+        Assert.Equal(GamecastLane.Fast, lanes.LaneOf(game.Id));
+        Assert.Equal(Now.AddSeconds(60), lanes.Snapshot!.LastReadAt[game.Id]);
+    }
+
+    [Fact]
+    public async Task A_game_a_window_opens_is_read_on_the_next_poll_whatever_its_cadence()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var game = await GameAsync(s, "e-open", Now.AddHours(-1), GameStatus.Live);
+        source.Games["e-open"] = () => AtBreak("e-open");
+
+        var lanes = new GamecastLanes();
+        var feed = Feed(s, source, lanes: lanes, adaptive: true);
+        await feed.PollAsync(Now, CancellationToken.None);
+
+        lanes.Watch(game.Id, Now.AddSeconds(10));
+        await feed.PollAsync(Now.AddSeconds(15), CancellationToken.None);
+
+        Assert.Equal(2, source.GamecastCalls["e-open"]);
+    }
+
+    [Fact]
+    public async Task A_summary_unchanged_since_the_last_write_is_not_written_again()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var game = await GameAsync(s, "e-same", Now.AddHours(-1), GameStatus.Live);
+
+        var plays = 2;
+        source.Games["e-same"] = () => Live("e-same", plays);
+
+        var writes = new Writes();
+        var feed = Feed(s, source, writes: writes);
+
+        await feed.PollAsync(Now, CancellationToken.None);
+        await feed.PollAsync(Now.AddSeconds(15), CancellationToken.None);
+        await feed.PollAsync(Now.AddSeconds(30), CancellationToken.None);
+
+        Assert.Equal(3, source.GamecastCalls["e-same"]);
+        Assert.Equal(1, writes.Calls);
+
+        // A play in, and the write goes ahead.
+        plays = 3;
+        await feed.PollAsync(Now.AddSeconds(45), CancellationToken.None);
+
+        Assert.Equal(2, writes.Calls);
+        Assert.Equal(3, await PlaysAsync(game.Id));
+    }
+
+    [Fact]
+    public async Task A_write_that_failed_is_written_again_though_the_summary_has_not_changed()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        var game = await GameAsync(s, "e-retry", Now.AddHours(-1), GameStatus.Live);
+        source.Games["e-retry"] = () => Live("e-retry");
+
+        var writes = new Writes { FailNext = true };
+        var feed = Feed(s, source, writes: writes);
+
+        await feed.PollAsync(Now, CancellationToken.None);
+        Assert.Equal(0, await PlaysAsync(game.Id));
+
+        await feed.PollAsync(Now.AddSeconds(15), CancellationToken.None);
+        await feed.PollAsync(Now.AddSeconds(30), CancellationToken.None);
+
+        Assert.Equal(2, writes.Calls);
+        Assert.Equal(2, await PlaysAsync(game.Id));
+    }
+
+    [Fact]
+    public async Task A_new_feed_writes_the_first_summary_it_reads_whatever_an_earlier_one_held()
+    {
+        // The fingerprint is memory only: a restart writes once and compares in the store.
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey);
+        await GameAsync(s, "e-restart", Now.AddHours(-1), GameStatus.Live);
+        source.Games["e-restart"] = () => Live("e-restart");
+
+        var writes = new Writes();
+        await Feed(s, source, writes: writes).PollAsync(Now, CancellationToken.None);
+        await Feed(s, source, writes: writes).PollAsync(Now.AddSeconds(15), CancellationToken.None);
+
+        Assert.Equal(2, writes.Calls);
+    }
+
+    [Fact]
+    public async Task The_poll_keeps_its_cadence_however_long_the_reads_take()
+    {
+        var s = await SeedAsync();
+        var source = new FakeGamecasts(s.SourceKey) { ReadDelay = TimeSpan.FromMilliseconds(250) };
+        await GameAsync(s, "e-steady", DateTimeOffset.UtcNow.AddHours(-1), GameStatus.Live);
+        source.Games["e-steady"] = () => Live("e-steady");
+
+        var poll = TimeSpan.FromMilliseconds(500);
+        var feed = Feed(s, source, configure: o => o.Poll = poll);
+        await feed.StartAsync(CancellationToken.None);
+
+        try
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(20);
+
+            while (source.ReadTimes.Count < 5 && DateTime.UtcNow < deadline)
+                await Task.Delay(25);
+
+            Assert.True(source.ReadTimes.Count >= 5, $"only {source.ReadTimes.Count} reads");
+        }
+        finally
+        {
+            await feed.StopAsync(CancellationToken.None);
+        }
+
+        // Past the first poll, which warms the model and may overrun: a read starts every Poll,
+        // not every Poll plus the read. Poll plus the read would be 750 ms or more.
+        var times = source.ReadTimes;
+        var span = (times[4] - times[2]) / 2;
+
+        Assert.InRange(span.TotalMilliseconds, 400, 650);
     }
 }

@@ -426,6 +426,13 @@
     --control-fill: color-mix(in srgb, var(--text-primary) 9%, transparent);
     --control-fill-hover: color-mix(in srgb, var(--text-primary) 15%, transparent);
     --control-fill-press: color-mix(in srgb, var(--text-primary) 20%, transparent);
+    /* The two sides of a two-sided chart — a home side and an away side, each a series with no
+       state: DeskChart's own pair, the accent's ink and the chart neutral. A neutral accent
+       (Graphite) whose ink sits a step from the neutral re-points them in its own blocks, to a
+       pair 3:1 apart and 3:1 off the panel; a chart still draws one side hollow, so the two part
+       by shape before they part by tone. */
+    --chart-side-home: var(--accent-ink);
+    --chart-side-away: var(--chart-neutral);
 }
 
 /* By night the line and the sheen are the family's own sheen colour, at their own alpha
