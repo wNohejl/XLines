@@ -65,7 +65,8 @@ public class GamecastWriter(XLinesDbContext db)
     /// registered source <paramref name="sourceKey"/>, and says what moved.
     /// </summary>
     /// <exception cref="InvalidOperationException">The source is not registered, or the game does not exist.</exception>
-    public async Task<GamecastWriteResult> WriteAsync(
+    /// <remarks>Virtual so a test can count the feed's writes and fail one, and see which it skipped.</remarks>
+    public virtual async Task<GamecastWriteResult> WriteAsync(
         int gameId, string sourceKey, CanonicalGamecast gamecast, CancellationToken ct)
     {
         var source = await RunRecord.SourceRowAsync(db, sourceKey, ct);

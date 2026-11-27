@@ -155,6 +155,24 @@ public class DataTierRemainingReaderTests(PostgresFixture fixture)
         Assert.Empty(await visitorCast.ScoringPlaysAsync(s.Game.Id));
         Assert.Empty(await visitorCast.DrivesAsync(s.Game.Id));
         Assert.Empty(await visitorCast.ProbabilitySeriesAsync(s.Game.Id));
+
+        // The window's own reads, whole and since a watermark, keep to the same sources; and the
+        // tier key a shared snapshot is filed under differs, so one is never served the other's.
+        var operatorRows = await operatorCast.SnapshotAsync(s.Game.Id);
+        Assert.Equal((2, 1), (operatorRows.Plays.Count, operatorRows.Drives.Count));
+        Assert.Equal(2, (await operatorCast.ChangesSinceAsync(s.Game.Id, null)).Plays.Count);
+
+        var visitorRows = await visitorCast.SnapshotAsync(s.Game.Id);
+        Assert.Empty(visitorRows.Plays);
+        Assert.Empty(visitorRows.Drives);
+        Assert.Null(visitorRows.Watermark);
+        var visitorChanges = await visitorCast.ChangesSinceAsync(s.Game.Id, null);
+        Assert.Empty(visitorChanges.Plays);
+        Assert.Empty(visitorChanges.Drives);
+
+        Assert.NotEqual(
+            GamecastService.TierKey(await operatorCast.VisibleSourcesAsync()),
+            GamecastService.TierKey(await visitorCast.VisibleSourcesAsync()));
     }
 
     private static GamePlay Play(Scaffold s, long sequence, bool scoring) => new()

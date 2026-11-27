@@ -62,7 +62,16 @@ public enum DeskAccent
 /// is the one case a chart draws the accent series in the ink rather than the fill
 /// (<see cref="Primitives.DeskChartPalette"/>). Left null, the fill stands in for it.
 /// </param>
-public sealed record AccentPalette(string Accent, string Hover, string? Ink = null);
+/// <param name="SideHome">
+/// <c>--chart-side-home</c>, carried only where the block re-points it: a two-sided chart's home
+/// side is the accent's ink everywhere but on a neutral accent (Graphite), whose ink sits too near
+/// the chart neutral to tell the two sides apart. Left null, the ink stands in for it.
+/// </param>
+/// <param name="SideAway">
+/// <c>--chart-side-away</c>, carried only where the block re-points it — where the chart neutral
+/// is too light for any home tone to clear it at 3:1. Left null, the chart neutral stands in for it.
+/// </param>
+public sealed record AccentPalette(string Accent, string Hover, string? Ink = null, string? SideHome = null, string? SideAway = null);
 
 /// <summary>
 /// The accent table: every <see cref="DeskAccent"/> on the Standard desk's two appearances, with
@@ -105,7 +114,7 @@ public static class DeskAccents
         DeskAccent.Teal => new("#277A89", "#297F8F"),
         DeskAccent.Indigo => new("#5E5CE6", "#6260E7"),
         DeskAccent.Purple => new("#9E4AC8", "#A44DD0"),
-        DeskAccent.Graphite => new("#707074", "#747479"),
+        DeskAccent.Graphite => new("#707074", "#747479", SideHome: "#F8F8F9"),
         _ => new(DeskTheme.Accent, DeskTheme.AccentHover)
     };
 
@@ -115,7 +124,7 @@ public static class DeskAccents
         DeskAccent.Teal => new("#238090", "#217888"),
         DeskAccent.Indigo => new("#5856D6", "#4F4DC4"),
         DeskAccent.Purple => new("#A44DD1", "#9A48C4"),
-        DeskAccent.Graphite => new("#747479", "#6D6D71"),
+        DeskAccent.Graphite => new("#747479", "#6D6D71", SideHome: "#424244"),
         _ => new(DeskTheme.LightAccent, DeskTheme.LightAccentHover)
     };
 
@@ -222,8 +231,8 @@ public static class DeskFamilyAccents
             Dark: new AccentPalette("#83C092", "#8FC69D"),
             Light: new AccentPalette("#328361", "#2E7A5A")),
         new("graphite", "Graphite",
-            Dark: new AccentPalette("#A0ACA3", "#AAB4AC"),
-            Light: new AccentPalette("#6A7969", "#637162"))
+            Dark: new AccentPalette("#A0ACA3", "#AAB4AC", SideHome: "#F8F9F8"),
+            Light: new AccentPalette("#6A7969", "#637162", SideHome: "#3B433A"))
     ];
 
     public static IReadOnlyList<DeskFamilyAccent> Kanagawa { get; } =
@@ -236,8 +245,8 @@ public static class DeskFamilyAccents
             Dark: new AccentPalette("#7AA89F", "#87B1A9"),
             Light: new AccentPalette("#597B75", "#53726D")),
         new("graphite", "Graphite",
-            Dark: new AccentPalette("#93928A", "#9E9D96"),
-            Light: new AccentPalette("#716E61", "#69665A"))
+            Dark: new AccentPalette("#93928A", "#9E9D96", SideHome: "#CDCDC9"),
+            Light: new AccentPalette("#716E61", "#69665A", SideHome: "#3F3E37"))
     ];
 
     public static IReadOnlyList<DeskFamilyAccent> One { get; } =
@@ -250,8 +259,8 @@ public static class DeskFamilyAccents
             Dark: new AccentPalette("#56B6C2", "#67BDC8"),
             Light: new AccentPalette("#017DAE", "#0174A2")),
         new("graphite", "Graphite",
-            Dark: new AccentPalette("#989FAD", "#A2A9B5"),
-            Light: new AccentPalette("#696C77", "#62646F"))
+            Dark: new AccentPalette("#989FAD", "#A2A9B5", SideHome: "#EEEFF1"),
+            Light: new AccentPalette("#696C77", "#62646F", SideHome: "#4E5159"))
     ];
 
     public static IReadOnlyList<DeskFamilyAccent> Monokai { get; } =
@@ -264,8 +273,8 @@ public static class DeskFamilyAccents
             Dark: new AccentPalette("#E6DB74", "#E8DF82"),
             Light: new AccentPalette("#787332", "#706B2E")),
         new("graphite", "Graphite",
-            Dark: new AccentPalette("#9E9A8D", "#A8A498"),
-            Light: new AccentPalette("#75715E", "#6D6957"))
+            Dark: new AccentPalette("#9E9A8D", "#A8A498", SideHome: "#CECCC5"),
+            Light: new AccentPalette("#75715E", "#6D6957", SideHome: "#282720"))
     ];
 
     public static IReadOnlyList<DeskFamilyAccent> Ayu { get; } =
@@ -292,8 +301,8 @@ public static class DeskFamilyAccents
             Dark: new AccentPalette("#B84885", "#BF4B8A"),
             Light: new AccentPalette("#BF3989", "#A8337C")),
         new("graphite", "Graphite",
-            Dark: new AccentPalette("#656C76", "#6E757F"),
-            Light: new AccentPalette("#59636E", "#4F5862"))
+            Dark: new AccentPalette("#656C76", "#6E757F", SideHome: "#F0F6FC", SideAway: "#7D8590"),
+            Light: new AccentPalette("#59636E", "#4F5862", SideHome: "#393F46"))
     ];
 
     public static IReadOnlyList<DeskFamilyAccent> NightOwl { get; } =
@@ -334,8 +343,8 @@ public static class DeskFamilyAccents
             Dark: new AccentPalette("#DC8CC3", "#E19DCC"),
             Light: new AccentPalette("#9A6288", "#8F5B7E")),
         new("graphite", "Graphite",
-            Dark: new AccentPalette("#A0A098", "#ACACA4"),
-            Light: new AccentPalette("#656555", "#5E5E4F"))
+            Dark: new AccentPalette("#A0A098", "#ACACA4", SideHome: "#FFFFEF", SideAway: "#8F8F87"),
+            Light: new AccentPalette("#656555", "#5E5E4F", SideHome: "#4A4A3E"))
     ];
 
     public static IReadOnlyList<DeskFamilyAccent> Nord { get; } =
@@ -392,8 +401,8 @@ public static class DeskFamilyAccents
             Dark: new AccentPalette("#D3869B", "#DA98AA"),
             Light: new AccentPalette("#8F3F71", "#863B6A")),
         new("graphite", "Graphite",
-            Dark: new AccentPalette("#A5988C", "#B2A79D"),
-            Light: new AccentPalette("#776B60", "#70655A"))
+            Dark: new AccentPalette("#A5988C", "#B2A79D", SideHome: "#EDEAE8"),
+            Light: new AccentPalette("#776B60", "#70655A", SideHome: "#403933"))
     ];
 
     public static IReadOnlyList<DeskFamilyAccent> TokyoNight { get; } =

@@ -3,11 +3,13 @@
    (TeamMark), and a green field would blur the one green that means something here, a scoring
    play. The field is the content fill, the end zones a tier deeper, the yard lines hairlines.
 
-   The arcs are the side with the ball's, as the drive chart spends them: away the chart neutral,
-   home the accent's ink — DeskChart's own pair for two series that carry no state (the Volume
-   family), the ink because it is the accent taken to where it reads on the panel in every theme.
-   The dimmer neutral the home side wore before all but vanished on a dark field. Both opaque,
-   because a translucent ink would darken where two arcs cross. The shape says what a play was before its colour does: a
+   The arcs are the side with the ball's, as the drive chart spends them: the desk's chart-side
+   pair (--chart-side-home, --chart-side-away) — DeskChart's own pair for two series that carry no
+   state, the accent's ink and the chart neutral, except on Graphite, whose ink sits a step from
+   the neutral and is re-pointed 3:1 off it. Both opaque, because a translucent ink would darken
+   where two arcs cross. And not by tone alone: an away drive is hollow — a pass, run or loss
+   wider, with a core of the field's fill down its middle (.fieldgraphic__core), a dot or the
+   landing a ring — and a home drive solid, its end mark filled. The shape says what a play was before its colour does: a
    pass is high, a run low, a loss dips under the ground, a penalty is dashed, a kick dotted and
    faint, a play for nothing a dot. Hue is spent only where it says something: the line to gain in
    the warning state, as a broadcast's first-down line is the one coloured line on the field; the
@@ -99,24 +101,39 @@
 }
 
 .fieldgraphic__arc--away {
-    stroke: var(--chart-neutral);
+    stroke: var(--chart-side-away);
 }
 
 .fieldgraphic__arc--home {
-    stroke: var(--accent-ink);
+    stroke: var(--chart-side-home);
 }
 
-/* A play for nothing is a dot at its spot, filled in the side's colour. */
+/* An away arc that carries a core is drawn wider, so the line either side of the core reads. */
+.fieldgraphic__arc--hollow {
+    stroke-width: 0.65;
+}
+
+/* The core: the field's own fill down the middle of the away arc it repeats. */
+.fieldgraphic__core {
+    fill: none;
+    stroke: var(--surface-1);
+    stroke-width: 0.25;
+    stroke-linecap: round;
+}
+
+/* A play for nothing is a dot at its spot: filled in the home side's colour, a ring in the away side's. */
 .fieldgraphic__arc--nogain {
     stroke: none;
 }
 
 .fieldgraphic__arc--nogain.fieldgraphic__arc--away {
-    fill: var(--chart-neutral);
+    fill: var(--surface-1);
+    stroke: var(--chart-side-away);
+    stroke-width: 0.3;
 }
 
 .fieldgraphic__arc--nogain.fieldgraphic__arc--home {
-    fill: var(--accent-ink);
+    fill: var(--chart-side-home);
 }
 
 .fieldgraphic__arc--penalty {
@@ -135,6 +152,14 @@
 /* The latest play: heavier, the end of the story so far. */
 .fieldgraphic__arc--latest {
     stroke-width: 0.8;
+}
+
+.fieldgraphic__arc--latest.fieldgraphic__arc--hollow {
+    stroke-width: 1;
+}
+
+.fieldgraphic__core--latest {
+    stroke-width: 0.4;
 }
 
 .fieldgraphic__arc--latest.fieldgraphic__arc--kick {
@@ -164,18 +189,32 @@
     fill: var(--state-negative);
 }
 
-/* Where the latest arc landed, once the drive is over and no ball sits there. */
+.fieldgraphic__arc--nogain.fieldgraphic__arc--away.fieldgraphic__arc--score {
+    fill: var(--surface-1);
+    stroke: var(--state-positive);
+}
+
+.fieldgraphic__arc--nogain.fieldgraphic__arc--away.fieldgraphic__arc--turnover {
+    fill: var(--surface-1);
+    stroke: var(--state-negative);
+}
+
+/* Where the latest arc landed, once the drive is over and no ball sits there: a ring for away. */
 .fieldgraphic__landing.fieldgraphic__arc--away {
-    fill: var(--chart-neutral);
+    fill: var(--surface-1);
+    stroke: var(--chart-side-away);
+    stroke-width: 0.3;
 }
 
 .fieldgraphic__landing.fieldgraphic__arc--home {
-    fill: var(--accent-ink);
+    fill: var(--chart-side-home);
 }
 
 /* The latest solid arc draws itself in from where the ball was: its path is one unit long
-   (pathLength="1"), so one dash covers it and the offset runs it out from its start. */
-.fieldgraphic__arc--draw {
+   (pathLength="1"), so one dash covers it and the offset runs it out from its start. An away
+   arc's core draws in with it, the same way. */
+.fieldgraphic__arc--draw,
+.fieldgraphic__core--draw {
     stroke-dasharray: 1;
     stroke-dashoffset: 0;
     animation: fieldgraphic-draw var(--dur-slow) var(--ease-enter) both;
@@ -198,12 +237,14 @@
     stroke-width: 0.5;
 }
 
+/* A finished drive's end: a ring for the away side, filled for the home side. */
 .fieldgraphic__end--away {
-    stroke: var(--chart-neutral);
+    stroke: var(--chart-side-away);
 }
 
 .fieldgraphic__end--home {
-    stroke: var(--accent-ink);
+    fill: var(--chart-side-home);
+    stroke: var(--chart-side-home);
 }
 
 .fieldgraphic__end--score {
@@ -287,12 +328,37 @@
     color: var(--text-secondary);
 }
 
+/* A narrow card. The words on the turf are sized in the viewBox's units, so in a ~340px card a
+   unit is about 2.6px and the 2.6-unit yard numbers drew at 7px. Under 480px of card (its group,
+   .wgroup, is the container) the numbers and the end zones' names grow to read at 11px or more;
+   the bottom row of numbers goes, since the top row says the same and the arcs want the room; and
+   a replay's result word goes, because the line under the field (.gc__fielddrive) already names
+   the drive and its result, as the image's accessible name does. */
+@container (max-width: 480px) {
+    .fieldgraphic__num {
+        font-size: 4.4px;
+    }
+
+    .fieldgraphic__num--bottom {
+        display: none;
+    }
+
+    .fieldgraphic__mark {
+        font-size: 4.8px;
+    }
+
+    .fieldgraphic__results {
+        display: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .fieldgraphic__mover {
         transition: none;
     }
 
-    .fieldgraphic__arc--draw {
+    .fieldgraphic__arc--draw,
+    .fieldgraphic__core--draw {
         animation: none;
     }
 }

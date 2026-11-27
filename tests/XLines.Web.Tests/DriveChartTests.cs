@@ -184,14 +184,135 @@ public class DriveChartTests : DeskTestContext
     [Fact]
     public void The_sheet_spends_tokens_draws_no_outline_on_a_row_and_rings_the_focus()
     {
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Snippets", "DriveChart.razor.css"));
+        var css = Sheet();
 
         Assert.DoesNotMatch(@"#[0-9A-Fa-f]{3,8}\b|rgba?\(", css);
-        Assert.Contains("var(--chart-neutral)", css);
-        Assert.Contains("var(--accent-ink)", css);
-        Assert.DoesNotContain("var(--chart-neutral-dim)", css);
+        // The sides are the desk's chart-side pair (the ink and the neutral, re-pointed on Graphite),
+        // never the raw tokens, so a neutral accent's two sides still part.
+        Assert.Contains("var(--chart-side-home)", css);
+        Assert.Contains("var(--chart-side-away)", css);
+        Assert.DoesNotContain("var(--accent-ink)", css);
+        Assert.DoesNotContain("var(--chart-neutral", css);
         Assert.Contains("var(--focus-ring-inset)", css);
         Assert.Contains("var(--accent-wash)", css);
         Assert.Matches(@"\.drivechart__row\s*\{[^}]*border:\s*0", css);
     }
+
+    /// <summary>
+    /// Not by colour alone: the home side's bars are solid, the away side's hollow — an inset line in
+    /// the side's tone round a clear bar — and a scoring away drive stays hollow in the positive.
+    /// </summary>
+    [Fact]
+    public void An_away_bar_is_hollow_and_a_home_bar_solid()
+    {
+        var css = Sheet();
+
+        Assert.Matches(@"\.drivechart__row--home \.drivechart__bar[^{]*\{[^}]*background:\s*var\(--chart-side-home\)", css);
+        Assert.Matches(@"\.drivechart__row--away \.drivechart__bar\s*\{[^}]*background:\s*transparent;[^}]*box-shadow:\s*inset 0 0 0 [\d.]+px var\(--chart-side-away\)", css);
+        Assert.Matches(@"\.drivechart__row--away\.drivechart__row--score \.drivechart__bar\s*\{[^}]*background:\s*transparent;[^}]*box-shadow:\s*inset 0 0 0 [\d.]+px var\(--state-positive\)", css);
+    }
+
+    /// <summary>The key above the field says which is which: the away side's hollow mark on the left, as its end zone is, the home side's solid on the right.</summary>
+    [Fact]
+    public void A_key_names_the_hollow_side_and_the_solid_side()
+    {
+        var cut = Render();
+
+        var key = cut.Find(".drivechart__legend");
+        Assert.Equal("true", key.GetAttribute("aria-hidden"));
+        var items = key.QuerySelectorAll(".drivechart__keyitem");
+        Assert.Equal(new[] { "CIN", "WSH" }, items.Select(i => i.TextContent.Trim()));
+        Assert.NotNull(items[0].QuerySelector(".drivechart__swatch--away"));
+        Assert.NotNull(items[1].QuerySelector(".drivechart__swatch--home"));
+    }
+
+    /// <summary>A row is at least 28px tall, the whole row the button, so the target is the row and not its bar.</summary>
+    [Fact]
+    public void A_row_is_at_least_twenty_eight_pixels_and_the_whole_row_is_the_target()
+    {
+        var css = Sheet();
+
+        var row = System.Text.RegularExpressions.Regex.Match(css, @"--dc-row:\s*(\d+)px");
+        Assert.True(row.Success);
+        Assert.True(int.Parse(row.Groups[1].Value) >= 28, $"--dc-row is {row.Groups[1].Value}px");
+        Assert.Matches(@"\.drivechart__row\s*\{[^}]*width:\s*100%[^}]*min-height:\s*var\(--dc-row\)", css);
+    }
+
+    /// <summary>
+    /// One Tab stop for the whole list — a roving tabindex, on the chosen drive or the first when
+    /// none is chosen — rather than twenty-odd stops a keyboard reader has to walk past.
+    /// </summary>
+    [Fact]
+    public void The_list_is_one_tab_stop_on_the_chosen_drive_or_the_first()
+    {
+        var none = Render();
+        var rows = none.FindAll("button.drivechart__row");
+        Assert.Equal("0", rows[0].GetAttribute("tabindex"));
+        Assert.All(rows.Skip(1), r => Assert.Equal("-1", r.GetAttribute("tabindex")));
+
+        var chosen = Render(more: p => p.Add(s => s.Selected, 7));
+        rows = chosen.FindAll("button.drivechart__row");
+        Assert.Single(rows, r => r.GetAttribute("tabindex") == "0");
+        Assert.Equal("0", rows[4].GetAttribute("tabindex"));
+    }
+
+    /// <summary>
+    /// Down and Up move the focus a row, Home and End to the ends, and the tab stop goes with it;
+    /// nothing is chosen until Enter or Space presses the row (the button's own keys).
+    /// </summary>
+    [Fact]
+    public void Arrows_Home_and_End_move_the_focus_and_the_tab_stop_without_choosing()
+    {
+        int? chosen = null;
+        var cut = Render(more: p => p.Add(s => s.OnSelect, (int sequence) => { chosen = sequence; }));
+
+        int Stop() => cut.FindAll("button.drivechart__row").ToList().FindIndex(r => r.GetAttribute("tabindex") == "0");
+        void Press(string key) => cut.Find("ol.drivechart").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = key });
+
+        Press("ArrowDown");
+        Assert.Equal(1, Stop());
+        Press("ArrowDown");
+        Press("ArrowUp");
+        Assert.Equal(1, Stop());
+        Press("End");
+        Assert.Equal(6, Stop());
+        Press("ArrowDown");
+        Assert.Equal(6, Stop());
+        Press("Home");
+        Assert.Equal(0, Stop());
+
+        Assert.Null(chosen);
+        // Five moves (Down at the end goes nowhere): each one focuses the row it lands on.
+        JSInterop.VerifyFocusAsyncInvoke(calledTimes: 5);
+
+        // A shortcut is the browser's, and Left and Right are not this list's.
+        cut.Find("ol.drivechart").KeyDown(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "End", CtrlKey = true });
+        Press("ArrowRight");
+        Assert.Equal(0, Stop());
+    }
+
+    /// <summary>
+    /// Choosing a drive brings its plays into view: the chart hands the browser the drive's
+    /// sequence, and reveal.js scrolls the nearest group marked data-drive with it into view —
+    /// at once under reduced motion. Off when the caller names no attribute.
+    /// </summary>
+    [Fact]
+    public void Choosing_a_drive_reveals_its_plays()
+    {
+        var module = JSInterop.SetupModule("./js/reveal.js");
+        module.SetupVoid("revealNear", _ => true);
+
+        var cut = Render();
+        cut.FindAll("button.drivechart__row")[5].Click();
+
+        var call = Assert.Single(module.Invocations, i => i.Identifier == "revealNear");
+        Assert.Equal("[data-drive=\"10\"]", call.Arguments[1]);
+
+        var off = Render(more: p => p.Add(s => s.RevealAttribute, null));
+        off.FindAll("button.drivechart__row")[0].Click();
+        Assert.Single(module.Invocations, i => i.Identifier == "revealNear");
+    }
+
+    private static string Sheet()
+        => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Snippets", "DriveChart.razor.css"));
 }

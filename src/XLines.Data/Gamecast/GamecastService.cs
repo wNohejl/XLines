@@ -12,11 +12,13 @@ namespace XLines.Data.Gamecast;
 /// (spec 2026-10-24 §6.1, §6.4).
 ///
 /// <para>
-/// The window appends rather than reloads. Every open Gamecast on every circuit hears the same
-/// <c>plays:{id}</c> notice and asks <see cref="PlaysSinceAsync"/> for what came after the last
-/// play it holds, so that read is one query down <c>ix_game_play_game_sequence</c>, untracked,
-/// projected straight to a record. The rest are asked when the window opens, or — the header —
-/// on a <c>games:{id}</c> notice.
+/// The window appends rather than reloads. It opens on <see cref="SnapshotAsync(int, CancellationToken)"/>
+/// (shared across circuits by the web host), and every open Gamecast on every circuit hears the
+/// same <c>plays:{id}</c> notice and asks <see cref="ChangesSinceAsync"/> for the plays and drives
+/// stamped since the newest it has read: one query per table down <c>ix_game_play_game_updated</c>
+/// and <c>ix_game_drive_game_updated</c>, untracked, projected straight to records, with no
+/// GROUP BY — the drives' spans are derived from the plays held (<see cref="GamecastDrives"/>).
+/// The header is asked when the window opens and on a <c>games:{id}</c> notice.
 /// </para>
 ///
 /// <para>
@@ -155,12 +157,129 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
 
         var visible = await db.VisibleSourceIdsAsync(Tier, ct);
 
-        var drives = await db.GameDrives.FromVisible(visible)
+        var (drives, _) = await ReadDrivesAsync(db.GameDrives.FromVisible(visible).Where(d => d.GameId == gameId), ct);
+        if (drives.Count == 0)
+            return [];
+
+        // The spans from the plays' sequence and drive alone, derived as the window derives them
+        // (GamecastDrives.WithSpans) rather than grouped in the database.
+        var spans = await db.GamePlays.FromVisible(visible)
             .AsNoTracking()
-            .Where(d => d.GameId == gameId)
+            .Where(p => p.GameId == gameId && p.DriveSeq != null)
+            .Select(p => new { p.Sequence, p.DriveSeq })
+            .ToListAsync(ct);
+
+        return GamecastDrives.WithSpans(drives, spans.Select(p => (p.Sequence, p.DriveSeq)));
+    }
+
+    // ---- What the window reads: once whole, then what changed --------------------------------
+
+    /// <summary>
+    /// How far behind its watermark <see cref="ChangesSinceAsync"/> reads again.
+    ///
+    /// <para>
+    /// <see cref="GamePlay.UpdatedAt"/> is the writer's clock, taken before its save commits. Two
+    /// writers — the feed and the backport, or the feed on two hosts whose clocks disagree by a
+    /// second — can commit a row whose stamp is at or a little before the newest a window has
+    /// already read. Reading from the watermark less this much catches that row; the window
+    /// matches by id, so the few rows read twice are drawn once. The cost is those few rows per
+    /// notice, down <c>ix_game_play_game_updated</c>.
+    /// </para>
+    /// </summary>
+    public static readonly TimeSpan ChangeOverlap = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// The sources this reader may see (ADR 0024): null for every one. What a snapshot shared
+    /// across readers is filed under (<see cref="TierKey"/>), so one tier is never served another's.
+    /// </summary>
+    public async Task<int[]?> VisibleSourcesAsync(CancellationToken ct = default)
+    {
+        if (Tier.CanSeePersonalUseSources)
+            return null;
+
+        await using var db = await contexts.CreateDbContextAsync(ct);
+        return await db.VisibleSourceIdsAsync(Tier, ct);
+    }
+
+    /// <summary>
+    /// A visible-sources answer as a cache key: <c>all</c>, or the ids in order (<c>v:</c> alone when
+    /// none is visible). Two readers with the same key see exactly the same rows.
+    /// </summary>
+    public static string TierKey(int[]? visible)
+        => visible is null ? "all" : "v:" + string.Join(',', visible.Order());
+
+    /// <summary>
+    /// Every play and drive of the game this reader may see, the drives with their spans, and the
+    /// newest stamp among them as the watermark the window reads changes after.
+    /// </summary>
+    public async Task<GamecastRows> SnapshotAsync(int gameId, CancellationToken ct = default)
+        => await SnapshotAsync(gameId, await VisibleSourcesAsync(ct), ct);
+
+    /// <summary>
+    /// <see cref="SnapshotAsync(int, CancellationToken)"/> for an answer of
+    /// <see cref="VisibleSourcesAsync"/> already in hand: what a shared snapshot is loaded with, so
+    /// the rows it holds are exactly the ones its key names.
+    /// </summary>
+    public async Task<GamecastRows> SnapshotAsync(int gameId, int[]? visible, CancellationToken ct = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(ct);
+
+        var (plays, newestPlay) = await ReadPlaysAsync(db.GamePlays.FromVisible(visible).Where(p => p.GameId == gameId), ct);
+        var (drives, newestDrive) = await ReadDrivesAsync(db.GameDrives.FromVisible(visible).Where(d => d.GameId == gameId), ct);
+
+        return new GamecastRows(plays, GamecastDrives.WithSpans(drives, plays), Later(newestPlay, newestDrive));
+    }
+
+    /// <summary>
+    /// The plays and drives stamped at or after <paramref name="since"/> less
+    /// <see cref="ChangeOverlap"/> — new ones, and old ones the provider rewrote, in any drive —
+    /// with the newest stamp read (never earlier than <paramref name="since"/>) as the next
+    /// watermark. Every row when <paramref name="since"/> is null. The drives come without spans:
+    /// the window derives them from the plays it holds (<see cref="GamecastDrives.WithSpans"/>).
+    ///
+    /// <para>
+    /// One read per table on a <c>plays:{id}</c> notice, in place of the plays after the last
+    /// sequence held, the drives with a GROUP BY over every play, and the drive in progress read
+    /// again. Nothing here learns of a deletion, because there are none: the writer never deletes
+    /// a play or a drive (<see cref="GamePlay"/>), and a game deleted takes its plays with it and
+    /// leaves the window with no header, which it reloads on.
+    /// </para>
+    /// </summary>
+    public async Task<GamecastRows> ChangesSinceAsync(int gameId, DateTimeOffset? since, CancellationToken ct = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(ct);
+
+        var visible = await db.VisibleSourceIdsAsync(Tier, ct);
+        var plays = db.GamePlays.FromVisible(visible).Where(p => p.GameId == gameId);
+        var drives = db.GameDrives.FromVisible(visible).Where(d => d.GameId == gameId);
+
+        if (since is { } watermark)
+        {
+            var from = watermark - ChangeOverlap;
+            plays = plays.Where(p => p.UpdatedAt >= from);
+            drives = drives.Where(d => d.UpdatedAt >= from);
+        }
+
+        var (changedPlays, newestPlay) = await ReadPlaysAsync(plays, ct);
+        var (changedDrives, newestDrive) = await ReadDrivesAsync(drives, ct);
+
+        return new GamecastRows(changedPlays, changedDrives, Later(since, Later(newestPlay, newestDrive)));
+    }
+
+    private static DateTimeOffset? Later(DateTimeOffset? a, DateTimeOffset? b)
+        => a is null ? b : b is null ? a : a > b ? a : b;
+
+    /// <summary>The drives in order, without spans, and the newest stamp among them.</summary>
+    private static async Task<(List<GamecastDrive> Drives, DateTimeOffset? Newest)> ReadDrivesAsync(
+        IQueryable<GameDrive> drives, CancellationToken ct)
+    {
+        var rows = await drives
+            .AsNoTracking()
             .OrderBy(d => d.Sequence)
+            .ThenBy(d => d.Id)
             .Select(d => new
             {
+                d.Id,
                 d.Sequence,
                 d.TeamId,
                 TeamAbbrev = d.Team!.Abbrev,
@@ -176,32 +295,19 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
                 d.StartYardLine,
                 d.EndPeriod,
                 d.EndClock,
-                d.EndYardLine
+                d.EndYardLine,
+                d.UpdatedAt
             })
             .ToListAsync(ct);
 
-        if (drives.Count == 0)
-            return [];
-
-        var spans = await db.GamePlays.FromVisible(visible)
-            .AsNoTracking()
-            .Where(p => p.GameId == gameId && p.DriveSeq != null)
-            .GroupBy(p => p.DriveSeq!.Value)
-            .Select(g => new { Drive = g.Key, Count = g.Count(), First = g.Min(p => p.Sequence), Last = g.Max(p => p.Sequence) })
-            .ToDictionaryAsync(x => x.Drive, ct);
-
-        return drives.Select(d =>
-        {
-            var span = spans.GetValueOrDefault(d.Sequence);
-
-            return new GamecastDrive(
+        var list = rows.Select(d => new GamecastDrive(
                 d.Sequence, d.TeamId, d.TeamAbbrev, d.Description, d.Result, d.Yards, d.OffensivePlays,
                 d.TimeElapsed, d.IsScore, d.IsCurrent, d.StartPeriod, d.StartClock, d.StartYardLine,
                 d.EndPeriod, d.EndClock, d.EndYardLine,
-                PlayCount: span?.Count ?? 0,
-                FirstSequence: span?.First,
-                LastSequence: span?.Last);
-        }).ToList();
+                PlayCount: 0, FirstSequence: null, LastSequence: null, Id: d.Id))
+            .ToList();
+
+        return (list, rows.Count == 0 ? null : rows.Max(d => d.UpdatedAt));
     }
 
     /// <summary>
@@ -230,6 +336,25 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
     }
 
     /// <summary>
+    /// Why a finished game holds no plays, when the backport knows (<see cref="GamecastBackportMiss"/>):
+    /// how often it asked, when it asks again and what the last ask came to. Null when it has not
+    /// missed the game, or when the reader may not see the source it asked (ADR 0024). Asked only
+    /// for a final with no plays held, so it is one primary-key read, once per window.
+    /// </summary>
+    public async Task<GamecastMiss?> BackportMissAsync(int gameId, CancellationToken ct = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(ct);
+
+        var visible = await db.VisibleSourceIdsAsync(Tier, ct);
+
+        return await db.GamecastBackportMisses
+            .AsNoTracking()
+            .Where(m => m.GameId == gameId && (visible == null || visible.Contains(m.SourceId)))
+            .Select(m => new GamecastMiss(m.Attempts, m.LastTriedAt, m.RetryAt, m.Reason))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
     /// The plays this reader may see (ADR 0024): every play on a local desk or for the operator,
     /// whose answer is the table as it was; for a visitor only a displayable source's, which today
     /// is none, so the window shows the empty state it shows before a game's first play.
@@ -238,6 +363,11 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
         => db.GamePlays.FromVisible(await db.VisibleSourceIdsAsync(Tier, ct));
 
     private static async Task<IReadOnlyList<GamecastPlay>> PlaysAsync(IQueryable<GamePlay> plays, CancellationToken ct)
+        => (await ReadPlaysAsync(plays, ct)).Plays;
+
+    /// <summary>The plays in order, as records, and the newest stamp among them.</summary>
+    private static async Task<(List<GamecastPlay> Plays, DateTimeOffset? Newest)> ReadPlaysAsync(
+        IQueryable<GamePlay> plays, CancellationToken ct)
     {
         var rows = await plays
             .AsNoTracking()
@@ -266,11 +396,12 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
                 p.SpreadCoverPctHome,
                 p.TotalOverPct,
                 p.Wallclock,
-                p.Modified
+                p.Modified,
+                p.UpdatedAt
             })
             .ToListAsync(ct);
 
-        return rows
+        var list = rows
             .Select(p => new GamecastPlay(
                 p.Id, p.Sequence, p.DriveSeq, p.Period, p.Clock, p.ClockSeconds, p.Type, p.Text,
                 p.HomeScore, p.AwayScore, p.IsScoring, p.IsTurnover, p.IsPenalty, p.Yardage, p.TeamId,
@@ -278,6 +409,8 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
                 (double?)p.HomeWinPct, (double?)p.SpreadCoverPctHome, (double?)p.TotalOverPct,
                 p.Wallclock, p.Modified))
             .ToList();
+
+        return (list, rows.Count == 0 ? null : rows.Max(p => p.UpdatedAt));
     }
 
     private static GamecastTeam Team(int id, Team? team)
@@ -389,6 +522,8 @@ public sealed record GamecastPlay(
 /// <summary>
 /// One drive. <see cref="PlayCount"/> and the sequence range are the plays we hold under it
 /// (<see cref="GamePlay.DriveSeq"/> = <see cref="Sequence"/>); both are empty for a drive with none yet.
+/// <see cref="Id"/> is the stored row's, what a correction is matched by when the provider
+/// renumbers the drive; zero for a drive built by hand.
 /// </summary>
 public sealed record GamecastDrive(
     int Sequence,
@@ -409,7 +544,72 @@ public sealed record GamecastDrive(
     int? EndYardLine,
     int PlayCount,
     long? FirstSequence,
-    long? LastSequence);
+    long? LastSequence,
+    long Id = 0);
+
+/// <summary>
+/// What the window reads in one go: plays in order (ties by id), drives in order, and the newest
+/// <see cref="GamePlay.UpdatedAt"/>/<see cref="GameDrive.UpdatedAt"/> among the rows read — the
+/// database's own clock, never the reader's — as the watermark for the next read. Null when no row
+/// has been read. Immutable: one snapshot may be handed to every window open on the game.
+/// </summary>
+public sealed record GamecastRows(
+    IReadOnlyList<GamecastPlay> Plays,
+    IReadOnlyList<GamecastDrive> Drives,
+    DateTimeOffset? Watermark)
+{
+    public static readonly GamecastRows Empty = new([], [], null);
+}
+
+/// <summary>Drive arithmetic done in memory, over the plays a reader already holds.</summary>
+public static class GamecastDrives
+{
+    /// <summary>
+    /// The drives with <see cref="GamecastDrive.PlayCount"/> and the sequence range set from the
+    /// plays filed under each (<see cref="GamecastPlay.DriveSeq"/> = <see cref="GamecastDrive.Sequence"/>):
+    /// what a GROUP BY over the game's plays returned, without asking the database on every notice.
+    /// A drive with no play held has none; a play under no drive, or under one not listed, counts
+    /// for nothing. The order and every other field are the drives' own.
+    /// </summary>
+    public static IReadOnlyList<GamecastDrive> WithSpans(IReadOnlyList<GamecastDrive> drives, IEnumerable<GamecastPlay> plays)
+        => WithSpans(drives, plays.Select(p => (p.Sequence, p.DriveSeq)));
+
+    /// <inheritdoc cref="WithSpans(IReadOnlyList{GamecastDrive}, IEnumerable{GamecastPlay})"/>
+    public static IReadOnlyList<GamecastDrive> WithSpans(IReadOnlyList<GamecastDrive> drives, IEnumerable<(long Sequence, int? DriveSeq)> plays)
+    {
+        if (drives.Count == 0)
+            return [];
+
+        var spans = new Dictionary<int, (int Count, long First, long Last)>();
+
+        foreach (var (sequence, driveSeq) in plays)
+        {
+            if (driveSeq is not { } drive)
+                continue;
+
+            spans[drive] = spans.TryGetValue(drive, out var span)
+                ? (span.Count + 1, Math.Min(span.First, sequence), Math.Max(span.Last, sequence))
+                : (1, sequence, sequence);
+        }
+
+        var result = new GamecastDrive[drives.Count];
+        for (var i = 0; i < drives.Count; i++)
+        {
+            var d = drives[i];
+            result[i] = spans.TryGetValue(d.Sequence, out var span)
+                ? d with { PlayCount = span.Count, FirstSequence = span.First, LastSequence = span.Last }
+                : d with { PlayCount = 0, FirstSequence = null, LastSequence = null };
+        }
+
+        return result;
+    }
+}
+
+/// <summary>
+/// A finished game the backport asked ESPN for and came away without plays: how many times, when
+/// last, when it is due again, and why the last ask came away empty ("no plays", or the error).
+/// </summary>
+public sealed record GamecastMiss(int Attempts, DateTimeOffset LastTriedAt, DateTimeOffset RetryAt, string? Reason);
 
 /// <summary>One point on the probability line, at a play. Fractions of one; null where the provider gave none.</summary>
 public sealed record GamecastProbability(

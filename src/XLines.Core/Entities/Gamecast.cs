@@ -15,6 +15,17 @@ namespace XLines.Core.Entities;
 /// The win probability lives on the play that produced it rather than in a table of its own:
 /// the provider pairs them by play id, and the window reads them together.
 /// </para>
+///
+/// <para>
+/// <b>Written only through tracked saves</b> — <c>Add</c>, or a loaded row changed, then
+/// <c>SaveChanges</c> — with <see cref="UpdatedAt"/> stamped on every insert and every change, and
+/// never deleted; the same holds for <see cref="GameDrive"/>. An open Gamecast learns its game moved
+/// from the <c>plays:{id}</c> notice the save raises (<c>ChangeNotifier</c>), and reads what moved
+/// by <see cref="UpdatedAt"/> (<c>GamecastService.ChangesSinceAsync</c>); a shared per-game snapshot
+/// is evicted by the same notice. <c>ExecuteUpdate</c>, <c>ExecuteDelete</c> and raw SQL raise no
+/// notice and stamp nothing, so a window would never see what they did:
+/// <c>GamecastTrackedWritesTests</c> fails the build's tests if one appears in <c>src</c>.
+/// </para>
 /// </summary>
 public class GamePlay : Contracts.IFromSource
 {
@@ -72,7 +83,10 @@ public class GamePlay : Contracts.IFromSource
     /// <summary>When the provider last changed the play; a later stamp is a review or a correction.</summary>
     public DateTimeOffset? Modified { get; set; }
 
-    /// <summary>When we last wrote the row.</summary>
+    /// <summary>
+    /// When we last wrote the row, by the writer's clock: stamped on every insert and every change.
+    /// The window's watermark is the newest of these it has read, never the web host's clock.
+    /// </summary>
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
@@ -80,7 +94,8 @@ public class GamePlay : Contracts.IFromSource
 /// One drive of one game: the drive log the gamecast groups its plays under, and the
 /// <see cref="IsCurrent"/> one the field strip is drawn from. Upserted by
 /// <c>(GameId, SourceId, SourceDriveId)</c> exactly as <see cref="GamePlay"/> is, and never
-/// deleted. The MLB equivalent is the half-inning.
+/// deleted. The MLB equivalent is the half-inning. Written only through tracked saves that stamp
+/// <see cref="UpdatedAt"/>, as <see cref="GamePlay"/> is, and for the same reason.
 /// </summary>
 public class GameDrive : Contracts.IFromSource
 {

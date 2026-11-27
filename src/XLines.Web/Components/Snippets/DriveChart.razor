@@ -15,18 +15,29 @@
     stronger — drawn once for the whole chart, so the bars read as ground covered and not as a
     bar chart. A quiet line between quarters, with the quarter's name, when the period changes.
 
-    Each row is a real button: reachable by Tab, its focus the desk's inset ring, the chosen one
-    aria-pressed and washed in the accent (selection is what the accent is for), and its name the
-    drive in a sentence — "Drive 4, WSH, 6 plays, 25 yards, Punt" — because the bar alone says
-    nothing to a reader who cannot see it. Pressing one hands its Sequence to OnSelect; what that
-    selects is the window's business. A drive with no start or no end still has its row, with no
-    bar and its result in words. Rows are compact (one line of caption type), so twenty-odd drives
-    stand in a card as narrow as a phone's. No edge: the card holding it is the group.
+    Each row is a real button: its focus the desk's inset ring, the chosen one aria-pressed and
+    washed in the accent (selection is what the accent is for), and its name the drive in a
+    sentence — "Drive 4, WSH, 6 plays, 25 yards, Punt" — because the bar alone says nothing to a
+    reader who cannot see it. The list is one Tab stop (a roving tabindex, on the chosen drive or
+    the first): Down and Up move a row, Home and End to the ends, and Enter or Space — the
+    button's own keys — presses it, so twenty-odd drives are not twenty-odd stops. Pressing one
+    hands its Sequence to OnSelect; what that selects is the window's business, and the group the
+    window marks with RevealAttribute for that drive (its plays, in the drive log) is scrolled into
+    view. A drive with no start or no end still has its row, with no bar and its result in words.
+    Rows are one line of caption type at a 28px target, the whole row the button. No edge: the card
+    holding it is the group.
+
+    Not by colour alone: the home side's bar is solid and the away side's hollow, an inset line in
+    its tone, as the key above the field says — away on the left, where its end zone is.
 *@
 
 @if (Drives is { Count: > 0 })
 {
-    <ol class="drivechart" aria-label="Drive chart">
+    <p class="drivechart__legend" aria-hidden="true">
+        <span class="drivechart__keyitem"><span class="drivechart__swatch drivechart__swatch--away"></span>@AwayAbbrev</span>
+        <span class="drivechart__keyitem"><span class="drivechart__swatch drivechart__swatch--home"></span>@HomeAbbrev</span>
+    </p>
+    <ol class="drivechart" aria-label="Drive chart" @ref="_list" @onkeydown="OnKeyDownAsync">
         <li class="drivechart__field" aria-hidden="true">
             <span class="drivechart__ground">
                 <span class="drivechart__zone drivechart__zone--away"></span>
@@ -36,8 +47,9 @@
         </li>
 
         @{ int? period = null; var number = 0; }
-        @foreach (var drive in Ordered)
+        @foreach (var drive in _ordered)
         {
+            var index = number;
             number++;
             var home = drive.TeamId == HomeTeamId;
             var sided = drive.TeamId is not null;
@@ -58,8 +70,11 @@
                         class="drivechart__row @SideClass(drive) drivechart__row--@OutcomeName(outcome) @(selected ? "drivechart__row--selected" : null)"
                         aria-pressed="@(selected ? "true" : "false")"
                         aria-label="@Name(drive, number)"
+                        tabindex="@(index == TabStop ? "0" : "-1")"
                         data-sequence="@drive.Sequence"
-                        @onclick="() => OnSelect.InvokeAsync(sequence)">
+                        @ref="_rows[index]"
+                        @onfocus="() => _focus = index"
+                        @onclick="() => SelectAsync(sequence)">
                     <span class="drivechart__team" aria-hidden="true">
                         @if (Abbrev(drive) is { } abbrev)
                         {
@@ -103,7 +118,108 @@
     /// <summary>The league's key, for the crests beside the sides' names.</summary>
     [Parameter] public string? Sport { get; set; }
 
-    private IEnumerable<GamecastDrive> Ordered => Drives.OrderBy(d => d.Sequence);
+    /// <summary>
+    /// The attribute the window marks each drive's group of plays with (the drive log's
+    /// <c>data-drive</c>), so a chosen drive's plays are scrolled into view; null leaves the page
+    /// where it is.
+    /// </summary>
+    [Parameter] public string? RevealAttribute { get; set; } = "data-drive";
+
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    /// <summary>The browser module that scrolls a drive's plays into view.</summary>
+    public const string RevealModule = "./js/reveal.js";
+
+    private GamecastDrive[] _ordered = [];
+    private ElementReference[] _rows = [];
+    private ElementReference _list;
+
+    /// <summary>The row the keyboard is on, once it has moved; null until then, so the tab stop is the chosen row's.</summary>
+    private int? _focus;
+
+    private int? _lastSelected;
+
+    /// <summary>A drive just chosen, whose plays are to be brought into view once this render reaches the browser.</summary>
+    private int? _reveal;
+
+    protected override void OnParametersSet()
+    {
+        _ordered = Drives.OrderBy(d => d.Sequence).ToArray();
+        if (_rows.Length != _ordered.Length)
+            _rows = new ElementReference[_ordered.Length];
+
+        // A choice made anywhere — here, or a scoring play pressed elsewhere in the window — moves the
+        // tab stop to it; so does a list that has lost the row the keyboard was on.
+        if (Selected != _lastSelected || _focus >= _ordered.Length)
+            _focus = null;
+        _lastSelected = Selected;
+    }
+
+    private int SelectedIndex => Selected is { } s ? Array.FindIndex(_ordered, d => d.Sequence == s) : -1;
+
+    /// <summary>The one row Tab reaches: where the keyboard last was, else the chosen drive, else the first.</summary>
+    private int TabStop => _focus ?? Math.Max(SelectedIndex, 0);
+
+    private async Task SelectAsync(int sequence)
+    {
+        _reveal = sequence;
+        await OnSelect.InvokeAsync(sequence);
+    }
+
+    /// <summary>The keys the list answers: the vertical half of the roving contract (Roving), Left and Right being no list's.</summary>
+    private static readonly string[] ListKeys = ["ArrowDown", "ArrowUp", "Home", "End"];
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs e)
+    {
+        if (_ordered.Length == 0 || !ListKeys.Contains(e.Key))
+            return;
+
+        var current = TabStop;
+        if (Roving.Next(current, _ordered.Length, e, wrap: false) is not { } next || next == current)
+            return;
+
+        _focus = next;
+        await _rows[next].FocusAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_reveal is not { } sequence)
+            return;
+
+        _reveal = null;
+        if (string.IsNullOrWhiteSpace(RevealAttribute))
+            return;
+
+        var selector = $"[{RevealAttribute}=\"{sequence.ToString(CultureInfo.InvariantCulture)}\"]";
+        try
+        {
+            var module = await JS.InvokeAsync<IJSObjectReference>("import", RevealModule);
+
+            // A runtime with no browser behind it (a render test that set nothing up) hands back no module.
+            if (module is null)
+                return;
+
+            await using (module)
+                await module.InvokeVoidAsync("revealNear", _list, selector);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went with the press: there is no page to scroll.
+        }
+        catch (InvalidOperationException)
+        {
+            // Prerendering, or the runtime or the module went with the component.
+        }
+        catch (JSException)
+        {
+            // The module would not load (a stale asset after a deploy) or threw: scrolling is a nicety.
+        }
+        catch (OperationCanceledException)
+        {
+            // The interop call timed out or was called off.
+        }
+    }
 
     private string? Abbrev(GamecastDrive drive)
         => drive.TeamId is null ? null

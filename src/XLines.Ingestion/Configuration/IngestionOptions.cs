@@ -135,8 +135,32 @@ public class GamecastOptions
     public TimeSpan BoxPoll { get; set; } = TimeSpan.FromSeconds(60);
 
     /// <summary>
+    /// How long one gamecast request may take before it is given up on. Asked once, never retried
+    /// inside the poll: the next poll, <see cref="Poll"/> away, is the retry, and a game that keeps
+    /// failing is backed off. Zero or less reads as the default.
+    /// </summary>
+    public TimeSpan ReadTimeout { get; set; } = TimeSpan.FromSeconds(8);
+
+    /// <summary>
+    /// Gap between reads of a live game no window is watching. A watched game is read every
+    /// <see cref="Poll"/> whatever this says; nobody is looking at this one, so it can wait a
+    /// poll and leave ESPN's patience to the game someone has open. Never less than
+    /// <see cref="Poll"/>; zero or less reads as the default.
+    /// </summary>
+    public TimeSpan UnwatchedPoll { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gap between reads of a game no window is watching while its header says it is at a break —
+    /// halftime, the end of a quarter — when nothing is played and the document barely moves.
+    /// Never less than <see cref="Poll"/>; zero or less reads as the default.
+    /// </summary>
+    public TimeSpan BreakPoll { get; set; } = TimeSpan.FromSeconds(60);
+
+    /// <summary>
     /// The fast lane: the most games read every poll. Games a window is watching come first
     /// (<c>GamecastLanes</c>), then the healthy before the ones in trouble, earliest start first.
+    /// A watched game is never left out by this ceiling: every one is read every poll, and only
+    /// the slots they leave go to the rest.
     /// </summary>
     public int MaxFollowedGames { get; set; } = 4;
 

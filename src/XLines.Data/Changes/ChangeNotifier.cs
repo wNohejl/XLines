@@ -101,7 +101,9 @@ public static class DataTopics
 /// (there are no explicit transactions; retry-on-failure rules them out). Best-effort by design:
 /// a notice that fails to send costs a refresh, which the listener's fallback poll makes up, and
 /// must never fail the save it describes. Bulk <c>ExecuteUpdate</c>/<c>ExecuteDelete</c> calls do
-/// not pass through here; the few there are touch rows no window is waiting on.
+/// not pass through here; the few there are touch rows no window is waiting on. Plays and drives
+/// in particular are written only through tracked saves (see <see cref="GamePlay"/>): the Gamecast
+/// window and its shared snapshot depend on this notice, and a test fails on a bulk write to them.
 /// </para>
 /// </summary>
 public sealed class ChangeNotifier(ILogger<ChangeNotifier> logger) : SaveChangesInterceptor

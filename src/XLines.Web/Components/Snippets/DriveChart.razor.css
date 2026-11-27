@@ -2,13 +2,16 @@
    once, for the whole list — the content fill, the end zones a tier deeper, a hairline at each ten
    and the fifty stronger — so the rows' bars stand on one field and the eye can run down a yard
    line from the first drive to the last. The bars are the sides', as the field graphic spends
-   them: away the chart neutral, home the accent's ink — DeskChart's own pair for two series that
-   carry no state (the Volume family), and the ink rather than the fill because it is the accent
-   taken to where it reads on the panel in every theme. The dimmer neutral the home side wore
-   before all but vanished on a dark field. A score's bar and mark are the positive state, a
-   turnover's mark the negative.
+   them: the desk's chart-side pair (--chart-side-home, --chart-side-away), which is DeskChart's
+   own pair for two series that carry no state — the accent's ink and the chart neutral — except
+   on Graphite, whose ink sits a step from the neutral and is re-pointed to a tone 3:1 off it. Not
+   by tone alone: the home bar is solid and the away bar hollow, an inset line round a clear bar,
+   so the sides part in every theme and for a reader who cannot tell the tones apart; the key
+   above the field says which is which. A score's bar and mark are the positive state (an away
+   score's bar hollow in it), a turnover's mark the negative.
 
-   A row is a button the width of the chart: a team column, the field, a short result. Its hover
+   A row is a button the width of the chart, 28px tall: a side column, the field, a short result —
+   the whole row the target, not its bar. Its hover
    is a faint ink wash and its selection the accent's wash (what the accent is for), both
    translucent so the field's lines show through; its focus the desk's inset ring. No edge: the
    card it sits in is the group, and the quarters are divided by one quiet inset line each.
@@ -16,13 +19,16 @@
    The three columns share their widths with the field behind them through three custom
    properties, so the field's left and right edges sit exactly under every row's track. */
 
-.drivechart {
+.drivechart,
+.drivechart__legend {
     --dc-team: 44px;
     --dc-result: 44px;
     --dc-gap: var(--space-2);
     --dc-pad: var(--space-2);
-    --dc-row: 20px;
+    --dc-row: 28px;
+}
 
+.drivechart {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -146,7 +152,7 @@
     top: 50%;
     left: calc(var(--left) * 1%);
     width: calc(var(--width) * 1%);
-    height: 6px;
+    height: 8px;
     transform: translateY(-50%);
     border-radius: var(--radius-xs);
 }
@@ -156,8 +162,8 @@
     position: absolute;
     top: 50%;
     left: calc(var(--end) * 1%);
-    width: 5px;
-    height: 10px;
+    width: 6px;
+    height: 12px;
     transform: translate(-50%, -50%);
 }
 
@@ -169,20 +175,32 @@
     clip-path: polygon(0 0, 100% 50%, 0 100%);
 }
 
-.drivechart__row--away .drivechart__bar,
-.drivechart__row--away .drivechart__end {
-    background: var(--chart-neutral);
-}
-
+/* Home solid; away hollow — a clear bar inside a line of its tone — with its end mark solid, the
+   arrow the one thing a line that thin cannot draw. */
 .drivechart__row--home .drivechart__bar,
 .drivechart__row--home .drivechart__end {
-    background: var(--accent-ink);
+    background: var(--chart-side-home);
 }
 
-/* A score: the bar and its end the positive state, the result in its ink and weight. */
+.drivechart__row--away .drivechart__bar {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--chart-side-away);
+}
+
+.drivechart__row--away .drivechart__end {
+    background: var(--chart-side-away);
+}
+
+/* A score: the bar and its end the positive state, the result in its ink and weight; an away
+   score's bar keeps its hollow, in the positive. */
 .drivechart__row--score .drivechart__bar,
 .drivechart__row--score .drivechart__end {
     background: var(--state-positive);
+}
+
+.drivechart__row--away.drivechart__row--score .drivechart__bar {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--state-positive);
 }
 
 .drivechart__row--turnover .drivechart__end {
@@ -221,4 +239,40 @@
 
 .drivechart__periodname {
     width: var(--dc-team);
+}
+
+/* ---- The key ------------------------------------------------------------------------------- */
+
+/* Which side is hollow and which solid, over the field's two ends: the away side's name over the
+   left end zone, the home side's over the right, each after a short bar drawn as its rows' are. */
+.drivechart__legend {
+    display: flex;
+    justify-content: space-between;
+    margin: 0 0 var(--space-1);
+    padding: 0 calc(var(--dc-pad) + var(--dc-result) + var(--dc-gap)) 0 calc(var(--dc-pad) + var(--dc-team) + var(--dc-gap));
+    color: var(--text-secondary);
+    font-size: var(--text-caption);
+    font-weight: var(--weight-semibold);
+}
+
+.drivechart__keyitem {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.drivechart__swatch {
+    display: inline-block;
+    width: 14px;
+    height: 8px;
+    border-radius: var(--radius-xs);
+}
+
+.drivechart__swatch--home {
+    background: var(--chart-side-home);
+}
+
+.drivechart__swatch--away {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--chart-side-away);
 }
