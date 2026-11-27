@@ -13,7 +13,7 @@ namespace XLines.Desk.Tests;
 public class KeyFocusRingTests
 {
     private static string Css(string file)
-        => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", file)).Replace("\r\n", "\n");
+        => DeskCss.Sheet(file).Replace("\r\n", "\n");
 
     private static void AssertAfter(string css, string earlier, string later)
     {

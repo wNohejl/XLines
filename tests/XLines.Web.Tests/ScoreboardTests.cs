@@ -148,8 +148,7 @@ public class ScoreboardTests : DeskTestContext
             .Add(s => s.Compact, true));
         Assert.Equal(2, cut.FindAll(".scoreboard__name .desklink .desklink__shortcut").Count);
 
-        var css = File.ReadAllText(Path.Combine(XLines.Web.Tests.Support.Repo.Root(),
-            "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+        var css = XLines.Web.Tests.Support.Sheets.App;
         Assert.Matches(@"\.scoreboard \.desklink \{\s*position: relative;", css);
         Assert.Matches(@"(?s)\.scoreboard \.desklink__shortcut \{[^}]*position: absolute;[^}]*left: 100%;", css);
     }

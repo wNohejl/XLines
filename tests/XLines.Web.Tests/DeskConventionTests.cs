@@ -16,12 +16,18 @@ public class DeskConventionTests
 {
     private static readonly string Src = Path.Combine(Repo.Root(), "src");
     private static readonly string AppRazor = Path.Combine(Src, "XLines.Web", "Components", "App.razor");
-    private static readonly string AppSheet = Path.Combine(Src, "XLines.Web", "wwwroot", "css", "xlines.css");
+
+    // xlines.css is one sheet in two files (Sheets.AppParts); every sheet check below is a check
+    // of each rule, so it is run against each file, and the whole sheet is checked.
+    private static IReadOnlyList<string> AppSheets => Sheets.AppParts;
 
     /// <summary>All of them at once, as the Desk's README shows a consumer calling them.</summary>
     [Fact]
     public void The_desk_conventions_hold()
-        => DeskConventions.All(Src, "XLines.Web/Components/App.razor", "XLines.Web/wwwroot/css/xlines.css");
+    {
+        foreach (var sheet in AppSheets)
+            DeskConventions.All(Src, "XLines.Web/Components/App.razor", sheet);
+    }
 
     [Fact]
     public void Every_desk_field_has_a_name() => DeskConventions.EveryFieldHasAName(Src);
@@ -35,7 +41,11 @@ public class DeskConventionTests
 
     // This app's sheet declares no token block at all: every colour in it is the Desk's.
     [Fact]
-    public void No_literal_colour_in_the_app_sheet() => DeskConventions.AppSheetSpendsTokens(AppSheet);
+    public void No_literal_colour_in_the_app_sheet()
+    {
+        foreach (var sheet in AppSheets)
+            DeskConventions.AppSheetSpendsTokens(sheet);
+    }
 
     // Rules that draw a target smaller than the floor on purpose, by selector exactly as the
     // sheet writes it, each with its reason. Empty: nothing on the desk is small on purpose yet.
@@ -43,17 +53,31 @@ public class DeskConventionTests
 
     [Fact]
     public void Targets_are_at_least_28px_in_the_app_sheet()
-        => DeskConventions.AppSheetTargetsAreReachable(AppSheet, SmallOnPurpose);
+    {
+        foreach (var sheet in AppSheets)
+            DeskConventions.AppSheetTargetsAreReachable(sheet, SmallOnPurpose);
+    }
 
     [Fact]
-    public void The_app_sheet_does_not_fold_the_toolbar_again() => DeskConventions.AppSheetKeepsOneToolbarFold(AppSheet);
+    public void The_app_sheet_does_not_fold_the_toolbar_again()
+    {
+        foreach (var sheet in AppSheets)
+            DeskConventions.AppSheetKeepsOneToolbarFold(sheet);
+    }
 
     [Fact]
     public void The_app_sheet_leaves_the_desk_s_components_alone()
-        => DeskConventions.AppSheetLeavesDeskComponentsAlone(AppSheet);
+    {
+        foreach (var sheet in AppSheets)
+            DeskConventions.AppSheetLeavesDeskComponentsAlone(sheet);
+    }
 
     [Fact]
-    public void The_app_links_its_sheet_after_deskhead() => DeskConventions.AppHeadLoadsDeskFirst(AppRazor, AppSheet);
+    public void The_app_links_its_sheet_after_deskhead()
+    {
+        foreach (var sheet in AppSheets)
+            DeskConventions.AppHeadLoadsDeskFirst(AppRazor, sheet);
+    }
 
     // ---- Spacing: the ramp, spent by the sheet and owned by the primitives -----------------
 
@@ -137,7 +161,7 @@ public class DeskConventionTests
     [Fact]
     public void The_app_sheets_space_with_the_ramp()
     {
-        var sheets = new[] { AppSheet }
+        var sheets = AppSheets
             .Concat(Directory.EnumerateFiles(Components, "*.razor.css", SearchOption.AllDirectories));
         var offenders = new List<string>();
 
@@ -188,5 +212,9 @@ public class DeskConventionTests
     [InlineData(".price-picker")]
     [InlineData(".selection-")]
     public void A_window_s_selector_lives_in_the_app_sheet(string selector)
-        => DeskConventions.SelectorLivesInAppSheet(AppSheet, selector);
+        => DeskConventions.SelectorLivesInAppSheet(
+            // The file of the app's sheet that holds it, or the first when none does (and the check fails there).
+            AppSheets.FirstOrDefault(sheet => DeskConventions.WithoutComments(File.ReadAllText(sheet)).Contains(selector, StringComparison.Ordinal))
+                ?? AppSheets[0],
+            selector);
 }

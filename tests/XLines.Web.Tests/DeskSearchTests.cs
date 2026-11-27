@@ -186,7 +186,7 @@ public class DeskSearchTests : DeskTestContext
         Assert.Matches(@"\.ptoolbar > \.search ~ \.ptoolbar__actions \{\s*margin-left:\s*0", controls);
 
         // No window widens it again.
-        var app = DeskConventions.WithoutComments(Sheet("XLines.Web", "wwwroot", "css", "xlines.css"));
+        var app = DeskConventions.WithoutComments(Support.Sheets.App);
         Assert.DoesNotMatch(@"\.ptoolbar[^{},]*\.search\b", app);
     }
 

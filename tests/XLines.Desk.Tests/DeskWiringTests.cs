@@ -34,8 +34,15 @@ public class DeskWiringTests : DeskTestContext
             "js/theme-boot.js",
             "MudBlazor.min.css",
             "css/desk.css",
+            "css/desk-shell.css",
+            "css/desk-windows.css",
+            "css/desk-primitives.css",
+            "css/desk-feedback.css",
+            "css/desk-appearance.css",
             "css/controls.css",
             "css/themes.css",
+            "css/themes-more.css",
+            "css/themes-accents.css",
             "css/mud-bridge.css",
         ];
 
@@ -75,7 +82,7 @@ public class DeskWiringTests : DeskTestContext
     public void The_font_preload_names_the_path_the_stylesheet_asks_for()
     {
         var head = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "Layout", "DeskHead.razor"));
-        var desk = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var desk = Support.DeskCss.Sheet("desk.css");
 
         var preload = Assert.Single(head.Split('\n'), l => l.Contains("<link rel=\"preload\""));
         Assert.DoesNotContain("@Assets[", preload);

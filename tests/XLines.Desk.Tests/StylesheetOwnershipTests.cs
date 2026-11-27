@@ -13,7 +13,7 @@ namespace XLines.Desk.Tests;
 public class StylesheetOwnershipTests
 {
     private static string Desk(string name) =>
-        DeskConventions.WithoutComments(File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", name)));
+        DeskConventions.WithoutComments(DeskCss.Sheet(name));
 
     public static TheoryData<string> DeskComponentSelectors => [.. DeskConventions.DeskComponentSelectors];
 

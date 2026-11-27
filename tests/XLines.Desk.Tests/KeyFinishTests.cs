@@ -13,7 +13,7 @@ namespace XLines.Desk.Tests;
 public class KeyFinishTests
 {
     private static string Css(string file)
-        => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", file)).Replace("\r\n", "\n");
+        => DeskCss.Sheet(file).Replace("\r\n", "\n");
 
     [Fact]
     public void Filled_and_Tinted_wear_the_sheen_and_the_top_line()

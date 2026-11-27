@@ -142,7 +142,7 @@ public class DeskSparklineTests : DeskTestContext
         Assert.Null(cut.Find("circle").GetAttribute("fill"));
 
         var css = Regex.Replace(
-            File.ReadAllText(Path.Combine(RepoRoot(), "src/XLines.Desk/wwwroot/css/desk.css")),
+            Support.DeskCss.Sheet("desk.css"),
             @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
 
         var line = Rule(css, ".sparkline__line");

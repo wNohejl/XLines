@@ -20,8 +20,7 @@ public class CardContentTests : DeskTestContext
 
     private static readonly Row[] Rows = [new(1, "One"), new(2, "Two"), new(3, "Three")];
 
-    private static string Css(string name) => DeskConventions.WithoutComments(
-        File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", name)));
+    private static string Css(string name) => DeskConventions.WithoutComments(DeskCss.Sheet(name));
 
     private const string TableInset = ".wgroup > .deskgrid";
     private const string LastHairline = ".wgroup .deskgrid .mud-table-body .mud-table-row:last-child > .mud-table-cell";

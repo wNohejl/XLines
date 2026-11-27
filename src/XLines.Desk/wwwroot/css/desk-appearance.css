@@ -1,0 +1,547 @@
+/* ---- Theme swatches ----------------------------------------------------------
+   The Window manager's family picker. Each swatch carries its own data-theme —
+   the family it offers, in the appearance showing now — so every var() inside it
+   resolves against that family's token block. The swatch is not a picture of a
+   theme; it is a patch of the theme, painted by the same block that would paint
+   the desk, which means it cannot drift from what choosing it does.
+
+   Its anatomy is the desk in miniature: the ground, a panel resting on it, two
+   lines of ink at the primary and secondary tiers, the accent as a filled pill,
+   and the three states. Those are the tokens that make one family read
+   differently from another at a glance; the rest are shared shape.
+
+   Selection is the swatch's own accent as a ring, because selection is one of
+   the three things an accent is for — and the ring is drawn in the family's
+   accent rather than the desk's, so it reads as "this one" in the colours of
+   the one it marks. */
+.swatches {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: var(--space-2);
+}
+
+.swatch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius);
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px var(--separator);
+    transition: box-shadow var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.swatch:hover { transform: translateY(-1px); }
+.swatch--on,
+.swatch--on:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+
+.swatch__panel {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin: var(--space-2) var(--space-2) 0;
+    padding: var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--surface-1);
+    box-shadow: var(--shadow-1);
+}
+
+.swatch__ink {
+    display: block;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--text-primary);
+}
+
+.swatch__ink--secondary { width: 70%; background: var(--text-secondary); }
+
+.swatch__marks {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.swatch__pill {
+    width: 22px;
+    height: 8px;
+    border-radius: var(--radius-xs);
+    background: var(--accent);
+    margin-right: auto;
+}
+
+.swatch__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+}
+
+.swatch__dot--positive { background: var(--state-positive); }
+.swatch__dot--warning { background: var(--state-warning); }
+.swatch__dot--negative { background: var(--state-negative); }
+
+.swatch__name {
+    padding: 0 var(--space-2) var(--space-2);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-medium);
+    color: var(--text-secondary);
+}
+
+.swatch--on .swatch__name { color: var(--text-primary); font-weight: var(--weight-semibold); }
+
+/* The tile is positioned so the chosen one's tick can sit in its corner: a filled accent disc
+   with the family's own ink drawn as a check, so "this one" is said by a shape as well as by
+   the ring's hue and the name's weight. */
+.swatch { position: relative; }
+
+.swatch__tick {
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: var(--shadow-1);
+}
+
+.swatch__tick::after {
+    content: "";
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 3px;
+    height: 7px;
+    border: solid var(--on-accent);
+    border-width: 0 1.5px 1.5px 0;
+    transform: rotate(45deg);
+}
+
+/* The picker is one grid of tiles, as wide as it is given: ninety-six pixels a tile at least,
+   sharing what is left. It was four shelves under quiet headings, and the shelves were ragged —
+   rows of two, five, five and one; the headings are a filter over the one grid now
+   (DeskThemePicker's Group), so every row is full but the last. */
+.themes.swatches { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); min-width: 0; }
+.wgroup__row--pad > .themes { flex: 1 1 auto; }
+
+/* ---- The Window manager: grouped settings -------------------------------------
+   The Window manager is a settings screen, so it is the task windows' grouped form in the card
+   flow (.wflow of FormGroup section cards, .wgroup__row--form, .wgroup__split, .wgroup__foot)
+   and nothing new: groups, each a card with its name in its bar, its labels leading in one
+   column and its controls trailing, the explanation as the card's footer. What is here is only
+   what a settings screen needs that a task form does not.
+
+   It was one column stopped at a form's width (680px); at 1600px that left the right half of the
+   window empty and the sections stacked a long way down. The flow now caps each card, not the
+   window: more columns as it widens, so a label and its control stay within one glance and no
+   sentence of explanation runs the width of the desk. The label column is in ems so it grows
+   with Text size rather than letting "Fits readably" run into its value at 140%. */
+.wm { --form-label: 8em; }
+
+/* A pop-up is as wide as its longest choice, and a key as wide as its words: a grid item
+   stretches by default, so both ran the whole control column. .field is width:100% for the
+   forms it fills, which is why the select has to say so here. */
+.wm .wgroup__row--form > select.field { width: auto; max-width: 100%; justify-self: start; }
+.wm .wgroup__row--form > .desk-btn { justify-self: start; }
+
+/* A reading in a settings row: the value in the primary label colour, tabular, with its
+   qualifier in secondary beside it. The warning ink lands on the number only, and the note
+   under the group says why in words. */
+.wm-value {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+.wm-value--warn { color: var(--state-warning-ink); }
+
+/* The share slider: the accent on the control you drag, sized to be dragged, not to the row. */
+
+/* A pixel dimension is four digits and a spinner; two of them and the × between read as one
+   value. */
+.wm-px { width: 11ch; }
+
+/* The name field takes what the Save key leaves. */
+.wm-save__name { flex: 1 1 160px; min-width: 0; width: auto; }
+
+/* A saved workspace: its name, the windows it opens under it in secondary, its Delete key at
+   the trailing edge of the row it belongs to. */
+.wm-workspace__text { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.wm-workspace__name { color: var(--text-primary); }
+.wm-workspace__text > .meta { overflow-wrap: anywhere; }
+
+/* ---- The Parts window -----------------------------------------------------------
+   The developer catalogue. Its parts keep the window's width, because "does this fit?" is
+   answered at the width a panel has; its prose does not, because a paragraph run across a
+   1584px window is a line the eye cannot find its way back from (HIG, Typography: 45-75
+   characters). The opening note sits in the wrapper rather than straight in .win__body, so the
+   air beneath it is restated. */
+.parts > .note { margin: 0 0 var(--space-4); }
+.parts p.empty { max-width: 72ch; }
+/* The token beside each sample on the Spacing and Type styles rows: one column wide enough for
+   the longest name, so every sample starts at the same x. */
+.parts-key { flex: none; width: 9rem; }
+
+/* ---- Material fallbacks -----------------------------------------------------
+   Opaque fallbacks for every material surface. This block must stay AFTER every
+   material rule it overrides: @supports and @media add no specificity, so these
+   rules beat their unconditional counterparts only on source order. A material
+   added below this line needs its fallback added here and re-tested.
+
+   No blur available means no translucency either — a flat wash over the desk
+   would just look like a mistake. Chrome falls back to the same opaque tier as
+   a title bar; a group drawer falls back one tier down, to the tier a panel body
+   rests on; the dialog and the command palette fall back to the same tier as
+   chrome, since they are chrome that happens to float. The modal sheet falls
+   back the same way as the floating dialog — it is the same kind of surface, just
+   one that takes the desk hostage — and it keeps both classes so it still clears
+   the bridge's single-class .mud-dialog, which source order alone would not do. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .hdr, .ftr { background: var(--surface-2); }
+    .hdr::before { background: none; }
+    .bar__menu .bar__menu-panel { background: var(--surface-1); }
+    .palette__panel { background: var(--surface-2); }
+    .divider__width { background: var(--surface-2); }
+    .deskdialog { background: var(--surface-2); }
+    .mud-dialog.desk-sheet { background: var(--surface-2); }
+}
+
+/* Reduce Transparency: the same opaque surfaces, asked for rather than forced.
+   The HIG's Materials rule is that appearance changes with the setting, so the
+   desk answers it the way it answers a browser with no blur — each material
+   becomes the --surface-* tier above — and drops the blur too, which an opaque
+   fill would hide anyway but would still be paid for on every frame.
+
+   Two ways in, one answer. The media query is the browser's own report and works
+   before the circuit connects; data-reduced-transparency is what theme.js stamps
+   on <html> from ThemeService, so the desk agrees with whatever the operator's
+   machine says even where a browser does not expose the query. The attribute
+   rules weigh one attribute more than the rule they override, so they hold
+   wherever they sit. */
+@media (prefers-reduced-transparency: reduce) {
+    .hdr, .ftr { background: var(--surface-2); }
+    .bar__menu .bar__menu-panel { background: var(--surface-1); }
+    .palette__panel { background: var(--surface-2); }
+    .deskdialog { background: var(--surface-2); }
+    .mud-dialog.desk-sheet { background: var(--surface-2); }
+    .hdr::before { background: none; }
+    .divider__width { background: var(--surface-2); }
+
+    .hdr, .hdr::before, .ftr, .bar__menu .bar__menu-panel, .palette__panel, .divider__width,
+    .deskdialog, .mud-dialog.desk-sheet {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
+[data-reduced-transparency="true"] .hdr,
+[data-reduced-transparency="true"] .ftr,
+[data-reduced-transparency="true"] .palette__panel,
+[data-reduced-transparency="true"] .deskdialog,
+[data-reduced-transparency="true"] .mud-dialog.desk-sheet {
+    background: var(--surface-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+[data-reduced-transparency="true"] .hdr::before {
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+[data-reduced-transparency="true"] .divider__width {
+    background: var(--surface-2);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+[data-reduced-transparency="true"] .bar__menu .bar__menu-panel {
+    background: var(--surface-1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+/* Every other material — a popover in controls.css, MudBlazor's own popovers via
+   the bridge — reads the --material-* tokens rather than a class listed here, so
+   under the attribute the tokens themselves turn opaque. :root plus the attribute
+   outweighs the theme blocks, which would otherwise win on source order. */
+:root[data-reduced-transparency="true"] {
+    --material-ultrathin: var(--surface-2);
+    --material-thin: var(--surface-2);
+    --material-regular: var(--surface-2);
+    --material-thick: var(--surface-2);
+    --material-blur: none;
+}
+
+/* Glass: Tinted — the operator's step toward Reduce Transparency that stops short
+   of it (DeskGlass; macOS's Liquid Glass setting, Clear or Tinted). Every material
+   moves --glass-tint of the way from its family's own value to the opaque tier
+   Reduce Transparency uses, and keeps its blur: at the half step the Standard dark
+   desk's .55/.70/.82/.92 become about .78/.85/.91/.96, in the family's own hue.
+
+   Derived, never declared, so it holds for every family and names none: the mix
+   reads whatever the showing block set. A custom property cannot be mixed from
+   itself on one element (that is a cycle, and the declaration is dropped), so
+   <html> keeps each family value under a second name and <body> — where every
+   material is drawn — mixes from that inherited, already-resolved copy. Under
+   Reduce Transparency the copy is already --surface-2, so the mix is the opaque
+   tier and the blur stays none: the machine's setting wins whichever is stamped,
+   and ThemeService does not stamp this one under it. A swatch carrying its own
+   data-theme redeclares the materials inside it and shows them clear, which is
+   what a swatch is for. */
+:root[data-glass="tinted"] {
+    --glass-tint: 50%;
+    --glass-clear-ultrathin: var(--material-ultrathin);
+    --glass-clear-thin: var(--material-thin);
+    --glass-clear-regular: var(--material-regular);
+    --glass-clear-thick: var(--material-thick);
+}
+
+:root[data-glass="tinted"] > body {
+    --material-ultrathin: color-mix(in srgb, var(--glass-clear-ultrathin), var(--surface-2) var(--glass-tint));
+    --material-thin: color-mix(in srgb, var(--glass-clear-thin), var(--surface-2) var(--glass-tint));
+    --material-regular: color-mix(in srgb, var(--glass-clear-regular), var(--surface-2) var(--glass-tint));
+    --material-thick: color-mix(in srgb, var(--glass-clear-thick), var(--surface-2) var(--glass-tint));
+}
+
+/* ---- Forced colours: a Windows contrast theme -----------------------------------
+   Under forced-colors the browser replaces every colour with the operator's own system palette
+   and drops box-shadow, text-shadow and gradients. That costs the desk more than its looks: the
+   focus ring is a box-shadow, so it vanishes; selection and "on" are washes, so they vanish; a
+   Filled key and a Plain one become the same word on the same Canvas. This block restores the
+   distinctions and nothing else — it does not restyle the desk in system colours, which the
+   browser has already done. The guidance it follows is MDN's and Firefox's High Contrast Mode
+   notes: restore what was lost, and spend system colours in their pairs (Highlight with
+   HighlightText, ButtonFace with ButtonText, Canvas with CanvasText) so whatever palette the
+   operator chose, each pair still contrasts.
+
+   Weight, not !important. The block sits in desk.css, which loads before controls.css and the
+   bridge, so every rule here carries :root to outweigh the rule it answers wherever that lives.
+   The focus rule needs more: dozens of controls state their own `outline: none` beside their
+   ring, up to seven classes deep in the bridge, so it carries an id's weight through
+   :not(#\#) — a clause that matches every element and exists only to be heavier than they are.
+
+   One house rule gives way here, on purpose. Buttons, fields and segmented tracks carry no edge
+   at rest ("one edge"), because fill and shadow say "control" instead; a contrast theme takes
+   both away, and a control with no edge on Canvas is not a control. So each gets a 1px system
+   edge here — an outline drawn inset, so nothing moves by a pixel — and so does each surface that
+   was a card only by its fill. */
+@media (forced-colors: active) {
+    /* Focus: a real outline wherever the desk draws --focus-ring. The scrolling desk and page
+       take programmatic focus only, and stay unringed as they are everywhere else. */
+    :root :focus-visible:not(.desk[tabindex="-1"], .deskpage[tabindex="-1"], #\#) {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+    }
+
+    /* Inside a parent that clips (a tab strip, a launcher, a grid row), the ring goes inside,
+       as --focus-ring-inset does. */
+    :root :is(.tabs__tab, .launcher__item, .logrow__head, .snippet__open,
+              .deskgrid--clickable .mud-table-row):focus-visible:not(#\#) {
+        outline-offset: -2px;
+    }
+
+    /* The native input is transparent and the drawn shape beside it is what the eye reads, so
+       the ring goes on the shape. A field rings under the pointer too, as it does on the desk. */
+    :root .checkbox__input:focus-visible + .checkbox__box,
+    :root .toggle__input:focus-visible + .toggle__track,
+    :root .field:focus {
+        outline: 2px solid Highlight;
+        outline-offset: 2px;
+    }
+
+    /* Controls at rest: the sanctioned exception to "no outline at rest", above. */
+    :root .desk-btn,
+    :root .btn,
+    :root .popup__key,
+    :root .marble-row.gate,
+    :root .field,
+    :root .stepper,
+    :root .toggle__track,
+    :root .radio__mark {
+        outline: 1px solid ButtonBorder;
+        outline-offset: -1px;
+    }
+
+    /* Surfaces that were cards by their fill or their shadow alone: windows, floating panels,
+       sheets, notes and notices. A group, a metric or the answer under a row (a card) already carries
+       its one hairline, and the browser keeps it in CanvasText. */
+    :root .win,
+    :root .popover__panel,
+    :root .mud-popover.mud-popover-open,
+    :root .palette__panel,
+    :root .bar__menu .bar__menu-panel,
+    :root .deskdialog,
+    :root .mud-dialog.desk-sheet,
+    :root .desk-alert,
+    :root .toast,
+    :root .note {
+        outline: 1px solid CanvasText;
+        outline-offset: -1px;
+    }
+
+    /* A state tag keeps its word — the word was always the reading; hue only sharpened it — and
+       gets an edge, so it is still a tag and not loose text. */
+    :root .tag {
+        outline: 1px solid CanvasText;
+        outline-offset: -1px;
+    }
+
+    /* The attention marks keep their shapes in system colours. A fill would be dropped, so both
+       are drawn as borders, which the browser keeps: a ring for a warning, and for a breach a
+       border thick enough to fill the dot. */
+    :root :is(.wtabs__state.pulse--critical, .menu__attention--negative) { border: 4px solid CanvasText; }
+    :root :is(.wtabs__state.pulse--warn, .menu__attention--warning) { border: 1.5px solid CanvasText; }
+
+    /* Selected, on, current: Highlight behind HighlightText, the system's own selection. The
+       sliding caps and marbles that drew it are fills on fills, so they stand down and the
+       chosen option carries the pair itself. */
+    :root .marble.gate__cap,
+    :root .tabs__marble {
+        visibility: hidden;
+    }
+
+    :root .gate__opt--on,
+    :root .tabs__tab--on,
+    :root .bar__key--current,
+    :root .bar__group--current,
+    :root .rail__btn--accent,
+    :root .palette__item--active,
+    :root .menu__item:hover,
+    :root .menu__item:focus-visible,
+    :root .wstep--current .wstep__title {
+        background-color: Highlight;
+        color: HighlightText;
+    }
+
+    :root :is(.bar__key--current, .bar__group--current) svg {
+        color: HighlightText;
+    }
+
+    /* Open but not current, and a tab group's key while its menu is up: an edge, not the pair —
+       the pair is for the one place the operator is. */
+    :root .bar__key--open,
+    :root .bar__group--open,
+    :root .wtabs__key[aria-expanded="true"] {
+        outline: 1px solid CanvasText;
+        outline-offset: -1px;
+    }
+
+    /* No finish under forced colours: a key is the system's flat pair and its edge. */
+    :root :is(.desk-btn, .popup__key, .wtabs__key, .wtabs__tab) { background-image: none; }
+
+    /* The Filled key, and a key held down while its answer shows. Through the button's own
+       dials, so every hover and press rule that turns them keeps landing on the pair. */
+    :root .desk-btn--filled,
+    :root .desk-btn--filled:hover:not(:disabled),
+    :root .desk-btn--filled:active:not(:disabled),
+    :root .desk-btn--on,
+    :root .desk-btn--on:hover:not(:disabled) {
+        --btn-fill: Highlight;
+        --btn-ink: HighlightText;
+        outline-color: Highlight;
+    }
+
+    /* Checked toggle, ticked box, chosen radio: the pair again, with the moving part (thumb,
+       tick, dot) in the pair's ink so it reads on the fill. At rest the thumb is ButtonText on
+       the track's ButtonFace, where it would otherwise be forced to the Canvas it sits on. */
+    :root .toggle__track { background-color: ButtonFace; }
+    :root .toggle__thumb { background-color: ButtonText; }
+
+    :root .toggle__input:checked + .toggle__track,
+    :root .checkbox__input:checked + .checkbox__box,
+    :root .radio--on .radio__mark {
+        background-color: Highlight;
+        border-color: Highlight;
+        outline-color: Highlight;
+    }
+
+    :root .toggle__input:checked + .toggle__track .toggle__thumb,
+    :root .radio--on .radio__mark::after {
+        background-color: HighlightText;
+    }
+
+    :root .checkbox__input:checked + .checkbox__box::after { border-color: HighlightText; }
+
+    /* The open row's answer: an edge in Highlight rather than a fill, because what it holds is a
+       row of keys and words that the pair would repaint. */
+    :root .deskgrid__child > td {
+        outline: 1px solid Highlight;
+        outline-offset: -1px;
+    }
+
+    /* Disabled is GrayText, the system's word for it, edge and all. */
+    :root :is(button, input, select, textarea):disabled,
+    :root .desk-btn:disabled,
+    :root .tabs__tab--off {
+        --btn-ink: GrayText;
+        color: GrayText;
+        outline-color: GrayText;
+    }
+
+    /* A switch's input is the invisible sheet over its row, so the rule above greys nothing
+       anyone sees: the drawn parts take GrayText themselves — the track's edge, the thumb, the
+       words — and a switch that is on but cannot be changed gives up the Highlight pair for a
+       GrayText track under a Canvas thumb, so "on" never reads as "available". */
+    :root .toggle__input:disabled + .toggle__track { outline-color: GrayText; }
+    :root .toggle__input:disabled + .toggle__track .toggle__thumb { background-color: GrayText; }
+    :root .toggle__input:disabled ~ .toggle__label { color: GrayText; }
+
+    :root .toggle__input:disabled:checked + .toggle__track { background-color: GrayText; }
+    :root .toggle__input:disabled:checked + .toggle__track .toggle__thumb { background-color: Canvas; }
+
+    /* A link is LinkText. The desk's links are buttons that read as names (DeskLink), so they are
+       named here rather than found by element. */
+    :root a:not(.desk-btn),
+    :root .desklink,
+    :root .desklink__label,
+    :root .desklink__shortcut {
+        color: LinkText;
+    }
+
+    /* The drawn chevron is a gradient, which the browser drops; the native one comes back. */
+    :root select.field {
+        appearance: auto;
+        padding-right: var(--space-2);
+    }
+
+    /* No materials: a translucent Canvas over a blurred desk is the one thing a contrast theme
+       cannot read through. Every material and the blur are tokens, so the tokens go opaque and
+       the blur goes to none; html:root outweighs the theme blocks that declare them. */
+    /* The ground is plain whatever backdrop is chosen: a grid or a glow is decoration, and in a
+       contrast theme the Canvas behind the start screen's words is the operator's own. */
+    :root .desk,
+    :root[data-backdrop] .desk {
+        background-image: none;
+    }
+
+    html:root {
+        --material-ultrathin: Canvas;
+        --material-thin: Canvas;
+        --material-regular: Canvas;
+        --material-thick: Canvas;
+        --material-blur: none;
+    }
+
+    /* Colour is the information in a theme or accent swatch: forcing it would draw nine
+       identical tiles. These two, and nothing else, keep their own colours; the chosen one is
+       still marked in Highlight, which a contrast theme resolves even here. */
+    :root .swatch,
+    :root .accent-swatch {
+        forced-color-adjust: none;
+    }
+
+    :root .swatch--on { box-shadow: 0 0 0 3px Highlight; }
+    :root .swatch__tick { background-color: Highlight; }
+    :root .swatch__tick::after { border-color: HighlightText; }
+    :root .accent-swatch--on::after { border-color: Highlight; }
+}

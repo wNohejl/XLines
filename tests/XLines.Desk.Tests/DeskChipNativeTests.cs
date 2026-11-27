@@ -255,7 +255,7 @@ public class DeskChipNativeTests : DeskTestContext
     {
         var css = Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css");
 
-        Assert.Contains(".desk-chip--native {", File.ReadAllText(Path.Combine(css, "desk.css")));
+        Assert.Contains(".desk-chip--native {", DeskCss.Sheet("desk.css"));
         Assert.DoesNotContain("desk-chip--native", File.ReadAllText(Path.Combine(css, "mud-bridge.css")));
     }
 

@@ -33,12 +33,27 @@ public static class DeskCss
     /// <summary>A brace-balanced group: <c>{ … { … } … }</c>.</summary>
     public const string Balanced = @"\{(?>[^{}]+|\{(?<d>)|\}(?<-d>))*(?(d)(?!))\}";
 
-    /// <summary>One of the Desk's sheets as it ships, comments and all.</summary>
+    /// <summary>
+    /// The files a sheet was cut into at its banners, in the order DeskHead links them. desk.css and
+    /// themes.css are each one sheet in several files (no file over 2000 lines); every other sheet
+    /// is its one file. A test about "desk.css" means the whole sheet, so it reads <see cref="Sheet"/>.
+    /// </summary>
+    public static IReadOnlyList<string> Parts(string sheet) => sheet switch
+    {
+        "desk.css" => ["desk.css", "desk-shell.css", "desk-windows.css", "desk-primitives.css", "desk-feedback.css", "desk-appearance.css"],
+        "themes.css" => ["themes.css", "themes-more.css", "themes-accents.css"],
+        _ => [sheet],
+    };
+
+    /// <summary>One file of the Desk's sheets as it ships, comments and all.</summary>
     public static string Raw(string name)
         => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", name));
 
-    /// <summary>One of the Desk's sheets with its comments taken out.</summary>
-    public static string Stripped(string name) => Strip(Raw(name));
+    /// <summary>One of the Desk's sheets whole: its parts concatenated in link order, comments and all.</summary>
+    public static string Sheet(string name) => string.Concat(Parts(name).Select(Raw));
+
+    /// <summary>One of the Desk's sheets, whole, with its comments taken out.</summary>
+    public static string Stripped(string name) => Strip(Sheet(name));
 
     public static string Strip(string css) => Regex.Replace(css, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
 

@@ -267,7 +267,7 @@ public class QuickTakeTests : WagerTestContext
     [Fact]
     public void The_take_s_typed_fields_are_sized_by_what_they_hold_not_stretched()
     {
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+        var css = Support.Sheets.App;
 
         Assert.DoesNotContain(".qtake__typed .wfield--short", css);
         Assert.DoesNotContain(".wager-typed__cell > .field-set { flex: 1 1", css);

@@ -443,7 +443,7 @@ public class ThemeBootTests
     [Fact]
     public void The_tinted_glass_is_derived_for_every_family_and_keeps_its_blur()
     {
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         var rules = Regex.Matches(DeskConventions.WithoutComments(css), @"([^{}]*\[data-glass=""tinted""\][^{}]*)\{([^}]*)\}")
             .ToList();
 

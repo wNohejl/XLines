@@ -15,7 +15,7 @@ namespace XLines.Web.Tests;
 public class RosterTableFitTests : DeskTestContext
 {
     private static readonly string Css =
-        File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+        Support.Sheets.App;
 
     private static PlayerForm Player(int id, string name) => new(
         id, name, "WR", true, 3, DateTimeOffset.UtcNow.AddDays(-4),

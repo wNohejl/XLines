@@ -12,7 +12,7 @@ namespace XLines.Desk.Tests;
 public class TableMeasureCssTests
 {
     private static string Css => DeskConventions.WithoutComments(
-        File.ReadAllText(Path.Combine(Support.Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css")));
+        Support.DeskCss.Sheet("desk.css"));
 
     private static string Rule(string selector)
     {

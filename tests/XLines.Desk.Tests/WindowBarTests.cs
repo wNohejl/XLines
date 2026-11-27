@@ -327,7 +327,7 @@ public class WindowBarTests : SampleDeskTestContext
         Assert.Equal(["Minimise Notes", "Maximise Notes", "Close Notes"], keys.Select(k => k.GetAttribute("aria-label")));
         Assert.All(keys, k => Assert.Null(k.GetAttribute("data-glide-tone")));
 
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.DoesNotContain(".win__ctl::before", css);
         Assert.DoesNotMatch(@"\.win__ctl[\w-]*:hover[^{]*\{[^}]*state-negative", css);
         // Square at the toolbar control's height, which Density moves (--control-h, 28px at Standard).

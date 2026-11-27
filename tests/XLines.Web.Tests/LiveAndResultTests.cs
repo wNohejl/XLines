@@ -15,7 +15,7 @@ namespace XLines.Web.Tests;
 public class LiveAndResultTests : DeskTestContext
 {
     private static readonly string Css =
-        File.ReadAllText(Path.Combine(RepoRoot(), "src/XLines.Desk/wwwroot/css/desk.css"));
+        Support.Sheets.Desk("desk.css");
 
     // ---- Live ----------------------------------------------------------------------------
 
@@ -233,7 +233,7 @@ public class WagerLiveTagTests : XLines.Web.Tests.Support.WagerTestContext
 /// </summary>
 public class BoardMatchupCellTests
 {
-    private static readonly string Css = File.ReadAllText(Path.Combine(Root(), "src/XLines.Web/wwwroot/css/xlines.css"));
+    private static readonly string Css = Support.Sheets.App;
     private static readonly string Razor = File.ReadAllText(Path.Combine(Root(), "src/XLines.Web/Components/Panels/BoardPanel.razor"));
 
     [Fact]

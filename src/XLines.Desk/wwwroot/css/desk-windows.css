@@ -1,0 +1,1685 @@
+/* ---------------------------------------------------------------- desk ---- */
+
+.desk {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    overflow: auto;
+
+    /* A faint dot grid. Windows read as *placed* rather than floating, and it gives
+       the eye a reference when dragging. Deliberately near-invisible. It is the Dots
+       backdrop, the default, so it stamps nothing; the others follow. */
+    background-color: var(--surface-0);
+    background-image: radial-gradient(var(--surface-3) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-position: -1px -1px;
+}
+
+/* The backdrop (DeskBackdrop): what the ground carries behind the windows, on .desk alone.
+   Windows are opaque and chrome is material, so nothing printed on a window sits on it; the
+   empty desk's start screen does, and every pattern is a token its secondary text is already
+   held to — --surface-2 for the grid's lines, --surface-3 for the dots, and the accent mixed into
+   the ground at --backdrop-tint for the glow, which ThemeContrastTests measures on every desk in
+   every accent. Keyed on data-backdrop, never on a family: it is drawn in whichever is showing.
+   A Windows contrast theme gets the plain ground (the forced-colours block, at the end). */
+:root[data-backdrop="plain"] .desk { background-image: none; }
+
+:root[data-backdrop="gradient"] .desk {
+    background-image: radial-gradient(
+        120% 90% at 50% 0%,
+        color-mix(in srgb, var(--accent) var(--backdrop-tint), var(--surface-0)),
+        var(--surface-0) 72%);
+    background-size: auto;
+    background-position: 0 0;
+    background-attachment: local;
+}
+
+:root[data-backdrop="grid"] .desk {
+    background-image:
+        linear-gradient(var(--surface-2) 1px, transparent 1px),
+        linear-gradient(90deg, var(--surface-2) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -1px -1px;
+}
+
+/* The desk is the page's main landmark, and a router's FocusOnNavigate lands focus on it
+   (tabindex -1) so a reader starts there. That focus is a starting point, not a selection:
+   ringing the whole desk would say every window was chosen at once. */
+.desk[tabindex="-1"]:focus, .deskpage[tabindex="-1"]:focus { outline: none; box-shadow: none; }
+
+/* Windows position against this, so a declared resolution gets a real surface of that
+   size and the desk scrolls to it, rather than layout pretending the screen is bigger. */
+.desk__surface {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-width: 100%;
+    min-height: 100%;
+}
+
+/* Empty desk: a way into a workflow, not a paragraph about the desk (HIG, Onboarding).
+   One centred column held to a reading measure, so it reads the same at 2400px as at 700px:
+   the wordmark, a headline and one sentence; the first workspace as a card with the page's one
+   Filled key; the others as a grouped list of rows; a quieter line for a single window and the
+   palette; and the desk's mechanics folded into a disclosure. The column scrolls when the desk
+   is shorter than it, and centres when it is not. */
+.desk-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    overflow-y: auto;
+    padding: var(--space-6) var(--space-4);
+}
+
+.desk-empty__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    width: min(640px, 100%);
+    margin: auto;
+}
+
+.desk-empty__lead {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+}
+
+.desk-empty__mark {
+    margin-bottom: var(--space-2);
+    font-family: var(--face-display);
+    font-size: clamp(32px, 5vw, 56px);
+    font-weight: var(--weight-bold);
+    font-stretch: 112%;
+    letter-spacing: -.03em;
+    line-height: .9;
+    color: var(--surface-3);
+    text-transform: uppercase;
+}
+
+.desk-empty__mark em {
+    font-style: normal;
+    color: var(--accent-ink);
+}
+
+.desk-empty__headline {
+    font-family: var(--face-display);
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--text-largetitle);
+    font-weight: var(--weight-bold);
+    line-height: 1.2;
+}
+
+.desk-empty__sub {
+    margin: 0;
+    max-width: 52ch;
+    color: var(--text-secondary);
+    font-size: var(--text-body);
+    line-height: 1.5;
+}
+
+/* The first workspace: a card — the surface a window's body is, one hairline — with its icon in
+   an accent plate, its name, its sentence, the windows it opens and the Filled key. */
+.desk-empty__featured {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--space-3) var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    background: var(--surface-1);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-panel);
+}
+
+.desk-empty__icon {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+}
+
+.desk-empty__icon svg { width: 18px; height: 18px; }
+
+.desk-empty__icon--featured {
+    width: 40px;
+    height: 40px;
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+}
+
+.desk-empty__icon--featured svg { width: 22px; height: 22px; }
+
+.desk-empty__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    text-align: left;
+}
+
+.desk-empty__name {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: var(--text-headline);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+}
+
+.desk-empty__featured .desk-empty__name { font-size: var(--text-title2); }
+
+.desk-empty__desc {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-subheadline);
+    line-height: 1.45;
+}
+
+.desk-empty__windows {
+    margin: 0;
+    color: var(--text-tertiary);
+    font-size: var(--text-footnote);
+    line-height: 1.45;
+}
+
+.desk-empty__go { justify-self: end; }
+
+/* The other workspaces: one group, one hairline, rows parted by inset rules. */
+.desk-empty__group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.desk-empty__heading {
+    margin: 0;
+    padding: 0 var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-semibold);
+}
+
+.desk-empty__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    background: var(--surface-1);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-panel);
+    overflow: hidden;
+}
+
+.desk-empty__item + .desk-empty__item .desk-empty__row::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: calc(var(--space-4) + 28px + var(--space-3)); /* inset to the label's edge */
+    right: 0;
+    height: 1px;
+    background: var(--separator);
+}
+
+.desk-empty__row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.desk-empty__row:hover { background: var(--accent-wash); }
+.desk-empty__row:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
+
+.desk-empty__row .desk-empty__body { flex: 1 1 auto; }
+
+.desk-empty__chevron {
+    display: inline-flex;
+    flex: none;
+    color: var(--text-tertiary);
+}
+
+.desk-empty__chevron svg { width: 18px; height: 18px; }
+
+/* The quieter way in: one window, or the palette. */
+.desk-empty__single {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1) var(--space-2);
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: var(--text-subheadline);
+}
+
+.desk-empty__single kbd {
+    display: inline-block;
+    min-width: 20px;
+    margin: 0 1px;
+    padding: 0 var(--space-1);
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--face-ui);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-semibold);
+    line-height: 18px;
+    text-align: center;
+}
+
+/* The desk's mechanics, for whoever wants them, and out of the way of whoever does not. */
+.desk-empty__how {
+    align-self: center;
+    max-width: 52ch;
+    color: var(--text-secondary);
+    font-size: var(--text-subheadline);
+}
+
+.desk-empty__facts {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: var(--space-1) 0 0;
+    padding-left: var(--space-4);
+    line-height: 1.5;
+}
+
+/* A narrow desk: the featured card stacks its key under its words, at the card's full width. */
+
+@media (max-width: 560px) {
+    .desk-empty__featured { grid-template-columns: auto 1fr; }
+    .desk-empty__go { grid-column: 1 / -1; justify-self: stretch; }
+}
+
+/* Under 720px the desk scrolls as one column with no fixed height, so the empty desk is in the
+   flow rather than laid over a surface that has none. */
+@media (max-width: 720px) {
+    .desk-empty { position: relative; inset: auto; padding: var(--space-4) var(--space-2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .desk-empty__row { transition: none; }
+}
+
+/* -------------------------------------------------------------- window ---- */
+
+/* A column. Positioned and sized horizontally only — top and bottom are the row. */
+.win {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--surface-1);
+    border: 0;
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-3);
+    /* clip, not hidden: a hidden box is still a scroll container, and the browser scrolls one
+       to bring a focused or pressed control into view. A key pressed near the bottom edge
+       while the row was sliding scrolled the whole column up a few pixels, bar and toolbar
+       with it, and nothing could scroll it back — the title bar's keys and the toolbar's
+       trailing keys sat cut off above the box. A clipped box cannot scroll at all; the
+       body below is the window's one scroll container. */
+    overflow: clip;
+    z-index: var(--z-window);
+    /* left/width transition is what makes the row "settle" after a reorder, a resize
+       commit, a new column, or a close — every column slides to its new slot instead of
+       jumping. Suppressed during the two live gestures below, where a transition would
+       lag a frame behind the pointer instead of tracking it. */
+    transition: left var(--dur-fast) var(--ease-standard), width var(--dur-fast) var(--ease-standard);
+}
+
+body.splitting .win, body.tab-dragging .win { transition: none; user-select: none; }
+
+/* The browser being resized re-lays the row every frame; sliding each step left the columns
+   trailing the window's edge (windowing.js sets the class until the edge is still). */
+body.viewport-resizing .win { transition: none; }
+
+/* Before the first measurement the row is laid out against a guessed width (Desk.razor). The
+   windows wait unseen for the one round trip rather than draw that guess and slide off it. */
+.desk--unmeasured .win { visibility: hidden; transition: none; }
+
+/* The dragged tab floats in front of whatever it passes over while it looks for a slot —
+   this is the interaction the row is built around: a window is its own tab, and moving it
+   is a direct, physical drag, not a trip through a menu. */
+.win.win--dragging-tab {
+    z-index: var(--z-divider);
+    box-shadow: var(--shadow-sheet);
+    cursor: grabbing;
+}
+
+body.tab-dragging .win__bar[data-tab-handle] { cursor: grabbing; }
+
+/* The window a dragged tab will join if let go now: the middle of a window takes it as a tab,
+   its outer quarters still move it beside (windowing.js). Washed and ringed in the accent, the
+   same answer the tab menu's selected row gives, so where it lands is said before the drop. */
+.win.win--tab-target::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: var(--accent-wash);
+    box-shadow: inset 0 0 0 2px var(--accent);
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+/* A row of a tab menu, lifted off the menu and following the pointer to another window. */
+.tab-ghost {
+    position: fixed;
+    z-index: var(--z-toast);
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: var(--shadow-sheet);
+    pointer-events: none;
+    transform: translate(12px, 8px);
+}
+
+body.tab-dragging [data-tab-drag-id] { cursor: grabbing; }
+
+/* Collapsed: a slim, title-only tab. Still a full member of the row — there is no other
+   list it could be sitting in instead. */
+.win--collapsed {
+    min-width: 0;
+}
+
+.win--collapsed .win__bar {
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+}
+
+.win--collapsed .win__icon { color: var(--text-secondary); }
+
+/* The stub's one key (AppWindow): the whole bar, so a press anywhere on it restores, and a key
+   so the keyboard can. Its ring sits inside the column, whose edge clips anything outside. */
+.win__restore {
+    flex: 1 1 auto;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    padding: var(--space-2) 0;
+    background: none;
+    border: 0;
+    border-radius: inherit;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.win__restore:hover { background: var(--surface-3); }
+.win__restore:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
+
+/* Drawn for the stacked layout's full-width row; the column stub is its icon alone. */
+.win__title--stub { display: none; }
+
+/* A window body is opaque and borderless, so focus is signalled by the title bar and the
+   window's depth — no ambient glow, no ring around the whole column. Unfocused windows
+   recede a shade, as if the bar had settled back into the body it sits on.
+
+   Two signals, said the way the rest of the desk says them. The focused column's icon wears the
+   wash the current key in the header strip wears, because it is the same fact — this is the
+   one you are in — and the accent is for selection. And it stands a step nearer: the focused
+   column keeps the window's full shadow while the others sit closer to the ground, the way a
+   Mac's key window casts the larger shadow. The bar's shade alone was one step of the surface
+   ramp, too slight to find across a row of three. */
+.win--focused .win__title {
+    color: var(--text-primary);
+}
+
+.win:not(.win--focused) {
+    box-shadow: var(--shadow-2);
+}
+
+.win--focused .win__icon {
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+}
+
+.win:not(.win--focused) .win__bar {
+    background: var(--surface-1);
+}
+
+.win:not(.win--focused) .win__title {
+    color: var(--text-secondary);
+}
+
+.win__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--titlebar-h);
+    /* Spacing tokens, so the bar follows Density with the body under it. At 4px from the edge,
+       the keys at either end sat inside the window's rounded corner and lost a corner of their
+       hover fill and focus ring to its clip. */
+    padding: 0 var(--space-2) 0 var(--space-3);
+    background: var(--surface-2);
+    flex: 0 0 auto;
+    /* The bar answers to its own column's width, not the viewport's: three columns on a wide
+       screen are each as narrow as one on a laptop. See "The bar at a column's narrowest". */
+    container: winbar / inline-size;
+}
+
+/* A subject window's own Back and Forward, at the leading edge of its bar the way a browser
+   puts them. Quiet chevrons, not traffic-light dots: these move through what the window shows,
+   and the dots at the other end act on the window itself. The bar's left padding is given up
+   to them so the chevron, not its box, lines up with the body's edge. */
+.win__nav {
+    display: flex;
+    gap: 0;
+    flex: 0 0 auto;
+    margin-left: calc(-1 * var(--space-1));
+}
+
+/* 28px, the toolbar control's height, in a 34px bar. */
+.win__nav-btn {
+    width: var(--control-h);
+    height: var(--control-h);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard),
+                color var(--dur-fast) var(--ease-standard);
+}
+
+.win__nav-btn svg { width: 16px; height: 16px; }
+
+.win__nav-btn:hover:not(:disabled) {
+    background: var(--surface-3);
+    color: var(--text-primary);
+}
+
+/* Dimmed once, as a disabled key is everywhere on the desk: tertiary ink under .45 as well
+   put it near 1.5:1, a key nobody could find to learn it was waiting. */
+.win__nav-btn:disabled {
+    opacity: .38;
+    cursor: default;
+}
+
+.win__nav-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Refresh, third of the leading keys on every bar. While the window loads its glyph turns —
+   the pulse's Active said on the key that asked — and stands still for Reduce Motion, where the
+   pulse strip under the bar already says it. */
+.win__refresh--busy svg { animation: win-refresh-turn var(--dur-spin) linear infinite; }
+
+@keyframes win-refresh-turn {
+    to { rotate: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .win__refresh--busy svg { animation: none; }
+}
+
+/* A 22px plate every icon has, washed only on the focused column, so focusing a window lights
+   the plate without moving the title beside it. */
+.win__icon {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+}
+
+.win__icon svg { width: 15px; height: 15px; }
+
+.win__title {
+    font-family: var(--face-display);
+    font-size: var(--text-headline);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Keeps a few letters however narrow the column, so a cut title is still a word. */
+    flex: 0 1 auto;
+    min-width: 4ch;
+}
+
+/* The window's own reading beside its name ("3 open"). It gives way long before the title
+   does — a far larger shrink factor, so the title keeps its width until the status has none —
+   and stands a step further off than the bar's gap, so the two read as a name and a remark
+   rather than one run of words. */
+.win__status {
+    font-size: var(--text-subheadline);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 0 40 auto;
+    min-width: 0;
+    margin-left: var(--space-1);
+}
+
+.win__spacer { flex: 1 1 auto; min-width: 8px; }
+
+/* ---- The bar at a column's narrowest -------------------------------------
+   A column can be as narrow as its window's minimum, and three keys at each end leave little
+   between them. The bar gives width back in a fixed order rather than letting everything shrink
+   at once: the status first (the title's tooltip still carries it), then the icon, which only
+   repeats what the title says. The keys never shrink, and Close keeps its step apart from the
+   others: a 28px target is the smallest the desk draws, and a narrow bar is where a hurried
+   click is likeliest. A collapsed column's bar is narrow by design and is nothing but its
+   icon, so it is left out. */
+@container winbar (max-width: 380px) {
+    .win__status { display: none; }
+}
+
+@container winbar (max-width: 300px) {
+    .win:not(.win--collapsed) .win__icon { display: none; }
+}
+
+/* Then Back and Forward: first a pair with nowhere to go, which says nothing at this width, then
+   the pair outright (Ctrl+[ and Ctrl+] still press them); last Minimise. Maximise and Close stay
+   whatever the width: under ~250px the keys did not fit, and the column's clip cut off Close, the
+   one key that ends the window. */
+@container winbar (max-width: 380px) {
+    .win__nav:not(:has(.win__nav-btn:enabled)) { display: none; }
+}
+
+/* Refresh goes with them: Alt+R still presses it, and a panel reloads itself when its data moves. */
+@container winbar (max-width: 300px) {
+    .win__refresh { display: none; }
+}
+
+@container winbar (max-width: 260px) {
+    .win__nav { display: none; }
+}
+
+@container winbar (max-width: 210px) {
+    .win__controls > .win__ctl:first-child { display: none; }
+}
+
+/* A step of the ramp between the keys, so a hover fill reads as one key lit rather than a
+   strip lighting in thirds, and a second step before Close: the key that ends the window
+   stands a little apart from the keys that only rearrange it, so a hurried click on Minimise
+   does not land on Close. */
+.win__controls {
+    display: flex;
+    gap: var(--space-1);
+    flex: 0 0 auto;
+}
+
+.win__controls > .win__ctl--close { margin-left: var(--space-2); }
+
+/* The desk's own plain icon keys: 28px — the toolbar's control height and the smallest target
+   the desk draws, held inside the 34px title bar — the glyph always drawn
+   in secondary ink. They were 12px grey dots that showed their glyphs only on hover — a
+   Mac's traffic lights set in a Windows order, the half-imitation of system chrome the HIG
+   says reads as broken. A key says what it does at rest; a dot made the operator hover to
+   find out. The hover is the --surface-3 fill every plain key on the desk takes, Close's
+   included: closing a window is dismissal, not destruction, and a window holding unsaved
+   input asks before it goes. */
+.win__ctl {
+    width: var(--control-h);
+    height: var(--control-h);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard),
+                color var(--dur-fast) var(--ease-standard);
+}
+
+.win__ctl svg { width: 16px; height: 16px; }
+
+.win__ctl:hover {
+    background: var(--surface-3);
+    color: var(--text-primary);
+}
+
+.win__ctl:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ---- Tab groups ------------------------------------------------------------
+   Past the column limit a column holds several windows, one showing (ADR 0027). Every one is
+   still on the page, stacked in the column's box: the ones behind keep their panels, scroll and
+   input, and are taken out of sight, out of the tab order (inert) and out of the accessibility
+   tree. Visibility rather than display: a hidden box is still laid out, so a scrolled list is
+   still scrolled when its tab comes forward.
+   ------------------------------------------------------------------------- */
+
+.win--behind {
+    visibility: hidden;
+    pointer-events: none;
+    box-shadow: none;
+}
+
+/* The group's title is a pop-up key (WindowTabs): the window showing — its icon and its name,
+   set exactly as a plain window's title is — then the column's count and the up-and-down
+   chevron. It sits where a plain window's title sits, and the bar's width past it goes back to
+   the window's status and its own keys: the windows behind are in the key's menu, not along
+   the bar.
+
+   It reads as a stack (amended 21 November 2026, ADR 0027): the key is a gray key with the
+   Desk's finish (a top line and a sheen, "Finish" under the buttons), and an edge for each window
+   behind — two at most — steps out to its right, a little shorter each, as the Activities stack's
+   layers do (ADR 0028). The key is opaque, so only the edges show. Hover deepens it; open, the
+   accent rings it, as a pop-up's key is ringed while its list is up (controls.css, .popup__key). */
+.wtabs {
+    --tab-step: 4px;
+
+    position: relative;
+    display: flex;
+    align-items: center;
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+/* Room for the edges, so the window's own figure never runs into them. */
+.wtabs--depth-1 { margin-right: var(--tab-step); }
+.wtabs--depth-2 { margin-right: calc(2 * var(--tab-step)); }
+
+.wtabs__layer {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-sm);
+    background: var(--surface-3);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 40%, transparent);
+    pointer-events: none;
+}
+
+.wtabs__layer--1 { translate: var(--tab-step) 0; scale: 1 .78; opacity: .8; }
+.wtabs__layer--2 { translate: calc(2 * var(--tab-step)) 0; scale: 1 .56; opacity: .55; }
+
+/* After the layers in the DOM, so it paints over them with no z-index: its menu's panel keeps
+   the popover tier it has everywhere. */
+.wtabs__popover {
+    position: relative;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.wtabs__key {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    max-width: 100%;
+    height: var(--control-h);
+    margin: 0;
+    padding: 0 var(--space-1) 0 3px; /* the icon's 22px plate centres in the 28px key */
+    background-color: var(--surface-3);
+    background-image: linear-gradient(to bottom, var(--key-gloss), transparent 38%);
+    border: 0;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 60%, transparent);
+    color: var(--text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color var(--dur-fast) var(--ease-standard),
+                box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.wtabs__key:hover { background-color: color-mix(in srgb, var(--surface-3), var(--text-primary) 8%); }
+.wtabs__key:active { background-image: none; box-shadow: inset 0 1px 2px var(--key-press); }
+/* The open key's ring is a stroke, so it is the accent's ink, as the focus ring is. */
+.wtabs__key[aria-expanded="true"] { box-shadow: inset 0 0 0 1.5px var(--accent-ink); }
+.wtabs__key:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* The window's own reading, beside a group's key, stands a full step further off than a plain
+   title's, so "Window manager · 2 tabs" and "2 of 2 columns" are never read as one run. */
+.win__bar--group .win__status { margin-left: var(--space-3); }
+
+/* How many windows share the column, after the name and parted from it by a middle dot, in
+   words — "2 tabs" — so it cannot be read as part of the window's own figure: secondary ink,
+   never a capsule — a filled oval with a number is the platform's unread badge, and this is a
+   count of tabs, not of anything unread (HIG, Notifications). At a column's narrowest the word
+   goes and the figure stays (below). */
+.wtabs__count {
+    flex: none;
+    color: var(--text-secondary);
+    font-size: var(--text-subheadline);
+    font-weight: var(--weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.wtabs__count::before {
+    content: '·';
+    margin-right: var(--space-1);
+    color: var(--text-tertiary);
+    font-weight: var(--weight-regular);
+}
+
+.wtabs__chevron {
+    display: inline-flex;
+    flex: none;
+    margin-left: calc(-1 * var(--space-1));
+    color: var(--text-secondary);
+}
+
+.wtabs__chevron svg { width: 14px; height: 14px; }
+
+/* A window behind that must be noticed is a mark on the closed key, told apart by shape as well
+   as hue: a ring for a warning, a filled dot for a breach (which also breathes, as the pulse
+   strip's critical does). The key's name says the same in words, its title repeats it for the
+   pointer, and the menu names the window in its row. */
+.wtabs__state {
+    flex: none;
+    box-sizing: border-box;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.wtabs__state.pulse--warn {
+    background: transparent;
+    border: 1.5px solid var(--state-warning);
+}
+
+@container winbar (max-width: 300px) {
+    .wtabs__count-word { display: none; }
+}
+
+/* The key's menu: each tab a key of its own, the same gray key with the same finish as the
+   title, so the stack on the bar and the keys in its menu read as one thing. Its title is one
+   line, cut with an ellipsis (the whole name is its tooltip and its accessible name), and the
+   window's own reading is a quiet line under it. The tab showing is the selected key: the
+   accent's wash, its name in the accent's ink, and its check — selection, never a Filled key,
+   so the context's one Filled key is untouched. Its close is a target of its own, drawn at rest
+   (Delete does the same from the keyboard). The two commands below the hairline stay plain
+   menu rows: they are commands, not tabs. */
+.wtabs__menu .wtabs__tab {
+    align-items: center;
+    margin: 0 0 2px;
+    min-height: 40px;
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius);
+    background-color: color-mix(in srgb, var(--text-primary) 6%, transparent);
+    background-image: linear-gradient(to bottom, var(--key-gloss), transparent 38%);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 60%, transparent);
+    transition: background-color var(--dur-fast) var(--ease-standard),
+                box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.wtabs__menu .wtabs__tab:hover { background-color: color-mix(in srgb, var(--text-primary) 11%, transparent); }
+
+.wtabs__menu .wtabs__tab:focus-visible {
+    background-color: color-mix(in srgb, var(--text-primary) 11%, transparent);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 60%, transparent), var(--focus-ring);
+}
+
+.wtabs__menu .wtabs__tab:active {
+    background-image: none;
+    box-shadow: inset 0 1px 2px var(--key-press);
+}
+
+/* Held from the keyboard, the key keeps its ring with its shade. */
+.wtabs__menu .wtabs__tab:focus-visible:active {
+    box-shadow: inset 0 1px 2px var(--key-press), var(--focus-ring);
+}
+
+.wtabs__menu .wtabs__tab--showing,
+.wtabs__menu .wtabs__tab--showing:hover { background-color: var(--accent-wash-strong); }
+
+.wtabs__menu .wtabs__tab--showing .menu__label {
+    color: var(--accent-ink);
+    font-weight: var(--weight-semibold);
+}
+
+.wtabs__tab .menu__label,
+.wtabs__tab .menu__desc {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow-wrap: normal;
+}
+
+.wtabs__tab .menu__check,
+.wtabs__tab .menu__icon { align-self: center; }
+
+.wtabs__tab .menu__remove {
+    width: var(--control-h);
+    height: var(--control-h);
+    margin: 0 calc(-1 * var(--space-1)) 0 0;
+    color: var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wtabs__menu .wtabs__tab { transition: none; }
+}
+
+/* Collapsed, a group's stub says how many windows it holds under its icon. */
+.win__tabcount {
+    font-size: var(--text-caption);
+    font-weight: var(--weight-semibold);
+    color: var(--text-secondary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wtabs__key { transition: none; }
+}
+
+/* ---- SIGNATURE: the pulse strip ------------------------------------------
+   A 2px live band under every title bar, mirrored on the window's rail chip.
+   It reports that window's own state, so an unfocused — or minimised — window
+   can still tell you something changed. This is the reason to run a desk of
+   windows instead of a stack of tabs, so it is the one element allowed to be
+   loud, and everything around it stays quiet.
+   ------------------------------------------------------------------------- */
+
+.pulse {
+    height: 2px;
+    flex: 0 0 auto;
+    background: var(--surface-3);
+    position: relative;
+    overflow: hidden;
+}
+
+.pulse--healthy { background: var(--state-positive); }
+.pulse--warn { background: var(--state-warning); }
+.pulse--critical { background: var(--state-negative); }
+.pulse--idle { background: var(--surface-3); }
+
+/* Active is the only animated state: it means work is genuinely in flight. */
+.pulse--active { background: var(--accent-wash); }
+
+.pulse--active::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 34%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: pulse-sweep var(--dur-sweep) linear infinite;
+}
+
+@keyframes pulse-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(320%); }
+}
+
+/* Critical earns a slow breath — it is the one state you must not miss. */
+.pulse--critical { animation: pulse-breathe var(--dur-breathe) ease-in-out infinite; }
+
+@keyframes pulse-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .42; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pulse--active::after { animation: none; opacity: .85; }
+    .pulse--critical { animation: none; }
+}
+
+.win__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--win-pad); /* 14px at Standard, moved with Density (the token's comment) */
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-3) transparent;
+}
+
+/* One arrival for everything a window turns to: a page followed or stepped back to (the body is
+   built afresh), a tab brought forward, a column restored. A short fade, never a slide — the
+   content has not come from anywhere, it has replaced what was there (HIG, Motion) — and
+   opacity only, so nothing inside is re-anchored while it runs. A tab behind holds no
+   animation, which is what starts it again the moment the tab comes forward. */
+.win__body { animation: win-body-in var(--dur-fast) var(--ease-enter); }
+.win--behind .win__body { animation: none; }
+
+@keyframes win-body-in {
+    from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .win__body { animation: none; }
+}
+
+.win__body::-webkit-scrollbar { width: 10px; height: 10px; }
+.win__body::-webkit-scrollbar-thumb {
+    background: var(--surface-3);
+    border-radius: 6px;
+    border: 3px solid var(--surface-1);
+}
+
+/* ------------------------------------------------------------- divider ---- */
+
+/* The only geometry an operator can change: where two adjacent columns meet.
+   Sits in the 8px gutter between them, with a hit area twice as wide as the gutter: 4px
+   over each column's edge, which is where a reaching pointer lands. */
+.divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 16px;
+    margin-left: -4px; /* centres the 16px target on the 8px gutter */
+    z-index: var(--z-divider);
+    cursor: col-resize;
+    display: grid;
+    place-items: center;
+    background: none;
+    border: 0;
+    touch-action: none; /* the pointer gesture owns the drag, not the browser's scroll */
+}
+
+/* The seam: the line the two columns actually meet on, drawn the full height of the row once
+   the divider is reached for, so what moves is the whole edge and not a handle floating in a
+   gap. Nothing at rest — the gutter is already the edge. */
+.divider::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    transform: translateX(-50%);
+    border-radius: 1px;
+    background: transparent;
+    transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+/* At rest, a short rounded grip in tertiary ink: enough to say "this gap is a handle" across
+   the room without competing with the columns either side. It was a 2px stroke of --surface-3
+   on the desk's ground, one step of the ramp from what it sat on, and nobody found it. */
+.divider__grip {
+    position: relative;
+    width: 4px;
+    height: 36px;
+    border-radius: 2px;
+    background: var(--text-tertiary);
+    transition: background-color var(--dur-fast) var(--ease-standard), height var(--dur-fast) var(--ease-standard);
+}
+
+/* Accent, not the neutral hover fill, and deliberately: this is not a plate behind a
+   row, it is the grip itself, and the same declaration serves --active (the live drag)
+   and :focus-visible. Splitting hover off to a neutral would either land on the grip's
+   own resting ink — a hover that paints nothing — or flip colour the instant a drag began.
+   The desk's one accent is what "you have hold of this" looks like. Hover lights the seam in
+   the wash, as a preview; holding it, by pointer or keyboard, draws the seam in the accent. */
+.divider:hover .divider__grip,
+.divider--active .divider__grip,
+.divider:focus-visible .divider__grip {
+    background: var(--accent);
+    height: 64px;
+}
+
+.divider:hover::before { background: var(--accent-wash-strong); }
+
+.divider--active::before,
+.divider:focus-visible::before { background: var(--accent); }
+
+.divider:focus-visible { outline: none; }
+
+/* The two widths, while the divider is held: each figure on its own side of the seam, against
+   the column it measures, so a drag reads as "this one, that one" without a key to decode.
+   They float over the columns' edges, so they take a material and a shadow; they are not
+   controls, so they take no edge and no pointer. Drawn from data-width (set by the render and,
+   mid-drag, by windowing.js), because the figure is the readout's and the reader already hears
+   it from the divider's own value. */
+.divider__readout {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    visibility: hidden;
+}
+
+/* Shown while the divider is moving — a drag, or a beat after each split key (windowing.js) —
+   never merely because it has focus: at rest the pills would sit over the neighbours' text. */
+.divider--active .divider__readout,
+.divider--keyed .divider__readout { visibility: visible; }
+
+.divider__width {
+    position: absolute;
+    top: 0;
+    transform: translateY(-50%);
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: var(--material-regular);
+    backdrop-filter: var(--material-blur);
+    -webkit-backdrop-filter: var(--material-blur);
+    box-shadow: var(--shadow-2);
+    color: var(--text-primary);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-semibold);
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.divider__width::before { content: attr(data-width); }
+
+.divider__width[data-split-left] { right: var(--space-2); }
+.divider__width[data-split-right] { left: var(--space-2); }
+
+/* While splitting, the whole desk shows the resize cursor — the pointer often leaves the
+   14px handle mid-drag and a flickering cursor reads as the gesture breaking. */
+body.splitting, body.splitting * { cursor: col-resize !important; }
+
+/* ---------------------------------------------------------------- rail ---- */
+
+/* The desk's plain icon key, the one recipe .win__ctl and .win__nav-btn share: the control
+   height square, the control corner, a 16px glyph, no edge at rest. It was 32×30 behind a
+   transparent border, a key of its own size beside the title bar's 28px ones. */
+.rail__btn {
+    width: var(--control-h);
+    height: var(--control-h);
+    display: grid;
+    place-items: center;
+    background: none;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+}
+
+.rail__btn:hover { background: var(--surface-3); color: var(--text-primary); }
+.rail__btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Selected/active reads as a wash, not a border — the same recipe as a Tinted
+   button and the platform's own menu highlight. */
+.rail__btn--accent { background: var(--accent-wash); color: var(--accent-ink); }
+.rail__btn svg { width: 16px; height: 16px; }
+
+/* ------------------------------------------------------- rail popover ---- */
+
+/* The launcher's wrapper. Its panel is a DeskPopover now, styled in controls.css with
+   the other popovers; this rule only keeps the trigger laid out in the header and rail. */
+.railmenu { position: relative; display: flex; }
+
+/* ------------------------------------------------------------ palette ----- */
+
+/* The command palette is a sheet-tier surface: it takes the keyboard, dims the desk and sits
+   above everything, but it is dismissed by a click outside or Escape — nothing in it is a
+   decision that must be answered. Near the top rather than centred, so the list grows down
+   into the space it needs instead of pushing the field around as results arrive. */
+.palette {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 12vh;
+    background: color-mix(in srgb, var(--surface-0) 60%, transparent);
+}
+
+.palette__panel {
+    width: min(620px, calc(100vw - 32px));
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--material-thick);
+    -webkit-backdrop-filter: var(--material-blur);
+    backdrop-filter: var(--material-blur);
+    border: 1px solid var(--separator-strong);
+    border-radius: var(--radius-sheet);
+    box-shadow: var(--shadow-sheet);
+    overflow: hidden;
+}
+
+.palette__field {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--separator);
+}
+
+.palette__field svg { width: 18px; height: 18px; color: var(--text-secondary); flex: 0 0 auto; }
+
+.palette__input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: 0;
+    outline: none;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--text-title2);
+}
+
+.palette__input::placeholder { color: var(--text-tertiary); }
+
+.palette__kbd {
+    font-family: inherit;
+    font-size: var(--text-caption);
+    color: var(--text-tertiary);
+    border: 1px solid var(--separator-strong);
+    border-radius: var(--radius-sm);
+    padding: 1px 6px;
+}
+
+.palette__results { overflow-y: auto; padding: var(--space-1); }
+
+.palette__empty { margin: 0; padding: var(--space-3); color: var(--text-secondary); font-size: var(--text-body); }
+
+/* The keyboard's row is lit as every menu row on the desk is (controls.css, .menu__item): the
+   accent's wash. Arrow keys move it and the pointer moves it too, so there is one lit row. */
+.palette__item--active { background: var(--accent-wash); }
+
+/* ------------------------------------------------------------ launcher ---- */
+
+/* The launcher sits in a popover's panel, so its rows are inset twice: the panel's padding and
+   its own, both --space-1 (the inset), and their corner gives up both (concentric with the
+   panel's). The palette's rows share the class but sit in a sheet, and keep --radius-xs. */
+.launcher {
+    min-width: 300px;
+    padding: var(--space-1);
+}
+
+.launcher .launcher__item,
+.launcher > .glide-plate { border-radius: calc(var(--radius-panel) - 2 * var(--radius-inset)); }
+
+/* The plate that glides under the rows is the menu row's highlight, so a launcher lights as a
+   DeskMenu does. */
+.launcher > .glide-plate { background: var(--accent-wash); }
+
+/* A group header in a menu: sentence case ("Saved here"), footnote, semibold, secondary. */
+.launcher__group {
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-semibold);
+    color: var(--text-secondary);
+    padding: var(--space-1) var(--space-3) 0;
+}
+
+.launcher__item {
+    display: flex;
+    gap: var(--space-3);
+    align-items: flex-start;
+    /* MudBlazor's button rule centres a flex button's content; a palette row is a list
+       row, so its icon and text sit flush left like every other row's. */
+    justify-content: flex-start;
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: none;
+    border: 0;
+    border-radius: var(--radius-xs);
+    color: var(--text-primary);
+    text-align: left;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--text-body);
+}
+
+/* The accent's wash, as every menu row on the desk is lit (controls.css, .menu__item): a row about
+   to be pressed. It agrees with the launcher's glide plate, which paints in its place while the
+   pointer is inside the list. */
+.launcher__item:hover { background: var(--accent-wash); }
+.launcher__item:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
+.launcher__item svg { width: 17px; height: 17px; color: var(--text-secondary); margin-top: 1px; flex: 0 0 auto; }
+.launcher__desc { display: block; color: var(--text-secondary); font-size: var(--text-footnote); margin-top: 2px; line-height: 1.4; }
+
+.launcher__note {
+    padding: var(--space-2) var(--space-3);
+    margin: var(--space-1) 0 0;
+    border-top: 1px solid var(--separator);
+    color: var(--state-warning-ink);
+    font-size: var(--text-footnote);
+    line-height: 1.45;
+}
+
+/* Refused by the ceiling — dimmed and inert, with the reason stated below the list. */
+.launcher__item--blocked { opacity: .38; cursor: not-allowed; }
+.launcher__item--blocked:hover { background: none; }
+
+/* --------------------------------------------------- panel typography ---- */
+
+/* A section header: sentence case ("Recent orders"), subheadline, semibold, --text-secondary,
+   untracked — the same voice as a grouped form's header (.pform--grouped > .panel-h) and the
+   grouped form's group head (.wgroup__head).
+
+   It was footnote capitals with .06em of tracking, and before that 10.5px tertiary at .13em.
+   The HIG has no all-caps eyebrow (audit 2026-10-25, "Section headers lose their capitals"):
+   distinction comes from weight and the secondary label colour against body text, not from
+   case or from being faint. Tertiary stays off it — a header is how the eye finds a section,
+   so it has to be read. */
+.panel-h {
+    font-size: var(--text-subheadline);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+    color: var(--text-secondary);
+    margin: 0 0 var(--space-2);
+}
+
+.panel-h + .panel-h { margin-top: var(--space-6); }
+
+/* A heading after content opens a new section, so it gets a section's air whether or not the
+   panel remembered Gap="Section". Without it the heading sat on the last table's hairline or
+   the last line of prose and read as part of it — "By sport" looked like a row of "By market".
+   Gap="Nested" and Tight set their own margin inline and still win. */
+.win__body :not(.panel-h) + .panel-h { margin-top: var(--space-6); }
+
+/* Metric: the number leads, the label explains. Not the other way round.
+   State lands on the number and nowhere else — the tile itself stays neutral. The
+   old left-edge bar was a second place to read the same fact, and it had to be
+   scanned separately from the figure it qualified; a red number is read at the
+   moment the number is. */
+.metric {
+    padding: var(--space-3);
+    background: var(--surface-2);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius);
+}
+
+.metric__value {
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-title1);
+    font-weight: var(--weight-medium);
+    line-height: 1.05;
+}
+
+.metric--good .metric__value { color: var(--state-positive-ink); }
+.metric--warn .metric__value { color: var(--state-warning-ink); }
+.metric--bad .metric__value { color: var(--state-negative-ink); }
+.metric--info .metric__value { color: var(--text-primary); }
+
+.metric__label {
+    font-size: var(--text-footnote);
+    color: var(--text-secondary);
+    margin-top: 5px;
+}
+
+.metric__note { font-size: var(--text-footnote); color: var(--text-secondary); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* A tile that is also the way to the thing it counts. It takes the hover fill under the
+   pointer; a tile that only reports stays still. It used to lift a pixel as well, which is
+   motion on an interaction that happens all day (HIG Motion) — the fill and the chevron
+   already say "pressable", and the chevron says it without hover, for a touch pointer and
+   for anyone running reduced motion. */
+.metric--action {
+    display: block;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-standard),
+                border-color var(--dur-fast) var(--ease-standard);
+}
+
+.metric--action:hover { background: var(--surface-3); }
+
+.metric--action:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.metric__go { float: right; font-size: var(--text-title3); line-height: 1; color: var(--text-tertiary); }
+.metric--action:hover .metric__go { color: var(--text-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+    .metric--action { transition: background var(--dur-fast) linear; }
+}
+
+/* Data tables: dense, hairline-separated, numbers right-aligned and tabular.
+   No zebra striping — rows separate with a hairline and nothing else, the same
+   rule .deskgrid holds MudDataGrid to below. */
+.grid {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-body);
+}
+
+/* Headings are set as DeskGrid's are (mud-bridge.css): subheadline, semibold, secondary ink, on
+   the body's 20px line, so a hand-written table in a snippet reads like the grid beside it. */
+.grid th {
+    text-align: left;
+    font-size: var(--text-subheadline);
+    font-weight: var(--weight-semibold);
+    line-height: 20px;
+    color: var(--text-secondary);
+    padding: var(--space-1) var(--space-2);
+    border-bottom: 1px solid var(--separator);
+    white-space: nowrap;
+    position: sticky;
+    top: calc(-1 * var(--win-pad)); /* cancels .win__body's padding at every density, so the header pins flush with the scroll edge */
+    background: var(--surface-2);
+    z-index: 1;
+}
+
+.grid td {
+    padding: var(--space-1) var(--space-2);
+    line-height: 20px; /* + the padding above = a 28px row */
+    border-bottom: 1px solid var(--separator);
+    color: var(--text-primary);
+    vertical-align: middle;
+    font-variant-numeric: tabular-nums; /* costs nothing on prose; guarantees every number lines up without hunting for .r */
+}
+
+.grid tbody tr:hover td { background: var(--surface-2); }
+.grid .r { text-align: right; font-variant-numeric: tabular-nums; }
+.grid .dim { color: var(--text-secondary); }
+
+/* Quieter than the row, still readable as data. --text-tertiary is the right tier for
+   an annotation nobody has to read — a hint, a placeholder, a unit — and it measures
+   2.70:1 on --surface-1, which is below AA and correct for exactly that job. A cell an
+   operator has to read is not that job: a timestamp, a duration, a job key and a credit
+   count are the reading. So they get --text-secondary (5.71:1, passes AA) and stay a
+   step under the row's --text-primary. Set bare rather than under .grid so it works in
+   a DeskGrid cell template too, where the .grid descendant selectors never match. */
+.quiet { color: var(--text-secondary); }
+
+/* A long message in a narrow window must not turn one row into six. Truncate and keep
+   the full text in the title attribute — row rhythm is what makes a dense table scannable. */
+.grid .trunc {
+    max-width: 1px; /* forces the cell to take its share and no more */
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Wide tables scroll inside their own window rather than pushing the layout. */
+.gridwrap {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-3) transparent;
+}
+
+.gridwrap .grid { min-width: 100%; }
+
+/* ---- Floating dialog -------------------------------------------------------
+   The layer ADR 0007 reserved and never built: arbitrary placement, above the
+   desk, for the things a tiled row cannot hold. Deliberately not modal — several
+   stay open at once and get dragged into an arrangement, because the workflow
+   this serves is comparison. A scrim would make that impossible.
+
+   It wears the window's chrome so it reads as part of the desk.
+   --------------------------------------------------------------------------- */
+
+.deskdialog {
+    position: fixed;
+    top: 90px;
+    left: 120px;
+    display: flex;
+    flex-direction: column;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    background: var(--material-thick);
+    backdrop-filter: var(--material-blur);
+    -webkit-backdrop-filter: var(--material-blur);
+    /* The one place a hairline is allowed: a floating material surface needs an
+       edge to separate it from whatever it is floating over. */
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-sheet);
+    box-shadow: var(--shadow-sheet);
+    overflow: hidden;
+    animation: deskdialog-in var(--dur-base) var(--ease-spring);
+}
+
+@keyframes deskdialog-in {
+    from { opacity: 0; transform: scale(.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* A dialog is drawn inside the window that opened it, and every window is a stacking context
+   of its own (z-index on .win), so the next window along drew over a dialog that reached it,
+   and the footer over its foot. The window holding one rises above its neighbours and the
+   dividers; it stays under the header and footer, which the dialog no longer reaches —
+   dialogs.js keeps it on the desk and sizes it to fit. */
+.win:has(.deskdialog) { z-index: calc(var(--z-divider) + 1); }
+
+.deskdialog__bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    height: var(--titlebar-h);
+    /* The window bar's 4px and 10px at Standard, on the ramp so they follow Density. */
+    padding: 0 var(--space-1) 0 calc(var(--space-2) + var(--space-1) / 2);
+    background: transparent;
+    border-bottom: 1px solid var(--separator);
+    flex: 0 0 auto;
+    cursor: grab;
+    touch-action: none; /* the pointer gesture owns the drag, not the browser's scroll */
+    user-select: none;
+}
+
+/* Focused so Escape reaches it; the dialog is not a control, so no ring. */
+.deskdialog:focus { outline: none; }
+.deskdialog--dragging { box-shadow: var(--shadow-sheet), 0 0 0 1px var(--separator-strong); }
+.deskdialog--dragging .deskdialog__bar { cursor: grabbing; }
+body.dialog-dragging { user-select: none; }
+
+.deskdialog__icon { display: grid; place-items: center; color: var(--text-tertiary); flex: 0 0 auto; }
+.deskdialog__icon svg { width: 15px; height: 15px; }
+
+/* Set as a window's title is (.win__title): a dialog is a window that floats, and its name is
+   a name, not an eyebrow. */
+.deskdialog__title {
+    font-size: var(--text-headline);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+/* Carries ids, counts and timestamps beside the title, so it keeps tabular figures
+   even though there is no second family left to set them in. */
+.deskdialog__sub {
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-footnote);
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.deskdialog__spacer { flex: 1 1 auto; min-width: 8px; }
+
+.deskdialog__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: var(--space-4);
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-3) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .deskdialog { animation: none; }
+}
+
+/* A dialog that fills the screen on a phone is just a page, which is the right
+   answer there — dragging panels around needs a pointer and a desk. */
+@media (max-width: 720px) {
+    .deskdialog {
+        top: 8px !important;
+        left: 8px !important;
+        width: calc(100vw - 16px) !important;
+    }
+
+    .deskdialog__bar { cursor: default; }
+}
+
+/* ---- Linked cell -----------------------------------------------------------
+   A cell naming something with a window of its own. The desk answers "what will
+   this click do?" by moving a key toward the light; a cell cannot move without
+   disturbing its row, so it answers by naming the destination on highlight.
+
+   The shortcut's width is reserved and its opacity toggled, never its display —
+   revealing it by laying it out would push the rest of the row sideways every
+   time the pointer crossed a link.
+   --------------------------------------------------------------------------- */
+
+.desklink {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    max-width: 100%;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: calc(var(--radius-xs) - 1px);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.desklink__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-bottom: 1px dotted transparent;
+    transition: border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.desklink__shortcut {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex: 0 0 auto;
+    opacity: 0;
+    color: var(--accent-ink);
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-semibold);
+    transition: opacity var(--dur-fast) var(--ease-standard);
+}
+
+.desklink__shortcut svg { width: 11px; height: 11px; }
+
+/* The row is the unit an operator scans, so the dotted rule appears across the
+   whole row's links — "these are the ways out of here" — while the destination
+   name only resolves on the one actually under the pointer. */
+.grid tbody tr:hover .desklink__label,
+.mud-table-row:hover .desklink__label {
+    border-bottom-color: var(--surface-3);
+}
+
+/* Accent on the label, not a neutral: this is a link resolving, not a row lighting
+   under the pointer — the accent is on the text and the rule under it, there is no
+   fill, and the same declaration serves :focus-visible. */
+.desklink:hover .desklink__label,
+.desklink:focus-visible .desklink__label {
+    color: var(--accent-ink);
+    border-bottom-color: var(--accent);
+}
+
+.desklink:hover .desklink__shortcut,
+.desklink:focus-visible .desklink__shortcut { opacity: 1; }
+
+.desklink:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+@media (prefers-reduced-motion: reduce) {
+    .desklink__label, .desklink__shortcut { transition: none; }
+}
+
+.up { color: var(--state-positive-ink); }
+.down { color: var(--state-negative-ink); }
+.warnc { color: var(--state-warning-ink); }
+
+/* Tag: a small state word, set as a capsule.
+
+   The outlined chip is gone. An outline is a second edge inside a table that is
+   already ruled by hairlines, and a column of them read as a column of little boxes
+   rather than as a column of states. A capsule has one edge — its own fill — so a
+   table of them settles: the shape says "label", the wash says which state, and the
+   ink is that state's own colour so the word and its fill agree.
+
+   Neutral is --surface-3 under --text-secondary: still a capsule, no state claimed.
+
+   The line-height is explicit and it is load-bearing. A tag is inline-block, so without
+   one it inherits the line-height of whatever it sits in; in a grid cell that is 20px,
+   which puts the capsule's own box at 24px with its 2px paddings and drags the row's
+   line box up with it. Measured in the History panel's Recent-days grid: a tag-bearing
+   row came out 33px against a plain row's 29px, and ten panels put tags in cells, so
+   density drifted panel to panel with no rule behind it.
+
+   14px puts the capsule at 18px, which is the largest box that still fits inside the
+   cell's 20px line box without pushing it — 20px (line-height 16px) measures 30px,
+   because an inline-block that exactly equals the strut still has to be positioned
+   within it and cannot be. The 1px vertical-align is the rest of the measurement, not
+   a guess: at baseline the capsule sat 6px from the cell's top and 4px from its bottom;
+   lifting it 1px reads 5/5, dead centre, and the row still measures 29px.
+
+   The word is sentence case at --text-footnote (11px), untracked — it was caption (10px)
+   capitals at .07em, an all-caps eyebrow the HIG does not have (audit 2026-10-25). The
+   box is unchanged by that: line-height 14px + 2px + 2px padding = 18px, and 11px glyphs
+   sit inside a 14px line with room to spare, so the 29px row holds.
+
+   A live tag's dot (.tag__live, below) is a 6px inline-block lifted 1px off the baseline,
+   which puts its centre on the cap height and its whole box inside that same 14px line —
+   so a live tag is still an 18px capsule and the row still measures 29px. A result capsule
+   (.tag--result) changes only its width, never its height. */
+.tag {
+    display: inline-block;
+    padding: 2px var(--space-2);
+    border: 0;
+    border-radius: 999px;
+    font-size: var(--text-footnote);
+    line-height: 14px;
+    vertical-align: 1px;
+    font-weight: var(--weight-medium);
+    background: var(--surface-3);
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.tag--good { background: var(--state-positive-wash); color: var(--state-positive-ink); }
+.tag--warn { background: var(--state-warning-wash); color: var(--state-warning-ink); }
+.tag--bad { background: var(--state-negative-wash); color: var(--state-negative-ink); }
+/* Info is a reading with no state to report, so it takes the neutral capsule; the accent
+   is kept for what can be pressed. */
+.tag--info { background: var(--surface-3); color: var(--text-secondary); }
+
+/* Something in progress: the one state still changing while the operator reads it, so it alone
+   moves — a slow breath, not a blink. The dot is aria-hidden; the word "Live" is what is read
+   and what an operator who cannot see motion or hue still has. Warning, because that is the
+   live state everywhere on the desk. */
+.tag__live {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-right: var(--space-1);
+    border-radius: 50%;
+    background: var(--state-warning);
+    vertical-align: 1px;
+    animation: tag-live var(--dur-sweep) ease-in-out infinite alternate;
+}
+
+@keyframes tag-live {
+    from { opacity: 1; }
+    to { opacity: .35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tag__live { animation: none; }
+}
+
+/* A result — W, L, P or T (ResultTag). The state washes are the tag's own; this centres the
+   word and gives one letter a floor, so a run of results reads as even beads rather than a W
+   wider than the L beside it. Width only: the capsule is a tag's height. */
+.tag--result { min-width: 1em; text-align: center; }
+

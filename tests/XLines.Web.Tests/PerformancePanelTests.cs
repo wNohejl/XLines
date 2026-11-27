@@ -98,7 +98,7 @@ public class PerformancePanelTests : DeskTestContext
         Assert.Contains("Class=\"perf-chart\"", source);
         Assert.Contains("Takeaway=\"@_takeaway\"", source);
 
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+        var css = Support.Sheets.App;
         Assert.Contains(".perf-chart .mud-chart svg.mud-chart-line { display: block; width: 100%; height: auto; margin: 0; }", css);
         Assert.Contains(".perf-chart .mud-chart text { font-size: var(--text-footnote); fill: var(--text-secondary); }", css);
     }
@@ -159,10 +159,10 @@ public class PerformancePanelTests : DeskTestContext
     {
         var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "PerformancePanel.razor.css"));
 
-        var app = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+        var app = Support.Sheets.App;
         Assert.Contains(".perf { container: perf / inline-size; }", app);
         // A table in a card is the Desk's rule, once (desk.css), not a copy in this window's sheet.
-        var desk = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var desk = Support.Sheets.Desk("desk.css");
         Assert.Contains(".wgroup .deskgrid .mud-table-body .mud-table-row:last-child > .mud-table-cell { border-bottom: 0; }", desk);
         Assert.DoesNotContain("mud-table-row:last-child", css);
     }

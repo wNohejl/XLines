@@ -11,6 +11,13 @@
     out-specifies what MudBlazor hard-codes. The application's own stylesheet comes after this
     component: it holds its windows, spends the Desk's tokens, and wins a tie with any Desk rule
     on source order.
+
+    desk.css and themes.css are each one sheet cut into files at its banners, so that no file
+    passes 2000 lines (architecture review §10); the parts are linked in the order their rules
+    had in the one file, and nothing else about the cascade changed. desk.css is the first part
+    (the tokens, the geometry, the scale), then desk-shell, desk-windows, desk-primitives,
+    desk-feedback and desk-appearance; themes.css is the first families, then themes-more and
+    themes-accents. Every "desk.css" or "themes.css" in a comment means the sheet, all its parts.
 *@
 @*  The browser's own chrome in the desk's ground. Declared here, empty, so it is in the head from
     the first byte and a host's App.razor needs nothing of its own; theme-boot.js fills it from the
@@ -36,7 +43,14 @@
 <link rel="preload" href="@(DeskAssets.Root + "/fonts/InterVariable.woff2")" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="@Assets["_content/MudBlazor/MudBlazor.min.css"]" />
 <link rel="stylesheet" href="@Assets[DeskAssets.Css("desk.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("desk-shell.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("desk-windows.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("desk-primitives.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("desk-feedback.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("desk-appearance.css")]" />
 @* The newer primitives (menus, popovers) — straight after the file whose tokens they spend. *@
 <link rel="stylesheet" href="@Assets[DeskAssets.Css("controls.css")]" />
 <link rel="stylesheet" href="@Assets[DeskAssets.Css("themes.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("themes-more.css")]" />
+<link rel="stylesheet" href="@Assets[DeskAssets.Css("themes-accents.css")]" />
 <link rel="stylesheet" href="@Assets[DeskAssets.Css("mud-bridge.css")]" />

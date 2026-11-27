@@ -82,7 +82,7 @@ public class SnippetShellTests : DeskTestContext
     [Fact]
     public void The_pane_header_has_no_fill_and_no_edge()
     {
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         var rule = System.Text.RegularExpressions.Regex.Match(css, @"\.snippet--panes > \.snippet__bar\s*\{([^}]*)\}").Groups[1].Value;
 
         Assert.Contains("background: none", rule);

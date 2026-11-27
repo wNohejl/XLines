@@ -12,7 +12,7 @@ namespace XLines.Web.Tests;
 /// </summary>
 public class CrestPlacementTests : DeskTestContext
 {
-    private static readonly string Css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+    private static readonly string Css = Support.Sheets.App;
 
     [Fact]
     public void A_crest_in_a_line_lays_out_cap_high()

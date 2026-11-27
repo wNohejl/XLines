@@ -17,7 +17,7 @@ namespace XLines.Web.Tests;
 public class BoardFitTests
 {
     private static readonly string Css =
-        DeskConventions.WithoutComments(File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css")));
+        DeskConventions.WithoutComments(Support.Sheets.App);
 
     private static readonly string Razor =
         File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "BoardPanel.razor"));
@@ -140,7 +140,7 @@ public class BoardFitTests
 public class LineMovementLayoutTests
 {
     private static readonly string Css =
-        DeskConventions.WithoutComments(File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css")));
+        DeskConventions.WithoutComments(Support.Sheets.App);
 
     private static readonly string Razor =
         File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "OddsPanel.razor"));

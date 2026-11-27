@@ -1,0 +1,1179 @@
+/* ============================================================================
+   The accent, chosen.
+
+   The Standard desk spends one hue on interactivity, focus and selection, and
+   which hue is the operator's, as it is in macOS's own appearance settings.
+   Blue is the default and lives in desk.css's two Standard blocks; each block
+   here redeclares exactly four accent tokens — the fill, its hover and press,
+   and the ink — under a compound selector, so it weighs
+   (0,2,0) and wins over the family block it sits on without touching anything
+   else. No accent is a state hue: there is no red, orange or green, because a
+   positive tag and a primary key that shared a hue would stop meaning
+   different things.
+
+   Every family may offer more than its own (DeskThemeFamilies.Catalog, ADR
+   0030). Each accent is two blocks of exactly this shape,
+   [data-theme="<slug>-dark"][data-accent="<key>"] and its -light twin, declaring
+   these four tokens and no others — the two washes are the new fill thinned,
+   recomputed by desk.css's derived rule at the family's alphas, and a block
+   names --accent-wash-alpha or --accent-wash-strong-alpha only where its hue
+   wants another strength. The family's --on-accent stays, so every
+   fill must carry it at 4.5:1 — and nothing here names an accent its family's
+   row does not list. ThemeService (and theme-boot.js, from its ACCENTS table)
+   stamp data-accent with the showing family's choice, never its own accent.
+   A family's accents follow Standard's, grouped under a comment naming it.
+
+   Here rather than beside the Standard blocks in desk.css: desk.css is the
+   file every component reads and holds the one desk; this is the file of
+   alternatives to it, and an accent is one. Placement does not decide the
+   cascade — the extra attribute does — so the choice is about where a reader
+   looks, and a reader looking for "what else can the desk wear" looks here.
+
+   Hover travels the way the ground demands: lighter on the dark desk, deeper
+   on the light one, for the reason --accent-hover gives in desk.css. The
+   washes follow the family's alphas. The ink is the hover value
+   on dark and the press value on light, as Blue's is, lifted or deepened
+   further where that still falls short of 4.5:1 over --surface-1 (indigo on
+   dark, teal on light). The C# mirror is Theming/DeskAccent.cs; DeskThemeTests
+   holds each block to it and to the four tokens, ThemeContrastTests its ink.
+
+   A swatch in the accent picker carries data-theme and data-accent of its
+   own, so each one is painted by the block below that choosing it would apply.
+   ============================================================================ */
+
+[data-theme="apple-dark"][data-accent="teal"] {
+    --accent: #277A89;
+    --accent-hover: #297F8F;
+    --accent-press: #24717F;
+    --accent-ink: #5FD3E7; /* 8.92:1 */
+}
+[data-theme="apple-light"][data-accent="teal"] {
+    --accent: #238090;
+    --accent-hover: #217888;
+    --accent-press: #1F707F;
+    /* The press measures 4.09:1 on white; one step deeper reads. */
+    --accent-ink: #1C6E7E; /* 4.67:1 raised, 4.53 on the strong wash */
+}
+
+[data-theme="apple-dark"][data-accent="indigo"] {
+    --accent: #5E5CE6;
+    --accent-hover: #6260E7;
+    --accent-press: #4B49D9;
+    /* The hover measures 4.36:1 over the panel; one step lighter reads. */
+    --accent-ink: #9492F1; /* 5.70:1, 4.51 on the strong wash */
+}
+[data-theme="apple-light"][data-accent="indigo"] {
+    --accent: #5856D6;
+    --accent-hover: #4F4DC4;
+    --accent-press: #4644AD;
+    --accent-ink: #4644AD; /* 7.80:1 */
+}
+
+[data-theme="apple-dark"][data-accent="purple"] {
+    --accent: #9E4AC8;
+    --accent-hover: #A44DD0;
+    --accent-press: #9144B8;
+    --accent-ink: #CC7BF5; /* 5.76:1, 4.56 on the strong wash */
+}
+[data-theme="apple-light"][data-accent="purple"] {
+    --accent: #A44DD1;
+    --accent-hover: #9A48C4;
+    --accent-press: #9043B7;
+    --accent-ink: #8F3DB8; /* 5.95:1 */
+}
+
+[data-theme="apple-dark"][data-accent="graphite"] {
+    --accent: #707074;
+    --accent-hover: #747479;
+    --accent-press: #67676B;
+    --accent-ink: #A1A1A6; /* 6.09:1 */
+    --chart-side-home: #F8F8F9; /* 14.77:1 on the panel, 3.07 off the neutral */
+}
+[data-theme="apple-light"][data-accent="graphite"] {
+    --accent: #747479;
+    --accent-hover: #6D6D71;
+    --accent-press: #66666A;
+    --accent-ink: #656569; /* 4.62:1 raised, more on the panel */
+    --chart-side-home: #424244; /* 10.03:1, 3.08 */
+}
+
+/* Paper's chosen accents: the other inks in the well.
+
+   Keys (data-accent) and names, the family's own first:
+     ink → Ink blue (built in: the paper-dark and paper-light blocks), sepia → Sepia,
+     plum → Plum, verdigris → Verdigris
+
+   Each is an ink a writer could actually have filled a pen with — sepia from
+   cuttlefish, a plum-black, the green-blue of copper gone to verdigris — and
+   none is a state hue, so a key never wears the colour of a tag. Every block
+   keeps Paper's own label (parchment by night, the page by day): an accent
+   here is a different ink on the same sheet. As with the built-in pen, the
+   fills sit deep enough that the label holds on all three of them, hover
+   lightens by lamplight and deepens by day, and the ink is the hue lifted
+   (dark) or deepened (light) until it reads on its washes as well as the
+   panel. */
+
+[data-theme="paper-dark"][data-accent="sepia"] {
+    --accent: #7E5B37;
+    --accent-hover: #85603A;
+    --accent-press: #725232;
+    --accent-ink: #D2AA80;
+}
+[data-theme="paper-light"][data-accent="sepia"] {
+    --accent: #7A5430;
+    --accent-hover: #6D4A2A;
+    --accent-press: #604124;
+    --accent-ink: #6D4A2A;
+}
+
+[data-theme="paper-dark"][data-accent="plum"] {
+    --accent: #7A4470;
+    --accent-hover: #834A78;
+    --accent-press: #6D3C64;
+    --accent-ink: #CF9CC4;
+}
+[data-theme="paper-light"][data-accent="plum"] {
+    --accent: #6E3A64;
+    --accent-hover: #623358;
+    --accent-press: #562D4D;
+    --accent-ink: #6E3A64;
+}
+
+[data-theme="paper-dark"][data-accent="verdigris"] {
+    --accent: #2D6A64;
+    --accent-hover: #32716B;
+    --accent-press: #285E59;
+    --accent-ink: #84C4BA;
+}
+[data-theme="paper-light"][data-accent="verdigris"] {
+    --accent: #2A5F5A;
+    --accent-hover: #24544F;
+    --accent-press: #1F4945;
+    --accent-ink: #2A5F5A;
+}
+
+/* Midnight's chosen accents: other lights on the same black.
+
+   Keys (data-accent) and names, the family's own first:
+     electric → Electric (built in: the midnight-dark and midnight-light blocks),
+     violet → Violet, magenta → Magenta, mono → Mono
+
+   By night each is lit as brightly as the cyan and carries the same black
+   label, so a key is still a lit panel with its letters cut out; hover lifts,
+   press dims, and the ink is the fill, since on #000 there is nothing to lift
+   it from. By day each turns to its deep, saturated twin under white. Mono is
+   the accent that is no hue at all — white on black, black on white — for an
+   operator who wants the desk to be type and edges and nothing else; on it
+   the focus ring is the text colour, which on this desk is enough. None is a
+   state hue: magenta sits far enough toward blue that a destructive key and a
+   primary one never meet. */
+
+[data-theme="midnight-dark"][data-accent="violet"] {
+    --accent: #A98BFF;
+    --accent-hover: #BCA3FF;
+    --accent-press: #9877F5;
+    --accent-ink: #A98BFF;
+}
+[data-theme="midnight-light"][data-accent="violet"] {
+    --accent: #5B21F0;
+    --accent-hover: #4F1AD6;
+    --accent-press: #4415BB;
+    --accent-ink: #5B21F0;
+}
+
+[data-theme="midnight-dark"][data-accent="magenta"] {
+    --accent: #FF4FE0;
+    --accent-hover: #FF78E8;
+    --accent-press: #EE36CF;
+    --accent-ink: #FF4FE0;
+}
+[data-theme="midnight-light"][data-accent="magenta"] {
+    --accent: #B8009E;
+    --accent-hover: #A0008A;
+    --accent-press: #880075;
+    --accent-ink: #A8008F; /* the fill measures 4.29:1 on its strong wash; a step deeper reads */
+}
+
+[data-theme="midnight-dark"][data-accent="mono"] {
+    --accent: #EDEDED;
+    --accent-hover: #FFFFFF;
+    --accent-press: #D4D4D4;
+    --accent-wash-alpha: .12;
+    --accent-wash-strong-alpha: .20;
+    --accent-ink: #EDEDED;
+}
+[data-theme="midnight-light"][data-accent="mono"] {
+    --accent: #1C1C1C;
+    --accent-hover: #0E0E0E;
+    --accent-press: #000000;
+    --accent-wash-alpha: .08;
+    --accent-wash-strong-alpha: .14;
+    --accent-ink: #1C1C1C;
+}
+
+/* Obsidian's chosen accents: the terminal's other signal lamps.
+
+   Keys (data-accent) and names, the family's own first:
+     sky → Sky (built in: the obsidian-dark and obsidian-light blocks),
+     violet → Violet, slate → Slate
+
+   Drawn from the same slate-and-signal palette as the sky: Violet is the
+   proposal's #A78BFA, a second lamp on the carbon; Slate is the hairlines'
+   own blue-grey, for an operator who wants the keys to be ruled rather than
+   lit. There is no amber and no green, because those are this desk's warning
+   and positive. By night each carries the canvas as its label, as the sky
+   does: hover lifts, press dims, and the ink is the fill, or a step above it
+   where the fill would sink into its own strong wash. By day each takes the
+   step the sky takes to harbour blue, deep enough for white, with the ink one
+   step deeper again. */
+
+[data-theme="obsidian-dark"][data-accent="violet"] {
+    --accent: #A78BFA;
+    --accent-hover: #BAA4FB;
+    --accent-press: #9677F7;
+    --accent-ink: #BAA4FB; /* the fill measures 4.40:1 on its strong wash; the hover reads */
+}
+[data-theme="obsidian-light"][data-accent="violet"] {
+    --accent: #6D28D9;
+    --accent-hover: #6023BF;
+    --accent-press: #541FA7;
+    --accent-ink: #5B21B6;
+}
+
+[data-theme="obsidian-dark"][data-accent="slate"] {
+    --accent: #94A3B8;
+    --accent-hover: #ACB7C8;
+    --accent-press: #8291A8;
+    --accent-ink: #94A3B8;
+}
+[data-theme="obsidian-light"][data-accent="slate"] {
+    --accent: #475569;
+    --accent-hover: #3E4B5C;
+    --accent-press: #374151;
+    --accent-ink: #334155;
+}
+
+/* Synthwave's chosen accents: the other tubes in the sign.
+
+   Keys (data-accent) and names, the family's own first:
+     magenta → Magenta (built in: the synthwave-dark and synthwave-light blocks),
+     cyan → Cyan, ultraviolet → Ultraviolet, chrome → Chrome
+
+   By night every one is a lit tube carrying the sky as its label, as the
+   magenta does: hover brightens, press dims, and the ink is the fill or a step
+   above it where the fill would sink into its own strong wash. By day each
+   deepens until it carries white. Cyan is the palette's second colour, the
+   grid line to the magenta's sun; Ultraviolet the blacklight between them;
+   Chrome the lettering on the cassette — a pale lilac-silver for an operator
+   who wants the grounds to carry the colour and the keys to stay out of the
+   way. Cyan is kept blue of the laser green, so a key never reads as a
+   positive tag. */
+
+[data-theme="synthwave-dark"][data-accent="cyan"] {
+    --accent: #2DE2FF;
+    --accent-hover: #63EAFF;
+    --accent-press: #12CCEB;
+    --accent-wash-alpha: .14;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #2DE2FF;
+}
+[data-theme="synthwave-light"][data-accent="cyan"] {
+    --accent: #006F8A;
+    --accent-hover: #00647C;
+    --accent-press: #00586E;
+    --accent-ink: #00586E;
+}
+
+[data-theme="synthwave-dark"][data-accent="ultraviolet"] {
+    --accent: #A77BFF;
+    --accent-hover: #B994FF;
+    --accent-press: #9566F7;
+    --accent-ink: #B994FF;
+}
+[data-theme="synthwave-light"][data-accent="ultraviolet"] {
+    --accent: #6A24D9;
+    --accent-hover: #5E1FC2;
+    --accent-press: #521AAB;
+    --accent-ink: #5E1FC2;
+}
+
+[data-theme="synthwave-dark"][data-accent="chrome"] {
+    --accent: #C9C1EA;
+    --accent-hover: #DAD4F2;
+    --accent-press: #B8AEE0;
+    --accent-wash-alpha: .13;
+    --accent-wash-strong-alpha: .22;
+    --accent-ink: #C9C1EA;
+}
+[data-theme="synthwave-light"][data-accent="chrome"] {
+    --accent: #564C78;
+    --accent-hover: #4C436B;
+    --accent-press: #423A5E;
+    --accent-ink: #564C78;
+}
+
+/* Terra's chosen accents: the other earths.
+
+   Keys (data-accent) and names, the family's own first:
+     clay → Clay (built in: the terra-dark and terra-light blocks), slate → Slate,
+     heather → Heather, stone → Stone
+
+   Each is a pigment from the same hillside, held to Terra's low saturation:
+   slate, a blue-grey for an operator who wants the keys cool against the warm
+   ground; heather, a dusty mauve; stone, a warm grey that gives the desk no
+   hue at all beyond its soil. None is the olive, ochre or madder of a state.
+   Every block keeps Terra's sand label, so the fills sit deep enough for it on
+   all three; hover lifts a touch by night and deepens by day, and the ink is
+   the hue lifted (dark) or deepened (light) until it reads on its washes. */
+
+[data-theme="terra-dark"][data-accent="slate"] {
+    --accent: #4E6878;
+    --accent-hover: #536E7F;
+    --accent-press: #475F6E;
+    --accent-ink: #9DB6C5;
+}
+[data-theme="terra-light"][data-accent="slate"] {
+    --accent: #4A6372;
+    --accent-hover: #425866;
+    --accent-press: #3A4E5A;
+    --accent-ink: #425866;
+}
+
+[data-theme="terra-dark"][data-accent="heather"] {
+    --accent: #77597C;
+    --accent-hover: #7D5E82;
+    --accent-press: #6D5172;
+    --accent-ink: #C3A6C7;
+}
+[data-theme="terra-light"][data-accent="heather"] {
+    --accent: #6E5373;
+    --accent-hover: #634A67;
+    --accent-press: #58425C;
+    --accent-ink: #634A67;
+}
+
+[data-theme="terra-dark"][data-accent="stone"] {
+    --accent: #69655B;
+    --accent-hover: #6E6A60;
+    --accent-press: #605C53;
+    --accent-ink: #B4AE9F;
+}
+[data-theme="terra-light"][data-accent="stone"] {
+    --accent: #67635A;
+    --accent-hover: #5C5850;
+    --accent-press: #524F47;
+    --accent-ink: #5C5850;
+}
+
+/* Everforest's chosen accents. Keys, built-in first:
+     blue => "Blue" (the family block's own), purple => "Purple", aqua => "Aqua", grey => "Grey".
+   Each block redeclares the four accent tokens and inherits the family block's
+   --on-accent (bg0 by night, white by day). Hover lightens by night and deepens
+   by day, press deepens in both, and the washes are the fill at .15/.24 by
+   night and .12/.20 by day, as Standard's chosen accents are. Purple is the
+   palette's purple; aqua its aqua, which sits nearer green than blue does —
+   it reads as teal beside the yellow-green positive; grey is grey2, the
+   palette's lightest grey. By day the light variant's hues are deepened until
+   white reads on them (purple #DF69BA 3.06:1, aqua #35A77C 3.01, grey1 #829181
+   3.32 as published). */
+
+[data-theme="everforest-dark"][data-accent="purple"] {
+    --accent: #D699B6;
+    --accent-hover: #DAA3BD;
+    --accent-press: #C78EA9;
+    --accent-ink: #E2B7CB; /* 7.05:1, 4.57 on its wash */
+}
+[data-theme="everforest-light"][data-accent="purple"] {
+    --accent: #B35391; /* purple (#DF69BA) deepened */
+    --accent-hover: #A64D87;
+    --accent-press: #9C487E;
+    --accent-ink: #924476; /* 5.88:1, 4.57 on its wash */
+}
+
+[data-theme="everforest-dark"][data-accent="aqua"] {
+    --accent: #83C092;
+    --accent-hover: #8FC69D;
+    --accent-press: #7AB388;
+    --accent-ink: #A4D1AF; /* 7.31:1, 4.58 on its wash */
+}
+[data-theme="everforest-light"][data-accent="aqua"] {
+    --accent: #328361; /* aqua (#35A77C) deepened */
+    --accent-hover: #2E7A5A;
+    --accent-press: #2C7254;
+    --accent-ink: #296B50; /* 5.88:1, 4.59 on its wash */
+}
+
+[data-theme="everforest-dark"][data-accent="graphite"] {
+    --accent: #A0ACA3; /* grey2 (#9DA9A0) lifted a hair: the press keeps bg0 at 4.5:1 */
+    --accent-hover: #AAB4AC;
+    --accent-press: #95A098;
+    --accent-ink: #BCC5BF; /* 7.05:1, 4.57 on its wash */
+    --chart-side-home: #F8F9F8; /* 11.82:1, 3.08 */
+}
+[data-theme="everforest-light"][data-accent="graphite"] {
+    --accent: #6A7969; /* grey2 (#829181) deepened */
+    --accent-hover: #637162;
+    --accent-press: #5C695B;
+    --accent-ink: #576356; /* 5.86:1, 4.61 on its wash */
+    --chart-side-home: #3B433A; /* 9.50:1, 3.08 */
+}
+
+/* Kanagawa's chosen accents. Keys, built-in first:
+     blue => "Blue" (the family block's own), violet => "Violet", aqua => "Aqua", gray => "Gray".
+   Each block redeclares the four accent tokens and inherits the family block's
+   --on-accent (sumiInk3 by night, white by day). Hover lightens by night and
+   deepens by day, press deepens in both, and the washes are the fill at
+   .15/.24 by night and .12/.20 by day. Violet is oniViolet by night and
+   lotusViolet4 by day, the keyword hue; aqua is waveAqua2 and lotusAqua; gray
+   is fujiGray and lotusGray2. By night oniViolet and fujiGray are lifted until
+   the press keeps the dark label at 4.5:1 (fujiGray measures 3.33:1 under it
+   as published). */
+
+[data-theme="kanagawa-dark"][data-accent="violet"] {
+    --accent: #9E88C1; /* oniViolet, lifted a step so the press keeps sumiInk3 at 4.5:1 */
+    --accent-hover: #A894C7;
+    --accent-press: #937EB3;
+    --accent-ink: #B09ECC; /* 6.70:1, 4.59 on its wash */
+}
+[data-theme="kanagawa-light"][data-accent="violet"] {
+    --accent: #624C83; /* lotusViolet4 */
+    --accent-hover: #5B477A;
+    --accent-press: #554272;
+    --accent-ink: #614B82; /* 6.17:1, 4.59 on its wash */
+}
+
+[data-theme="kanagawa-dark"][data-accent="aqua"] {
+    --accent: #7AA89F; /* waveAqua2 */
+    --accent-hover: #87B1A9;
+    --accent-press: #719C94;
+    --accent-ink: #89B2AA; /* 7.01:1, 4.58 on its wash */
+}
+[data-theme="kanagawa-light"][data-accent="aqua"] {
+    --accent: #597B75; /* lotusAqua */
+    --accent-hover: #53726D;
+    --accent-press: #4D6B66;
+    --accent-ink: #445D59; /* 5.92:1, 4.57 on its wash */
+}
+
+[data-theme="kanagawa-dark"][data-accent="graphite"] {
+    --accent: #93928A; /* fujiGray lifted toward oldWhite: 3.33:1 under sumiInk3 as published */
+    --accent-hover: #9E9D96;
+    --accent-press: #898880;
+    --accent-ink: #A6A69F; /* 6.67:1, 4.57 on its wash */
+    --chart-side-home: #CDCDC9; /* 10.25:1, 3.08 */
+}
+[data-theme="kanagawa-light"][data-accent="graphite"] {
+    --accent: #716E61; /* lotusGray2 */
+    --accent-hover: #69665A;
+    --accent-press: #626054;
+    --accent-ink: #5A584E; /* 5.95:1, 4.57 on its wash */
+    --chart-side-home: #3F3E37; /* 8.95:1, 3.05 */
+}
+
+/* One's chosen accents. Keys, built-in first:
+     blue => "Blue" (the family block's own), purple => "Purple", cyan => "Cyan", graphite => "Graphite".
+   Each block redeclares the four accent tokens and inherits the family block's
+   --on-accent (bg by night, white by day). Hover lightens by night and deepens
+   by day, press deepens in both, and the washes are the fill at .15/.24 by
+   night and .12/.20 by day. Purple is hue-3, cyan hue-1, graphite mono-2. By
+   night purple and mono-2 are lifted until the press keeps the bg label at
+   4.5:1 (mono-2 measures 3.98:1 under it as published); by day cyan (#0184BC,
+   4.18:1 under white) is deepened a step, and purple and mono-2 read as given. */
+
+[data-theme="one-dark"][data-accent="purple"] {
+    --accent: #CE82DD; /* hue-3, lifted a step so the press keeps bg at 4.5:1 */
+    --accent-hover: #D38EE0;
+    --accent-press: #C079CE;
+    --accent-ink: #DAA2E6; /* 6.86:1, 4.59 on its wash */
+}
+[data-theme="one-light"][data-accent="purple"] {
+    --accent: #A626A4; /* hue-3 */
+    --accent-hover: #9A2399;
+    --accent-press: #90218F;
+    --accent-ink: #9E249C; /* 6.31:1, 4.58 on its wash */
+}
+
+[data-theme="one-dark"][data-accent="cyan"] {
+    --accent: #56B6C2; /* hue-1 */
+    --accent-hover: #67BDC8;
+    --accent-press: #50A9B4;
+    --accent-ink: #78C5CE; /* 7.12:1, 4.56 on its wash */
+}
+[data-theme="one-light"][data-accent="cyan"] {
+    --accent: #017DAE; /* hue-1 deepened a step */
+    --accent-hover: #0174A2;
+    --accent-press: #016D97;
+    --accent-ink: #01668F; /* 6.10:1, 4.57 on its wash */
+}
+
+[data-theme="one-dark"][data-accent="graphite"] {
+    --accent: #989FAD; /* mono-2 lifted toward mono-1 */
+    --accent-hover: #A2A9B5;
+    --accent-press: #8D94A1;
+    --accent-ink: #B1B7C1; /* 6.94:1, 4.58 on its wash */
+    --chart-side-home: #EEEFF1; /* 12.17:1, 3.06 */
+}
+[data-theme="one-light"][data-accent="graphite"] {
+    --accent: #696C77; /* mono-2 */
+    --accent-hover: #62646F;
+    --accent-press: #5B5E68;
+    --accent-ink: #5C5F69; /* 6.10:1, 4.60 on its wash */
+    --chart-side-home: #4E5159; /* 7.61:1, 3.08 */
+}
+
+/* Monokai's chosen accents. Keys, built-in first:
+     cyan => "Cyan" (the family block's own), purple => "Purple", yellow => "Yellow", graphite => "Graphite".
+   Each block redeclares the four accent tokens and inherits the family block's
+   --on-accent (bg by night, the fg paper by day). Hover lightens by night and
+   deepens by day, press deepens in both, and the washes are the fill at
+   .15/.24 by night and .12/.20 by day. Purple is the constant purple; yellow
+   the string yellow, which stays clear of the orange warning by night; graphite
+   the comment grey, lifted by night until the press keeps bg at 4.5:1 (3.03:1
+   as published). By day each is deepened until the paper label reads on it, as
+   the cyan is: yellow becomes the olive light Monokai ports write strings in. */
+
+[data-theme="monokai-dark"][data-accent="purple"] {
+    --accent: #AE81FF; /* purple */
+    --accent-hover: #B68EFF;
+    --accent-press: #A278ED;
+    --accent-ink: #C09DFF; /* 6.73:1, 4.56 on its wash */
+}
+[data-theme="monokai-light"][data-accent="purple"] {
+    --accent: #8060BB; /* purple deepened: 2.67:1 under the paper as published */
+    --accent-hover: #7759AE;
+    --accent-press: #6F54A3;
+    --accent-ink: #6C519E; /* 5.95:1, 4.63 on its wash */
+}
+
+[data-theme="monokai-dark"][data-accent="yellow"] {
+    --accent: #E6DB74; /* yellow */
+    --accent-hover: #E8DF82;
+    --accent-press: #D6CC6C;
+    --accent-ink: #E6DB74; /* 10.44:1, 5.52 on its wash */
+}
+[data-theme="monokai-light"][data-accent="yellow"] {
+    --accent: #787332; /* yellow deepened to an olive: 1.34:1 under the paper as published */
+    --accent-hover: #706B2E;
+    --accent-press: #68642C;
+    --accent-ink: #67622B; /* 5.87:1, 4.58 on its wash */
+}
+
+[data-theme="monokai-dark"][data-accent="graphite"] {
+    --accent: #9E9A8D; /* comment lifted until the press keeps bg at 4.5:1 */
+    --accent-hover: #A8A498;
+    --accent-press: #938F83;
+    --accent-ink: #B3B0A6; /* 6.85:1, 4.57 on its wash */
+    --chart-side-home: #CECCC5; /* 9.25:1, 3.05 */
+}
+[data-theme="monokai-light"][data-accent="graphite"] {
+    --accent: #75715E; /* comment */
+    --accent-hover: #6D6957;
+    --accent-press: #666252;
+    --accent-ink: #646150; /* 5.85:1, 4.57 on its wash */
+    --chart-side-home: #282720; /* 14.06:1, 3.05 */
+}
+
+/* Ayu's chosen accents. Keys, built-in first:
+     gold => "Gold" (the family block's own), blue => "Blue", purple => "Purple", teal => "Teal".
+   Each block redeclares the four accent tokens and inherits the family block's
+   --on-accent, which is dark in both appearances. Hover lightens by night and
+   deepens by day, press deepens in both, and the washes are the fill at
+   .15/.24 by night and .12/.20 by day. Blue is syntax.entity, purple
+   syntax.constant and teal syntax.regexp, each as published in both: all of
+   them carry the dark label as given. Their inks are deepened by day. */
+
+[data-theme="ayu-dark"][data-accent="blue"] {
+    --accent: #59C2FF; /* syntax.entity */
+    --accent-hover: #6AC8FF;
+    --accent-press: #53B4ED;
+    --accent-ink: #59C2FF; /* 9.29:1, 5.65 on its wash */
+}
+[data-theme="ayu-light"][data-accent="blue"] {
+    --accent: #22A4E6; /* palette.blue */
+    --accent-hover: #2099D6;
+    --accent-press: #1E8FC8;
+    --accent-ink: #166A94; /* 5.81:1, 4.61 on its wash */
+}
+
+[data-theme="ayu-dark"][data-accent="purple"] {
+    --accent: #D2A6FF; /* syntax.constant */
+    --accent-hover: #D6AFFF;
+    --accent-press: #C39AED;
+    --accent-ink: #D2A6FF; /* 9.34:1, 5.66 on its wash */
+}
+[data-theme="ayu-light"][data-accent="purple"] {
+    --accent: #A37ACC; /* palette.purple */
+    --accent-hover: #9871BE;
+    --accent-press: #8E6AB1;
+    --accent-ink: #755792; /* 5.79:1, 4.56 on its wash */
+}
+
+[data-theme="ayu-dark"][data-accent="teal"] {
+    --accent: #95E6CB; /* syntax.regexp */
+    --accent-hover: #A0E8D0;
+    --accent-press: #8BD6BD;
+    --accent-ink: #95E6CB; /* 12.70:1, 6.89 on its wash */
+}
+[data-theme="ayu-light"][data-accent="teal"] {
+    --accent: #4CBF99; /* palette.teal */
+    --accent-hover: #47B28E;
+    --accent-press: #42A685;
+    --accent-ink: #2D715A; /* 5.65:1, 4.59 on its wash */
+}
+
+/* Primer's chosen accents: the emphasis hues Primer itself gives a filled
+   control or a label, none of them a state hue. Done (purple) and Sponsors
+   (pink) are Primer's own named roles; Graphite is its neutral emphasis.
+
+   Accents: blue → Blue (built in), purple → Purple, pink → Pink, graphite → Graphite
+
+   On the dark desk each emphasis fill measures within a hair of 4.55:1 under
+   the white label, so, as with the built-in blue, the fill at rest is deepened
+   a step and the published emphasis is the hover. On the light desk the
+   emphasis is the fill as published, and the ink is Primer's next step down
+   the scale (purple-6, pink-6, neutral-10), since the fg values read under
+   4.0:1 on their strong washes. */
+
+[data-theme="primer-dark"][data-accent="purple"] {
+    --accent: #8454DD; /* done.emphasis deepened a step */
+    --accent-hover: #8957E5; /* done.emphasis */
+    --accent-press: #7848D4;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #AB7DF8; /* done.fg */
+}
+[data-theme="primer-light"][data-accent="purple"] {
+    --accent: #8250DF; /* done.emphasis */
+    --accent-hover: #7445CC;
+    --accent-press: #6639BA; /* purple-6 */
+    --accent-ink: #6639BA; /* purple-6 */
+}
+
+[data-theme="primer-dark"][data-accent="pink"] {
+    --accent: #B84885; /* sponsors.emphasis deepened a step */
+    --accent-hover: #BF4B8A; /* sponsors.emphasis */
+    --accent-press: #A8417A;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    /* sponsors.fg (#DB61A2) is 4.51:1 on the strong wash; a breath lighter reads. */
+    --accent-ink: #DC66A5;
+}
+[data-theme="primer-light"][data-accent="pink"] {
+    --accent: #BF3989; /* sponsors.emphasis */
+    --accent-hover: #A8337C;
+    --accent-press: #99286E; /* pink-6 */
+    --accent-ink: #99286E; /* pink-6 */
+}
+
+[data-theme="primer-dark"][data-accent="graphite"] {
+    --accent: #656C76; /* neutral emphasis */
+    --accent-hover: #6E757F;
+    --accent-press: #5A6169;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #9198A1; /* fgColor-muted */
+    --chart-side-home: #F0F6FC; /* fgColor-default: 17.39:1, 3.43 off the away side */
+    --chart-side-away: #7D8590; /* 5.07:1; fgColor-muted is too light for any tone to clear it */
+}
+[data-theme="primer-light"][data-accent="graphite"] {
+    --accent: #59636E; /* fgColor-muted, Primer's neutral emphasis */
+    --accent-hover: #4F5862;
+    --accent-press: #454C54; /* neutral-10 */
+    --accent-ink: #454C54; /* neutral-10 */
+    --chart-side-home: #393F46; /* 10.64:1, 3.08 */
+}
+
+/* Night Owl's chosen accents: the palette's keyword purple, its cyan and the
+   slate of its badges, each in Night Owl by night and Light Owl's counterpart by
+   day. None is a state hue; the teal sits well clear of the terminal green.
+
+   Accents: blue → Blue (built in), purple → Purple, teal → Teal, slate → Slate
+
+   By night each takes the navy as its label, as the blue does. Purple and cyan
+   read as published; the badge slate (#5F7E97) measures 4.29:1 under navy, so
+   it is lifted until the label, and the press below it, still read. By day
+   purple reads under white as published; Light Owl's teal (#2AA298, 3.13:1
+   under white) and slate (4.27:1) are deepened until they carry it, and every
+   ink is its fill deepened again, for the grey controls. */
+
+[data-theme="night-owl-dark"][data-accent="purple"] {
+    --accent: #C792EA; /* keyword */
+    --accent-hover: #CE9FED;
+    --accent-press: #BB89DC;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #C792EA;
+}
+[data-theme="night-owl-light"][data-accent="purple"] {
+    --accent: #994CC3; /* Light Owl keyword */
+    --accent-hover: #8E47B5;
+    --accent-press: #8442A9;
+    --accent-ink: #8442A9;
+}
+
+[data-theme="night-owl-dark"][data-accent="teal"] {
+    --accent: #7FDBCA; /* terminal bright cyan */
+    --accent-hover: #8EDFD0;
+    --accent-press: #78CFBF;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #7FDBCA;
+}
+[data-theme="night-owl-light"][data-accent="teal"] {
+    --accent: #22827A; /* Light Owl's button teal (#2AA298), deepened to carry white */
+    --accent-hover: #207971;
+    --accent-press: #1D6F68;
+    --accent-ink: #1C6C65; /* a step past the press, for the strong wash */
+}
+
+[data-theme="night-owl-dark"][data-accent="slate"] {
+    --accent: #7390A6; /* badge.background (#5F7E97), lifted to carry the navy */
+    --accent-hover: #819BAF;
+    --accent-press: #6C879C;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #8FA6B9;
+}
+[data-theme="night-owl-light"][data-accent="slate"] {
+    --accent: #5B7890; /* badge.background, deepened to carry white */
+    --accent-hover: #546E84;
+    --accent-press: #4C657A;
+    --accent-ink: #4C657A;
+}
+
+/* Palenight's chosen accents: the palette's blue, cyan and pale blue, each
+   in Palenight by night and its Material Lighter counterpart by day. None is
+   a state hue.
+
+   Accents: purple → Purple (built in), blue → Blue, cyan → Cyan, slate → Pale blue
+
+   By night each takes Palenight's Background as its label and reads as
+   published; the blue's ink is lifted toward white, for the reason the purple's
+   is (3.76:1 on its strong wash). By day Lighter's blue (3.89:1 under white),
+   cyan (2.69) and pale blue (2.99) are deepened until they carry white, and each
+   ink is its fill deepened again for the grey controls. */
+
+[data-theme="palenight-dark"][data-accent="blue"] {
+    --accent: #82AAFF; /* blue */
+    --accent-hover: #91B4FF;
+    --accent-press: #7AA0F0;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #9FBEFF;
+}
+[data-theme="palenight-light"][data-accent="blue"] {
+    --accent: #5775A6; /* Lighter blue (#6182B8), deepened to carry white */
+    --accent-hover: #516D9A;
+    --accent-press: #4B658F;
+    --accent-ink: #49628B;
+}
+
+[data-theme="palenight-dark"][data-accent="cyan"] {
+    --accent: #89DDFF; /* cyan */
+    --accent-hover: #97E1FF;
+    --accent-press: #81D0F0;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #89DDFF;
+}
+[data-theme="palenight-light"][data-accent="cyan"] {
+    --accent: #2A8086; /* Lighter cyan (#39ADB5), deepened to carry white */
+    --accent-hover: #27777D;
+    --accent-press: #246E73;
+    --accent-ink: #236A6F;
+}
+
+[data-theme="palenight-dark"][data-accent="pale-blue"] {
+    --accent: #B2CCD6; /* paleblue */
+    --accent-hover: #BBD2DB;
+    --accent-press: #A7C0C9;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #B5CED7;
+}
+[data-theme="palenight-light"][data-accent="pale-blue"] {
+    --accent: #697589; /* Lighter paleblue (#8796B0), deepened to carry white */
+    --accent-hover: #626D7F;
+    --accent-press: #5A6576;
+    --accent-ink: #586273;
+}
+
+/* Zenburn's chosen accents: blue+1's periwinkle, the palette's magenta and its
+   warm grey, none of them a state hue. Cyan (#93E0E3) is left out: it sits a
+   step from the built-in blue and would read as the same choice.
+
+   Accents: blue → Blue (built in), sky → Sky, magenta → Magenta, graphite → Graphite
+
+   By night each takes bg-1 as its label and the fill is the published colour,
+   except graphite: fg-05 (#989890) measures 4.87:1 under bg-1 and its press
+   would fall below 4.5, so the fill is lifted a step. The inks are the palette's
+   lighter steps where it has them (blue+3 for sky, fg for graphite); magenta has
+   none, so its ink is magenta lifted toward fg+1. By day blue+1 and magenta are
+   deepened until they carry fg+1, and graphite is fg-1 as published. */
+
+[data-theme="zenburn-dark"][data-accent="sky"] {
+    --accent: #94BFF3; /* blue+1 */
+    --accent-hover: #A4C9F5;
+    --accent-press: #8AB2E2;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #BDE0F3; /* blue+3 */
+}
+[data-theme="zenburn-light"][data-accent="sky"] {
+    --accent: #5C7697; /* blue+1, deepened to carry fg+1 */
+    --accent-hover: #566E8C;
+    --accent-press: #4F6582;
+    --accent-ink: #4D637F;
+}
+
+[data-theme="zenburn-dark"][data-accent="magenta"] {
+    --accent: #DC8CC3; /* magenta */
+    --accent-hover: #E19DCC;
+    --accent-press: #CD82B5;
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    /* Magenta is 2.95:1 on its strong wash; lifted toward fg+1 until it reads. */
+    --accent-ink: #EDC4D8;
+}
+[data-theme="zenburn-light"][data-accent="magenta"] {
+    --accent: #9A6288; /* magenta, deepened to carry fg+1 */
+    --accent-hover: #8F5B7E;
+    --accent-press: #845475;
+    --accent-ink: #825373;
+}
+
+[data-theme="zenburn-dark"][data-accent="graphite"] {
+    --accent: #A0A098; /* fg-05, lifted a step */
+    --accent-hover: #ACACA4;
+    --accent-press: #989890; /* fg-05 */
+    --accent-wash-alpha: .15;
+    --accent-wash-strong-alpha: .24;
+    --accent-ink: #DCDCCC; /* fg */
+    --chart-side-home: #FFFFEF; /* fg+1: 10.43:1, 3.23 off the away side */
+    --chart-side-away: #8F8F87; /* 3.23:1; fg-05 is too light for any tone to clear it */
+}
+[data-theme="zenburn-light"][data-accent="graphite"] {
+    --accent: #656555; /* fg-1 */
+    --accent-hover: #5E5E4F;
+    --accent-press: #575749;
+    --accent-ink: #575749;
+    --chart-side-home: #4A4A3E; /* 8.89:1, 3.09 */
+}
+
+/* Nord: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
+   where its hue wants another strength, and nothing else;
+   --on-accent, the surfaces and the states are the family block's own. */
+
+[data-theme="nord-dark"][data-accent="teal"] {
+    /* Frost teal: nord7 #8FBCBB as published. */
+    --accent: #8FBCBB;
+    --accent-hover: #A0C6C5;
+    --accent-press: #85AFAE;
+    /* The ink: lifted past #A0C6C5 until it reads on every surface and wash it is set on. */
+    --accent-ink: #A7CAC9;
+}
+
+[data-theme="nord-light"][data-accent="teal"] {
+    /* Frost teal: nord7 #8FBCBB deepened 35% so the #FFFFFF label reads. */
+    --accent: #5D7A7A;
+    --accent-hover: #577373;
+    --accent-press: #526B6B;
+    /* The ink: deepened past #526B6B until it reads on every surface and wash it is set on. */
+    --accent-ink: #4C6464;
+}
+
+[data-theme="nord-dark"][data-accent="purple"] {
+    /* Aurora purple: nord15 #B48EAD lifted 15% so the #2E3440 label reads. */
+    --accent: #BF9FB9;
+    --accent-hover: #C9ADC4;
+    --accent-press: #B294AC;
+    /* The ink: lifted past #C9ADC4 until it reads on every surface and wash it is set on. */
+    --accent-ink: #D0B8CC;
+}
+
+[data-theme="nord-light"][data-accent="purple"] {
+    /* Aurora purple: nord15 #B48EAD deepened 24% so the #FFFFFF label reads. */
+    --accent: #896C83;
+    --accent-hover: #81667B;
+    --accent-press: #795F73;
+    /* The ink: deepened past #795F73 until it reads on every surface and wash it is set on. */
+    --accent-ink: #71586B;
+}
+
+/* Solarized: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
+   where its hue wants another strength, and nothing else;
+   --on-accent, the surfaces and the states are the family block's own. */
+
+[data-theme="solarized-dark"][data-accent="violet"] {
+    /* Violet: violet #6C71C4 deepened 7% so the #FFFFFF label reads. */
+    --accent: #6469B6;
+    --accent-hover: #6A6FB9;
+    --accent-press: #5D62A9;
+    /* The ink: the published hue lifted until it reads on every surface and wash it is set on. */
+    --accent-ink: #9DA0D7;
+}
+
+[data-theme="solarized-light"][data-accent="violet"] {
+    /* Violet: violet #6C71C4 deepened 3% so the #FFFFFF label reads. */
+    --accent: #696EBE;
+    --accent-hover: #6367B3;
+    --accent-press: #5C61A7;
+    /* The ink: deepened past #5C61A7 until it reads on every surface and wash it is set on. */
+    --accent-ink: #535796;
+}
+
+[data-theme="solarized-dark"][data-accent="cyan"] {
+    /* Cyan: cyan #2AA198 deepened 23% so the #FFFFFF label reads. */
+    --accent: #207C75;
+    --accent-hover: #29817B;
+    --accent-press: #1E736D;
+    /* The ink: the published hue lifted until it reads on every surface and wash it is set on. */
+    --accent-ink: #57B5AE;
+}
+
+[data-theme="solarized-light"][data-accent="cyan"] {
+    /* Cyan: cyan #2AA198 deepened 19% so the #FFFFFF label reads. */
+    --accent: #22827B;
+    --accent-hover: #207A74;
+    --accent-press: #1E726C;
+    /* The ink: deepened past #1E726C until it reads on every surface and wash it is set on. */
+    --accent-ink: #1B6761;
+}
+
+[data-theme="solarized-dark"][data-accent="slate"] {
+    /* Slate: base01 #586E75 as published. */
+    --accent: #586E75;
+    --accent-hover: #5F747B;
+    --accent-press: #52666D;
+    /* The ink: the published hue lifted until it reads on every surface and wash it is set on. */
+    --accent-ink: #97A5A9;
+}
+
+[data-theme="solarized-light"][data-accent="slate"] {
+    /* Slate: base01 #586E75 as published. */
+    --accent: #586E75;
+    --accent-hover: #53676E;
+    --accent-press: #4D6167;
+    /* The ink: deepened past #4D6167 until it reads on every surface and wash it is set on. */
+    --accent-ink: #4C6066;
+}
+
+/* Rose Pine: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
+   where its hue wants another strength, and nothing else;
+   --on-accent, the surfaces and the states are the family block's own. */
+
+[data-theme="rose-pine-dark"][data-accent="subtle"] {
+    /* Subtle: subtle (Main) / subtle (Dawn) #908CAA as published. */
+    --accent: #908CAA;
+    --accent-hover: #A19DB7;
+    --accent-press: #86829E;
+    /* The ink: lifted past #A19DB7 until it reads on every surface and wash it is set on. */
+    --accent-ink: #A8A4BC;
+}
+
+[data-theme="rose-pine-light"][data-accent="subtle"] {
+    /* Subtle: subtle (Main) / subtle (Dawn) #797593 deepened 3% so the #FFFFFF label reads. */
+    --accent: #75718F;
+    --accent-hover: #6E6A86;
+    --accent-press: #67637E;
+    /* The ink: deepened past #67637E until it reads on every surface and wash it is set on. */
+    --accent-ink: #605C75;
+}
+
+/* Catppuccin: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
+   where its hue wants another strength, and nothing else;
+   --on-accent, the surfaces and the states are the family block's own. */
+
+[data-theme="catppuccin-dark"][data-accent="pink"] {
+    /* Pink: pink #F5C2E7 as published. */
+    --accent: #F5C2E7;
+    --accent-hover: #F6CBEB;
+    --accent-press: #E4B4D7;
+    /* The ink: the hover reads as it is. */
+    --accent-ink: #F6CBEB;
+}
+
+[data-theme="catppuccin-light"][data-accent="pink"] {
+    /* Pink: pink #EA76CB deepened 26% so the #FFFFFF label reads. */
+    --accent: #AD5796;
+    --accent-hover: #A3528D;
+    --accent-press: #984D84;
+    /* The ink: deepened past #984D84 until it reads on every surface and wash it is set on. */
+    --accent-ink: #894577;
+}
+
+[data-theme="catppuccin-dark"][data-accent="blue"] {
+    /* Blue: blue #89B4FA as published. */
+    --accent: #89B4FA;
+    --accent-hover: #9BBFFB;
+    --accent-press: #7FA7E8;
+    /* The ink: the hover reads as it is. */
+    --accent-ink: #9BBFFB;
+}
+
+[data-theme="catppuccin-light"][data-accent="blue"] {
+    /* Blue: blue #1E66F5 as published. */
+    --accent: #1E66F5;
+    --accent-hover: #1C60E6;
+    --accent-press: #1A5AD8;
+    /* The ink: deepened past #1A5AD8 until it reads on every surface and wash it is set on. */
+    --accent-ink: #1853C7;
+}
+
+[data-theme="catppuccin-dark"][data-accent="sapphire"] {
+    /* Sapphire: sapphire #74C7EC as published. */
+    --accent: #74C7EC;
+    --accent-hover: #89CFEF;
+    --accent-press: #6CB9DB;
+    /* The ink: the hover reads as it is. */
+    --accent-ink: #89CFEF;
+}
+
+[data-theme="catppuccin-light"][data-accent="sapphire"] {
+    /* Sapphire: sapphire #209FB5 deepened 19% so the #FFFFFF label reads. */
+    --accent: #1A8193;
+    --accent-hover: #18798A;
+    --accent-press: #177281;
+    /* The ink: deepened past #177281 until it reads on every surface and wash it is set on. */
+    --accent-ink: #146573;
+}
+
+/* Gruvbox: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
+   where its hue wants another strength, and nothing else;
+   --on-accent, the surfaces and the states are the family block's own. */
+
+[data-theme="gruvbox-dark"][data-accent="purple"] {
+    /* Purple: bright purple / faded purple #D3869B as published. */
+    --accent: #D3869B;
+    --accent-hover: #DA98AA;
+    --accent-press: #C47D90;
+    /* The ink: lifted past #DA98AA until it reads on every surface and wash it is set on. */
+    --accent-ink: #DB9CAD;
+}
+
+[data-theme="gruvbox-light"][data-accent="purple"] {
+    /* Purple: bright purple / faded purple #8F3F71 as published. */
+    --accent: #8F3F71;
+    --accent-hover: #863B6A;
+    --accent-press: #7E3763;
+    /* The ink: the press reads as it is. */
+    --accent-ink: #7E3763;
+}
+
+[data-theme="gruvbox-dark"][data-accent="graphite"] {
+    /* Gray: gray (#928374) / dark4 (#7C6F64) #928374 lifted 17% so the #282828 label reads. */
+    --accent: #A5988C;
+    --accent-hover: #B2A79D;
+    --accent-press: #998D82;
+    /* The ink: lifted past #B2A79D until it reads on every surface and wash it is set on. */
+    --accent-ink: #B7ACA3;
+    --chart-side-home: #EDEAE8; /* 12.31:1, 3.07 */
+}
+
+[data-theme="gruvbox-light"][data-accent="graphite"] {
+    /* Gray: gray (#928374) / dark4 (#7C6F64) #7C6F64 deepened 4% so the #FBF1C7 label reads. */
+    --accent: #776B60;
+    --accent-hover: #70655A;
+    --accent-press: #695E54;
+    /* The ink: deepened past #695E54 until it reads on every surface and wash it is set on. */
+    --accent-ink: #665B51;
+    --chart-side-home: #403933; /* 10.00:1, 3.09 */
+}
+
+/* Tokyo Night: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
+   where its hue wants another strength, and nothing else;
+   --on-accent, the surfaces and the states are the family block's own. */
+
+[data-theme="tokyo-night-dark"][data-accent="magenta"] {
+    /* Magenta: magenta (Night / Day) #BB9AF7 as published. */
+    --accent: #BB9AF7;
+    --accent-hover: #C5A9F8;
+    --accent-press: #AE8FE6;
+    /* The ink: the hover reads as it is. */
+    --accent-ink: #C5A9F8;
+}
+
+[data-theme="tokyo-night-light"][data-accent="magenta"] {
+    /* Magenta: magenta (Night / Day) #9854F1 deepened 3% so the #FFFFFF label reads. */
+    --accent: #9351EA;
+    --accent-hover: #8A4CDC;
+    --accent-press: #8147CE;
+    /* The ink: deepened past #8147CE until it reads on every surface and wash it is set on. */
+    --accent-ink: #723EB5;
+}
+
+[data-theme="tokyo-night-dark"][data-accent="purple"] {
+    /* Purple: purple (Night / Day) #9D7CD8 lifted 2% so the #1A1B26 label reads. */
+    --accent: #9F7FD9;
+    --accent-hover: #AD92DF;
+    --accent-press: #9476CA;
+    /* The ink: the hover reads as it is. */
+    --accent-ink: #AD92DF;
+}
+
+[data-theme="tokyo-night-light"][data-accent="purple"] {
+    /* Purple: purple (Night / Day) #7847BD as published. */
+    --accent: #7847BD;
+    --accent-hover: #7143B2;
+    --accent-press: #6A3EA6;
+    /* The ink: the press reads as it is. */
+    --accent-ink: #6A3EA6;
+}
+
+[data-theme="tokyo-night-dark"][data-accent="cyan"] {
+    /* Cyan: cyan (Night / Day) #7DCFFF as published. */
+    --accent: #7DCFFF;
+    --accent-hover: #90D6FF;
+    --accent-press: #74C1ED;
+    /* The ink: the hover reads as it is. */
+    --accent-ink: #90D6FF;
+}
+
+[data-theme="tokyo-night-light"][data-accent="cyan"] {
+    /* Cyan: cyan (Night / Day) #007197 as published. */
+    --accent: #007197;
+    --accent-hover: #006A8E;
+    --accent-press: #006385;
+    /* The ink: deepened past #006385 until it reads on every surface and wash it is set on. */
+    --accent-ink: #006182;
+}
+
+/* Dracula: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
+   where its hue wants another strength, and nothing else;
+   --on-accent, the surfaces and the states are the family block's own. */
+
+[data-theme="dracula-dark"][data-accent="cyan"] {
+    /* Cyan: Cyan (Dracula / Alucard) #8BE9FD as published. */
+    --accent: #8BE9FD;
+    --accent-hover: #9CECFD;
+    --accent-press: #81D9EB;
+    /* The ink: the hover reads as it is. */
+    --accent-ink: #9CECFD;
+}
+
+[data-theme="dracula-light"][data-accent="cyan"] {
+    /* Cyan: Cyan (Dracula / Alucard) #036A96 as published. */
+    --accent: #036A96;
+    --accent-hover: #03648D;
+    --accent-press: #035D84;
+    /* The ink: the press reads as it is. */
+    --accent-ink: #035D84;
+}
+
+[data-theme="dracula-dark"][data-accent="comment"] {
+    /* Comment: Comment (Dracula / Alucard) #6272A4 lifted 19% so the #191A21 label reads. */
+    --accent: #808DB5;
+    --accent-hover: #939EC0;
+    --accent-press: #7783A8;
+    /* The ink: lifted past #939EC0 until it reads on every surface and wash it is set on. */
+    --accent-ink: #A2ACC9;
+}
+
+[data-theme="dracula-light"][data-accent="comment"] {
+    /* Comment: Comment (Dracula / Alucard) #6C664B as published. */
+    --accent: #6C664B;
+    --accent-hover: #666046;
+    --accent-press: #5F5A42;
+    /* The ink: the press reads as it is. */
+    --accent-ink: #5F5A42;
+}

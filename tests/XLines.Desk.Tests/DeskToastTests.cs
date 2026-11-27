@@ -184,7 +184,7 @@ public class DeskToastTests : DeskTestContext
         Assert.Equal("false", stack.Find(".toast__count").GetAttribute("aria-expanded"));
 
         // The stylesheet fans on the one class the component sets, never on :hover or :focus-within.
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.Contains(".toasts--fanned .toasts__list", css);
         Assert.DoesNotContain(":focus-within, .toasts--open", css);
     }
@@ -510,7 +510,7 @@ public class DeskToastTests : DeskTestContext
     }
 
     private static string DeskCss()
-        => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css")).Replace("\r\n", "\n");
+        => Support.DeskCss.Sheet("desk.css").Replace("\r\n", "\n");
 
     private static string RuleOf(string css, string selector)
         => Regex.Match(css, $@"(?m)^{Regex.Escape(selector)}\s*\{{[^}}]*\}}").Value;
@@ -862,7 +862,7 @@ public class DeskToastTests : DeskTestContext
         var layout = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "Layout", "MainLayout.razor"));
         Assert.DoesNotContain("<MudSnackbarProvider", layout);
 
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.DoesNotContain(".hdr__notice", css);
     }
 }

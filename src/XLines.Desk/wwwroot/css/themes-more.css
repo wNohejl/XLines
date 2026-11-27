@@ -1,0 +1,1483 @@
+/* --------------------------------------------------------------- Terra ----
+   Earth, and nothing brighter than earth gets. Every colour on this desk could
+   be dug out of a hillside — clay, olive, ochre, slate, the sand over them —
+   and none is saturated past the point a pigment ground from rock would reach.
+   It is the calm desk: the one to leave open through a long evening of lines,
+   where the eye is never pulled anywhere it did not choose to go.
+
+   By night the ground is deep umber going to charcoal-olive, the colour of
+   turned soil after rain, and the panels rise through bark and lichen-grey
+   with a green cast held just under the surface. Text is dry sand. The accent
+   is terracotta — fired clay, a brown-orange, deep enough to carry a sand
+   label — and the states are kept off its hue on purpose: an olive for
+   positive, a mustard ochre for warning, and for negative a madder red that
+   leans to rose, so clay, ochre and madder are three colours, not one. */
+
+[data-theme="terra-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #141411; /* turned soil */
+    --surface-1: #1B1A16; /* umber */
+    --surface-2: #24231D; /* bark */
+    --surface-3: #2E2C25; /* lichen */
+
+    --separator: rgba(230, 222, 204, .10);
+    --separator-strong: rgba(230, 222, 204, .17);
+
+    --text-primary: rgba(230, 222, 204, .90); /* dry sand */
+    --text-secondary: rgba(230, 222, 204, .63);
+    --text-tertiary: rgba(230, 222, 204, .30);
+
+    --accent: #955439; /* terracotta */
+    --accent-hover: #9A583C;
+    --accent-press: #894D34;
+    --accent-wash-alpha: .18;
+    --accent-wash-strong-alpha: .28;
+    --on-accent: #F5EFE3; /* sand, not white: nothing on this desk is whiter than sand */
+
+    --state-positive: #8E9E5E; /* olive */
+    --state-negative: #A84A55; /* madder, leaning to rose */
+    --state-negative-hover: #95414B;
+    --state-warning: #C4A050; /* mustard ochre */
+    --state-positive-wash-alpha: .16;
+    --state-negative-wash-alpha: .18;
+    --state-warning-wash-alpha: .16;
+
+    /* Ink. Olive and ochre read on umber as they are; madder and clay are fills, so
+       each ink is its hue lifted toward the sand. */
+    --state-positive-ink: #A0B06E;
+    --state-warning-ink: #CFAE63;
+    --state-negative-ink: #D98A92;
+    --accent-ink: #D8977A;
+
+    --chart-neutral: #857D6C; /* raw sienna, greyed */
+    --chart-neutral-dim: #4F4B40;
+
+    --material-ultrathin: rgba(36, 35, 29, .58);
+    --material-thin: rgba(32, 31, 26, .72);
+    --material-regular: rgba(27, 26, 22, .84);
+    --material-thick: rgba(20, 20, 17, .93);
+
+    --shadow-1: 0 1px 2px rgba(6, 6, 4, .35);
+    --shadow-2: 0 4px 12px -2px rgba(6, 6, 4, .50), 0 1px 3px rgba(6, 6, 4, .35);
+    --shadow-3: 0 16px 40px -8px rgba(6, 6, 4, .65), 0 4px 12px rgba(6, 6, 4, .40);
+    --shadow-sheet: 0 32px 80px -12px rgba(6, 6, 4, .80), 0 8px 24px rgba(6, 6, 4, .50);
+    --shadow-inset: inset 0 1px 2px rgba(6, 6, 4, .40);
+
+    --sheen: rgba(230, 222, 204, .13);
+    --sheen-soft: rgba(230, 222, 204, .05);
+    --knob: #E6DECC; /* sand */
+    --key-press: rgba(6, 6, 4, .30);
+}
+
+/* By day Terra is sand and stone: a greige ground like a dry riverbed, panels
+   the pale limestone over it, controls the sand again a shade deeper. It is
+   cooler and greyer than Paper's ivory on purpose — Paper is a sheet, Terra is
+   ground — and its text is a charcoal with olive in it rather than an ink. The
+   clay deepens to a fired brick that carries a sand-white label, and the
+   states deepen with it into their own earths: a moss olive, a raw-sienna
+   ochre, a madder gone to the colour of dried roses. */
+
+[data-theme="terra-light"] {
+    color-scheme: light;
+
+    --surface-0: #E4DED1; /* dry riverbed */
+    --surface-1: #F3F0E8; /* limestone */
+    --surface-2: #E7E2D6;
+    --surface-3: #DAD3C4;
+
+    --separator: rgba(46, 44, 36, .12);
+    --separator-strong: rgba(46, 44, 36, .21);
+
+    --text-primary: rgba(46, 44, 36, .92); /* olive charcoal */
+    --text-secondary: rgba(46, 44, 36, .75);
+    --text-tertiary: rgba(46, 44, 36, .34);
+
+    --accent: #9C5236; /* fired clay */
+    --accent-hover: #8E4A31;
+    --accent-press: #80432C;
+    --on-accent: #FBF8F1;
+
+    --state-positive: #66763A; /* moss olive */
+    --state-negative: #A13D48; /* madder */
+    --state-negative-hover: #8A3440;
+    --state-warning: #9A6D18; /* raw-sienna ochre */
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Every earth is a fill on limestone and the sand controls; each ink is
+       its hue deepened, and the clay ink is its press. */
+    --state-positive-ink: #535F2E;
+    --state-warning-ink: #7A5610;
+    --state-negative-ink: #8E3540;
+    --accent-ink: #80432C;
+
+    --chart-neutral: #8A8272;
+    --chart-neutral-dim: #BFB7A6;
+
+    --material-ultrathin: rgba(243, 240, 232, .62);
+    --material-thin: rgba(239, 235, 226, .76);
+    --material-regular: rgba(234, 230, 220, .86);
+    --material-thick: rgba(228, 222, 209, .94);
+
+    --shadow-1: 0 1px 2px rgba(46, 44, 36, .10);
+    --shadow-2: 0 4px 12px -2px rgba(46, 44, 36, .14), 0 1px 3px rgba(46, 44, 36, .10);
+    --shadow-3: 0 16px 40px -8px rgba(46, 44, 36, .20), 0 4px 12px rgba(46, 44, 36, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(46, 44, 36, .28), 0 8px 24px rgba(46, 44, 36, .16);
+    --shadow-inset: inset 0 1px 2px rgba(46, 44, 36, .08);
+
+    --sheen: rgba(46, 44, 36, .10);
+    --sheen-soft: rgba(46, 44, 36, .05);
+    --knob: #FDFBF6;
+    --key-press: rgba(46, 44, 36, .14);
+}
+
+/* ---------------------------------------------------------- Everforest ----
+   sainnhe's palette (github.com/sainnhe/everforest, palette.md), at medium
+   contrast both ways. By night bg0 is the panel with bg_dim under it as the
+   ground and bg1 as the raised tone; by day bg0's cream is the panel, bg_dim the
+   ground, and bg3 and bg4 the controls. The accent is the palette's blue in
+   both — Everforest's own colour for information and links. Green is the
+   palette's signature, but it is also its "ok", and a primary key and a
+   positive tag that shared a hue would stop meaning different things. Pale by
+   night, the blue takes bg0 as its ink; the light variant's blue (#3A94C5)
+   measures 3.38:1 under white, so by day it is deepened to #327E99 to carry it.
+   The states are the palette's own green, red and yellow, as its diagnostics
+   spend them; by day they are fills on the cream, and each ink is its hue
+   deepened. */
+
+[data-theme="everforest-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #232A2E; /* bg_dim */
+    --surface-1: #2D353B; /* bg0 */
+    --surface-2: #343F44; /* bg1 */
+    --surface-3: #39444A; /* halfway from bg1 to bg2: secondary reads on it */
+
+    --separator: rgba(211, 198, 170, .10);
+    --separator-strong: rgba(211, 198, 170, .16);
+
+    /* fg (#D3C6AA) at tiers. fg is a soft parchment rather than a white, so primary is the
+       full colour (7.38:1) and secondary measures 5.52:1 over --surface-1 and 4.56:1 over
+       --surface-3, where tags and badges set it (Standard: 5.72 and 4.78). */
+    --text-primary: rgba(211, 198, 170, 1);
+    --text-secondary: rgba(211, 198, 170, .82);
+    --text-tertiary: rgba(211, 198, 170, .32);
+
+    --accent: #7FBBB3; /* blue */
+    --accent-hover: #8CC2BB;
+    --accent-press: #76AEA6;
+    --on-accent: #2D353B; /* bg0 */
+
+    --state-positive: #A7C080; /* green */
+    --state-negative: #E67F81; /* red, a step lighter: the bg0 label reads 4.58:1 (4.55 as published) */
+    --state-negative-hover: #E98D8F; /* lifted away from the dark label, 1.12:1 from rest */
+    --state-warning: #DBBC7F; /* yellow */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. Green, yellow and blue read on bg0 and bg1 alike; red is 3.98:1 on bg1, so its ink
+       is the same red lifted until it reads there and on its wash. */
+    --state-positive-ink: #A7C080; /* 6.23:1, 4.61 on its wash */
+    --state-warning-ink: #DBBC7F; /* 6.84:1, 4.97 on its wash */
+    --state-negative-ink: #EC9C9D; /* 5.82:1, 4.59 on its wash */
+    --accent-ink: #A2CEC8; /* 7.24:1, 4.57 on its wash */
+
+    --chart-neutral: #859289; /* grey1 */
+    --chart-neutral-dim: #56635F; /* bg5 */
+
+    --material-ultrathin: rgba(52, 63, 68, .58);
+    --material-thin: rgba(48, 58, 64, .72);
+    --material-regular: rgba(45, 53, 59, .84);
+    --material-thick: rgba(35, 42, 46, .93);
+
+    --shadow-1: 0 1px 2px rgba(16, 19, 21, .32);
+    --shadow-2: 0 4px 12px -2px rgba(16, 19, 21, .48), 0 1px 3px rgba(16, 19, 21, .32);
+    --shadow-3: 0 16px 40px -8px rgba(16, 19, 21, .62), 0 4px 12px rgba(16, 19, 21, .38);
+    --shadow-sheet: 0 32px 80px -12px rgba(16, 19, 21, .78), 0 8px 24px rgba(16, 19, 21, .48);
+    --shadow-inset: inset 0 1px 2px rgba(16, 19, 21, .38);
+
+    --sheen: rgba(211, 198, 170, .16);
+    --sheen-soft: rgba(211, 198, 170, .06);
+    --knob: #D3C6AA; /* fg */
+    --key-press: rgba(16, 19, 21, .30);
+}
+
+/* Everforest light, medium. Its fg (#5C6A72) is a slate tuned for code: 5.18:1
+   on bg0 and 4.05:1 on bg4, too little for a second tier to sit under it, so the
+   tiers are built on fg deepened until it reads at 7:1 (#4A555C), still the
+   palette's slate. The hues are fills on the cream (green 2.69, yellow 2.12:1
+   as text). Red (#F85552) is deepened until the white destructive label reads,
+   and every ink is its hue deepened again. */
+
+[data-theme="everforest-light"] {
+    color-scheme: light;
+
+    --surface-0: #EFEBD4; /* bg_dim, as the ground */
+    --surface-1: #FDF6E3; /* bg0 */
+    --surface-2: #E6E2CC; /* bg3 */
+    --surface-3: #E0DCC7; /* bg4 */
+
+    --separator: rgba(74, 85, 92, .12);
+    --separator-strong: rgba(74, 85, 92, .20);
+
+    /* fg deepened to #4A555C at tiers. A soft ink, so primary is the full colour (7.09:1) and
+       secondary sits close under it at 5.66:1, 4.59:1 over --surface-3 — the tiers are nearer
+       than on other desks because there is less ink to spend. */
+    --text-primary: rgba(74, 85, 92, 1);
+    --text-secondary: rgba(74, 85, 92, .91);
+    --text-tertiary: rgba(74, 85, 92, .40);
+
+    --accent: #327E99; /* blue (#3A94C5) deepened: the white label reads 4.59:1 (3.38 as published) */
+    --accent-hover: #2E758E;
+    --accent-press: #2C6E85;
+    --on-accent: #FFFFFF;
+
+    --state-positive: #8DA101; /* green */
+    --state-negative: #CD4644; /* red (#F85552) deepened: the white destructive label reads 4.61:1 (3.27 as published) */
+    --state-negative-hover: #BF413F; /* deepened, 1.13:1 from rest */
+    --state-warning: #DFA000; /* yellow */
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Each hue deepened until it reads on bg3; the accent ink is --accent-press a step deeper. */
+    --state-positive-ink: #5D6A01; /* 4.57:1 raised, 5.52 on the panel */
+    --state-warning-ink: #815D00; /* 4.61:1 raised, 5.56 on the panel */
+    --state-negative-ink: #AF3C3A; /* 4.56:1 raised, 5.51 on the panel */
+    --accent-ink: #29677D; /* 5.85:1, 4.57 on its wash */
+
+    --chart-neutral: #829181; /* grey2 */
+    --chart-neutral-dim: #BDC3AF; /* bg5 */
+
+    --material-ultrathin: rgba(253, 246, 227, .62);
+    --material-thin: rgba(248, 242, 222, .76);
+    --material-regular: rgba(244, 239, 217, .86);
+    --material-thick: rgba(239, 235, 212, .94);
+
+    --shadow-1: 0 1px 2px rgba(74, 85, 92, .10);
+    --shadow-2: 0 4px 12px -2px rgba(74, 85, 92, .14), 0 1px 3px rgba(74, 85, 92, .10);
+    --shadow-3: 0 16px 40px -8px rgba(74, 85, 92, .20), 0 4px 12px rgba(74, 85, 92, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(74, 85, 92, .28), 0 8px 24px rgba(74, 85, 92, .16);
+    --shadow-inset: inset 0 1px 2px rgba(74, 85, 92, .08);
+
+    --sheen: rgba(74, 85, 92, .10);
+    --sheen-soft: rgba(74, 85, 92, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(74, 85, 92, .14);
+}
+
+/* ------------------------------------------------------------ Kanagawa ----
+   rebelot's palette after Hokusai's wave (github.com/rebelot/kanagawa.nvim,
+   lua/kanagawa/colors.lua): Wave by night, Lotus by day. sumiInk3 is the dark
+   panel with sumiInk0 under it, and sumiInk4 and sumiInk5 are the controls;
+   lotusWhite3 is the light panel, lotusWhite2 the ground, and Lotus's own raised
+   tones, lotusWhite4 and lotusWhite5, the controls. The accent is crystalBlue
+   by night — the hue Kanagawa gives functions, and none of its states — pale
+   enough for sumiInk3 as ink; by day lotusBlue4, deep enough for white. The
+   states are springGreen, waveRed and roninYellow by night: waveRed rather than
+   samuraiRed, the palette's diagnostic red, because under the dark destructive
+   label samuraiRed measures 3.66:1 and waveRed reads as given. By day Lotus's
+   green, red and orange2 are the fills and each ink is its hue deepened. */
+
+[data-theme="kanagawa-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #16161D; /* sumiInk0 */
+    --surface-1: #1F1F28; /* sumiInk3 */
+    --surface-2: #2A2A37; /* sumiInk4 */
+    --surface-3: #363646; /* sumiInk5 */
+
+    --separator: rgba(220, 215, 186, .10);
+    --separator-strong: rgba(220, 215, 186, .16);
+
+    /* fujiWhite (#DCD7BA) at tiers. Secondary measures 5.80:1 over --surface-1 and 4.62:1 over
+       --surface-3, where tags and badges set it (Standard: 5.72 and 4.78). */
+    --text-primary: rgba(220, 215, 186, .92);
+    --text-secondary: rgba(220, 215, 186, .67);
+    --text-tertiary: rgba(220, 215, 186, .30);
+
+    --accent: #7E9CD8; /* crystalBlue */
+    --accent-hover: #8BA6DC;
+    --accent-press: #7591C9;
+    --on-accent: #1F1F28; /* sumiInk3 */
+
+    --state-positive: #98BB6C; /* springGreen */
+    --state-negative: #E46876; /* waveRed */
+    --state-negative-hover: #E77784; /* lifted away from the dark label, 1.13:1 from rest */
+    --state-warning: #FF9E3B; /* roninYellow */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. springGreen, roninYellow and crystalBlue read on sumiInk3 and sumiInk4 alike; waveRed is
+       4.40:1 on sumiInk4, so its ink is the same red lifted until it reads there. */
+    --state-positive-ink: #98BB6C; /* 7.52:1, 5.64 on its wash */
+    --state-warning-ink: #FF9E3B; /* 7.94:1, 5.96 on its wash */
+    --state-negative-ink: #E77683; /* 5.69:1, 4.57 on its wash */
+    --accent-ink: #8FA9DD; /* 6.92:1, 4.57 on its wash */
+
+    --chart-neutral: #727169; /* fujiGray */
+    --chart-neutral-dim: #54546D; /* sumiInk6 */
+
+    --material-ultrathin: rgba(42, 42, 55, .58);
+    --material-thin: rgba(36, 36, 48, .72);
+    --material-regular: rgba(31, 31, 40, .84);
+    --material-thick: rgba(22, 22, 29, .93);
+
+    --shadow-1: 0 1px 2px rgba(10, 10, 13, .32);
+    --shadow-2: 0 4px 12px -2px rgba(10, 10, 13, .48), 0 1px 3px rgba(10, 10, 13, .32);
+    --shadow-3: 0 16px 40px -8px rgba(10, 10, 13, .62), 0 4px 12px rgba(10, 10, 13, .38);
+    --shadow-sheet: 0 32px 80px -12px rgba(10, 10, 13, .78), 0 8px 24px rgba(10, 10, 13, .48);
+    --shadow-inset: inset 0 1px 2px rgba(10, 10, 13, .38);
+
+    --sheen: rgba(220, 215, 186, .16);
+    --sheen-soft: rgba(220, 215, 186, .06);
+    --knob: #DCD7BA; /* fujiWhite */
+    --key-press: rgba(10, 10, 13, .30);
+}
+
+/* Kanagawa Lotus. lotusInk1 (#545464) is a soft ink on a parchment ground, so
+   primary is the full colour and secondary sits close under it. Lotus's hues are
+   fills on lotusWhite3 (green 2.80 on the raised tone, orange2 2.16, red 3.49:1
+   there), so each ink is its hue deepened; lotusBlue4 and lotusRed carry the
+   white label as published. */
+
+[data-theme="kanagawa-light"] {
+    color-scheme: light;
+
+    --surface-0: #E5DDB0; /* lotusWhite2, as the ground */
+    --surface-1: #F2ECBC; /* lotusWhite3 */
+    --surface-2: #E7DBA0; /* lotusWhite4 */
+    --surface-3: #E4D794; /* lotusWhite5 */
+
+    --separator: rgba(84, 84, 100, .12);
+    --separator-strong: rgba(84, 84, 100, .20);
+
+    /* lotusInk1 (#545464) at tiers. Primary is the full colour (6.19:1) and secondary sits close
+       under it at 5.91:1, 4.91:1 over --surface-3 and 4.62:1 over the Gradient backdrop's glow
+       in violet — the tiers are nearer than on other desks because there is less ink to spend. */
+    --text-primary: rgba(84, 84, 100, 1);
+    --text-secondary: rgba(84, 84, 100, .98);
+    --text-tertiary: rgba(84, 84, 100, .40);
+
+    --accent: #4D699B; /* lotusBlue4 */
+    --accent-hover: #486290;
+    --accent-press: #435B87;
+    --on-accent: #FFFFFF;
+
+    --state-positive: #6F894E; /* lotusGreen */
+    --state-negative: #C84053; /* lotusRed: the white destructive label reads 4.87:1 */
+    --state-negative-hover: #BA3C4D; /* deepened, 1.12:1 from rest */
+    --state-warning: #E98A00; /* lotusOrange2 */
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Each Lotus hue deepened until it reads on lotusWhite4 and on its wash; lotusBlue4 reads as given. */
+    --state-positive-ink: #52653A; /* 4.58:1 raised, 5.33 on the panel */
+    --state-warning-ink: #895100; /* 4.64:1 raised, 5.40 on the panel */
+    --state-negative-ink: #A83646; /* 5.33:1, 4.57 on its wash */
+    --accent-ink: #405781; /* 6.04:1, 4.59 on its wash */
+
+    --chart-neutral: #8A8980; /* lotusGray3 */
+    --chart-neutral-dim: #A09CAC; /* lotusViolet1 */
+
+    --material-ultrathin: rgba(242, 236, 188, .62);
+    --material-thin: rgba(238, 231, 184, .76);
+    --material-regular: rgba(233, 226, 180, .86);
+    --material-thick: rgba(229, 221, 176, .94);
+
+    --shadow-1: 0 1px 2px rgba(84, 84, 100, .10);
+    --shadow-2: 0 4px 12px -2px rgba(84, 84, 100, .14), 0 1px 3px rgba(84, 84, 100, .10);
+    --shadow-3: 0 16px 40px -8px rgba(84, 84, 100, .20), 0 4px 12px rgba(84, 84, 100, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(84, 84, 100, .28), 0 8px 24px rgba(84, 84, 100, .16);
+    --shadow-inset: inset 0 1px 2px rgba(84, 84, 100, .08);
+
+    --sheen: rgba(84, 84, 100, .10);
+    --sheen-soft: rgba(84, 84, 100, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(84, 84, 100, .14);
+}
+
+/* ----------------------------------------------------------------- One ----
+   Atom's One, from its one-dark-syntax and one-light-syntax themes
+   (github.com/atom/atom, packages/one-dark-syntax and one-light-syntax,
+   styles/colors.less). One Dark's bg (#282C34) is the panel, the gutter tone
+   under it the ground, the cursor line the raised tone and the selection
+   (#3E4451) the hover. mono-1 (#ABB2BF) is a grey tuned for code — 6.57:1 on
+   the panel and 4.58 on the selection at full strength, which leaves a second
+   tier no room under it — so the tiers are built on mono-1 lifted toward white
+   until it reads at 9:1 (#CBD0D8). The accent is the syntax blue (hue-2,
+   #61AFEF) in both — the UI's own #528BFF measures 4.33:1 under the dark
+   label — taking bg as ink by night; by day One Light's blue (#4078F2, 4.05:1
+   under white) is deepened a step. The states are the palette's green (hue-4),
+   red (hue-5) and yellow (hue-6-2); red is lifted a hair by night so the bg
+   label reads (4.38:1 as published), and by day it is One Light's own deep red
+   (hue-5-2, #CA1243), because its #E45649 measures 3.67:1 under white. */
+
+[data-theme="one-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #21252B; /* the gutter and panel tone */
+    --surface-1: #282C34; /* bg */
+    --surface-2: #2C313C; /* the cursor line */
+    --surface-3: #3E4451; /* the selection */
+
+    --separator: rgba(203, 208, 216, .10);
+    --separator-strong: rgba(203, 208, 216, .16);
+
+    /* mono-1 lifted to #CBD0D8, at tiers. Secondary measures 6.25:1 over --surface-1 and 4.62:1
+       over --surface-3, the selection tone, where tags and badges set it (Standard: 5.72 and 4.78). */
+    --text-primary: rgba(203, 208, 216, .92);
+    --text-secondary: rgba(203, 208, 216, .79);
+    --text-tertiary: rgba(203, 208, 216, .32);
+
+    --accent: #61AFEF; /* hue-2 */
+    --accent-hover: #71B7F1;
+    --accent-press: #5AA3DE;
+    --on-accent: #282C34; /* bg */
+
+    --state-positive: #98C379; /* hue-4 */
+    --state-negative: #E1717A; /* hue-5, lifted a hair: the bg label reads 4.56:1 */
+    --state-negative-hover: #E47F87; /* lifted away from the dark label, 1.12:1 from rest */
+    --state-warning: #E5C07B; /* hue-6-2 */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. Green, yellow and blue read on bg and on the cursor line; red is 4.25:1 on the cursor line,
+       so its ink is the same red lifted until it reads there. */
+    --state-positive-ink: #98C379; /* 6.94:1, 5.11 on its wash */
+    --state-warning-ink: #E5C07B; /* 8.10:1, 5.78 on its wash */
+    --state-negative-ink: #E78C93; /* 5.71:1, 4.57 on its wash */
+    --accent-ink: #82C0F2; /* 7.18:1, 4.59 on its wash */
+
+    --chart-neutral: #828997; /* mono-2 */
+    --chart-neutral-dim: #5C6370; /* mono-3 */
+
+    --material-ultrathin: rgba(44, 49, 60, .58);
+    --material-thin: rgba(42, 46, 56, .72);
+    --material-regular: rgba(40, 44, 52, .84);
+    --material-thick: rgba(33, 37, 43, .93);
+
+    --shadow-1: 0 1px 2px rgba(15, 17, 19, .32);
+    --shadow-2: 0 4px 12px -2px rgba(15, 17, 19, .48), 0 1px 3px rgba(15, 17, 19, .32);
+    --shadow-3: 0 16px 40px -8px rgba(15, 17, 19, .62), 0 4px 12px rgba(15, 17, 19, .38);
+    --shadow-sheet: 0 32px 80px -12px rgba(15, 17, 19, .78), 0 8px 24px rgba(15, 17, 19, .48);
+    --shadow-inset: inset 0 1px 2px rgba(15, 17, 19, .38);
+
+    --sheen: rgba(203, 208, 216, .16);
+    --sheen-soft: rgba(203, 208, 216, .06);
+    --knob: #ABB2BF; /* mono-1 */
+    --key-press: rgba(15, 17, 19, .30);
+}
+
+/* One Light. bg (#FAFAFA) is the panel, with greys of the same hue-230 family
+   stepping down from it as ground, control and hover; mono-1 (#383A42) is the
+   ink, at tiers. Green and yellow are fills on the pale bg (3.07 and 3.06:1 as
+   text), so their inks are deepened: green from hue-4, warning from the
+   palette's dark yellow (hue-6, #986801, 3.87:1 on the control tone). */
+
+[data-theme="one-light"] {
+    color-scheme: light;
+
+    --surface-0: #EAEAEB; /* a step under bg, as the ground */
+    --surface-1: #FAFAFA; /* bg */
+    --surface-2: #E5E5E6;
+    --surface-3: #DBDBDC;
+
+    --separator: rgba(56, 58, 66, .12);
+    --separator-strong: rgba(56, 58, 66, .20);
+
+    /* mono-1 (#383A42) at tiers. Secondary measures 5.48:1 over --surface-1, 4.60:1 over --surface-3. */
+    --text-primary: rgba(56, 58, 66, .94);
+    --text-secondary: rgba(56, 58, 66, .77);
+    --text-tertiary: rgba(56, 58, 66, .34);
+
+    --accent: #3870E2; /* hue-2 (#4078F2) deepened a step: the white label reads 4.58:1 (4.05 as published) */
+    --accent-hover: #3468D2;
+    --accent-press: #3161C5;
+    --on-accent: #FFFFFF;
+
+    --state-positive: #50A14F; /* hue-4 */
+    --state-negative: #CA1243; /* hue-5-2: the white destructive label reads 5.71:1 */
+    --state-negative-hover: #BB113E; /* deepened, 1.13:1 from rest */
+    --state-warning: #C18401; /* hue-6-2 */
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Green and dark yellow deepened until they read on the control tone; the deep red reads as
+       given, a hair deeper so it clears its wash. */
+    --state-positive-ink: #397238; /* 4.59:1 raised, 5.53 on the panel */
+    --state-warning-ink: #885D01; /* 4.62:1 raised, 5.57 on the panel */
+    --state-negative-ink: #C71242; /* 5.60:1, 4.58 on its wash */
+    --accent-ink: #2E5BB8; /* 6.09:1, 4.59 on its wash */
+
+    --chart-neutral: #A0A1A7; /* mono-3 */
+    --chart-neutral-dim: #C8C8CA;
+
+    --material-ultrathin: rgba(250, 250, 250, .62);
+    --material-thin: rgba(245, 245, 245, .76);
+    --material-regular: rgba(239, 239, 240, .86);
+    --material-thick: rgba(234, 234, 235, .94);
+
+    --shadow-1: 0 1px 2px rgba(56, 58, 66, .10);
+    --shadow-2: 0 4px 12px -2px rgba(56, 58, 66, .14), 0 1px 3px rgba(56, 58, 66, .10);
+    --shadow-3: 0 16px 40px -8px rgba(56, 58, 66, .20), 0 4px 12px rgba(56, 58, 66, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(56, 58, 66, .28), 0 8px 24px rgba(56, 58, 66, .16);
+    --shadow-inset: inset 0 1px 2px rgba(56, 58, 66, .08);
+
+    --sheen: rgba(56, 58, 66, .10);
+    --sheen-soft: rgba(56, 58, 66, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(56, 58, 66, .14);
+}
+
+/* ------------------------------------------------------------- Monokai ----
+   Wimer Hazenberg's palette, as the Monokai.tmTheme that TextMate and Sublime
+   Text ship (monokai.pro carries the history). Its bg (#272822) is the dark
+   panel, a step under it the ground, the line highlight (#3E3D32) the raised
+   tone and the selection (#49483E) the hover; fg (#F8F8F2) is the ink at
+   tiers. The accent is the cyan (#66D9EF) Monokai gives types and support
+   functions, taking bg as its label. Pink (#F92672) is the palette's signature,
+   but it is also the only red it has, so it is the negative state, lifted to
+   #FA4C8B so the dark destructive label reads (3.93:1 as published); green and
+   orange are positive and warning.
+
+   Monokai publishes no light variant. The light desk is the palette turned
+   over: fg is the paper and bg the ink, the controls step down from the paper
+   by mixing that ink into it, and the paper itself is the label on a filled key.
+   The hues stay and their lightness moves — on paper the neon fills measure 1.5
+   to 2.1:1 — so each is deepened only until it does its job there: cyan and
+   pink until the paper label reads on them, green and orange until they are a
+   3:1 graphic, and every ink until it reads as text. */
+
+[data-theme="monokai-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #1E1F1C; /* a step under bg, Sublime's sidebar tone */
+    --surface-1: #272822; /* bg */
+    --surface-2: #3E3D32; /* lineHighlight */
+    --surface-3: #49483E; /* selection */
+
+    --separator: rgba(248, 248, 242, .10);
+    --separator-strong: rgba(248, 248, 242, .16);
+
+    /* fg (#F8F8F2) at tiers. Secondary measures 6.44:1 over --surface-1 and 4.56:1 over
+       --surface-3, the selection tone, where tags and badges set it (Standard: 5.72 and 4.78). */
+    --text-primary: rgba(248, 248, 242, .92);
+    --text-secondary: rgba(248, 248, 242, .63);
+    --text-tertiary: rgba(248, 248, 242, .30);
+
+    --accent: #66D9EF; /* cyan */
+    --accent-hover: #75DDF1;
+    --accent-press: #5FCADE;
+    --on-accent: #272822; /* bg */
+
+    --state-positive: #A6E22E; /* green */
+    --state-negative: #FA4C8B; /* pink, lifted: the bg label reads 4.58:1 (3.93 as published) */
+    --state-negative-hover: #FB6198; /* lifted away from the dark label, 1.12:1 from rest */
+    --state-warning: #FD971F; /* orange */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. Green, orange and cyan read on bg and the line highlight; the lifted pink is 3.37:1 on the
+       line highlight, so its ink is lifted further until it reads there. */
+    --state-positive-ink: #A6E22E; /* 9.58:1, 6.67 on its wash */
+    --state-warning-ink: #FD971F; /* 5.02:1 raised, 6.81 on the panel */
+    --state-negative-ink: #FB80AD; /* 4.58:1 raised, 6.22 on the panel */
+    --accent-ink: #66D9EF; /* 9.01:1, 5.09 on its wash */
+
+    --chart-neutral: #75715E; /* comment */
+    --chart-neutral-dim: #49483E; /* selection */
+
+    --material-ultrathin: rgba(62, 61, 50, .58);
+    --material-thin: rgba(50, 50, 42, .72);
+    --material-regular: rgba(39, 40, 34, .84);
+    --material-thick: rgba(30, 31, 28, .93);
+
+    --shadow-1: 0 1px 2px rgba(14, 14, 13, .32);
+    --shadow-2: 0 4px 12px -2px rgba(14, 14, 13, .48), 0 1px 3px rgba(14, 14, 13, .32);
+    --shadow-3: 0 16px 40px -8px rgba(14, 14, 13, .62), 0 4px 12px rgba(14, 14, 13, .38);
+    --shadow-sheet: 0 32px 80px -12px rgba(14, 14, 13, .78), 0 8px 24px rgba(14, 14, 13, .48);
+    --shadow-inset: inset 0 1px 2px rgba(14, 14, 13, .38);
+
+    --sheen: rgba(248, 248, 242, .16);
+    --sheen-soft: rgba(248, 248, 242, .06);
+    --knob: #F8F8F2; /* fg */
+    --key-press: rgba(14, 14, 13, .30);
+}
+
+/* Monokai by day: the palette turned over (see the family note above). */
+
+[data-theme="monokai-light"] {
+    color-scheme: light;
+
+    --surface-0: #ECECE6; /* bg mixed 6% into fg, as the ground */
+    --surface-1: #F8F8F2; /* fg, as the paper */
+    --surface-2: #E3E3DD; /* bg mixed 10% into fg */
+    --surface-3: #D7D7D1; /* bg mixed 16% into fg */
+
+    --separator: rgba(39, 40, 34, .12);
+    --separator-strong: rgba(39, 40, 34, .20);
+
+    /* bg (#272822) at tiers, as the ink. Secondary measures 5.40:1 over --surface-1, 4.63:1 over --surface-3. */
+    --text-primary: rgba(39, 40, 34, .92);
+    --text-secondary: rgba(39, 40, 34, .70);
+    --text-tertiary: rgba(39, 40, 34, .34);
+
+    --accent: #327B86; /* cyan deepened until the paper label reads: 4.57:1 (1.55 as published) */
+    --accent-hover: #2E727D;
+    --accent-press: #2C6B75;
+    --on-accent: #F8F8F2; /* fg, the paper */
+
+    --state-positive: #729B20; /* green deepened to a 3:1 graphic (1.46 as published) */
+    --state-negative: #D72163; /* pink deepened: the paper label reads 4.60:1 (3.55 as published) */
+    --state-negative-hover: #C81F5C; /* deepened, 1.13:1 from rest */
+    --state-warning: #CE7B19; /* orange deepened to a 3:1 graphic (2.05 as published) */
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Each fill deepened again until it reads on the raised tone and on its wash. */
+    --state-positive-ink: #506D17; /* 4.60:1 raised, 5.56 on the panel */
+    --state-warning-ink: #905611; /* 4.62:1 raised, 5.59 on the panel */
+    --state-negative-ink: #C01E59; /* 4.56:1 raised, 5.52 on the panel */
+    --accent-ink: #2A6871; /* 5.94:1, 4.61 on its wash */
+
+    --chart-neutral: #75715E; /* comment */
+    --chart-neutral-dim: #B9B8AE;
+
+    --material-ultrathin: rgba(248, 248, 242, .62);
+    --material-thin: rgba(244, 244, 238, .76);
+    --material-regular: rgba(240, 240, 234, .86);
+    --material-thick: rgba(236, 236, 230, .94);
+
+    --shadow-1: 0 1px 2px rgba(39, 40, 34, .10);
+    --shadow-2: 0 4px 12px -2px rgba(39, 40, 34, .14), 0 1px 3px rgba(39, 40, 34, .10);
+    --shadow-3: 0 16px 40px -8px rgba(39, 40, 34, .20), 0 4px 12px rgba(39, 40, 34, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(39, 40, 34, .28), 0 8px 24px rgba(39, 40, 34, .16);
+    --shadow-inset: inset 0 1px 2px rgba(39, 40, 34, .08);
+
+    --sheen: rgba(39, 40, 34, .10);
+    --sheen-soft: rgba(39, 40, 34, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(39, 40, 34, .14);
+}
+
+/* ----------------------------------------------------------------- Ayu ----
+   ayu-theme's palette (github.com/ayu-theme/ayu-colors, themes/*.yaml): Dark by
+   night — the near-black variant, chosen over Mirage because Mirage's blue
+   slate sits beside One Dark's and Kanagawa's, where Dark's ink-black has no
+   neighbour on the desk — and Light by day. By night surface.base is the
+   ground, the editor's lift the panel, and panel.bg and ui.line the raised and
+   hover tones. Primary is editor.fg's warm white and secondary Ayu's own UI ink
+   (ui.fg, #C4D6FE), at a strength that reads: 42% as published measures 3.18:1
+   on the panel. The accent is common.accent, the gold, in both — #E6B450 by
+   night, #F29718 by day — and it takes a dark label in both, as Ayu's own
+   buttons do (common.accent.on is the gold darkened, not white): under white
+   the light gold would measure 2.2:1. Warning is the keyword orange, the
+   nearest hue the palette has that is not the accent; negative is
+   common.error and positive vcs.added. */
+
+[data-theme="ayu-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #0D1017; /* surface.base */
+    --surface-1: #10141C; /* surface.lift, the editor */
+    --surface-2: #141821; /* ui.panel.bg */
+    --surface-3: #1B1F29; /* ui.line */
+
+    --separator: rgba(196, 214, 254, .10);
+    --separator-strong: rgba(196, 214, 254, .16);
+
+    /* editor.fg (#FCF8EC) for primary, at 82% where Ayu sets code at 74%; ui.fg (#C4D6FE) for the
+       quieter tiers. Secondary measures 4.82:1 over --surface-1 and 4.59:1 over --surface-3. The
+       ramp is shallow, so secondary reads nearly alike on all four. */
+    --text-primary: rgba(252, 248, 236, .82);
+    --text-secondary: rgba(196, 214, 254, .57);
+    --text-tertiary: rgba(196, 214, 254, .26);
+
+    --accent: #E6B450; /* common.accent */
+    --accent-hover: #E8BC62;
+    --accent-press: #D6A74A;
+    --on-accent: #0D1017; /* surface.base */
+
+    --state-positive: #70BF56; /* vcs.added */
+    --state-negative: #D95757; /* common.error: the dark label reads 4.94:1 */
+    --state-negative-hover: #DC6666; /* lifted away from the dark label, 1.13:1 from rest */
+    --state-warning: #FF8F40; /* syntax.keyword */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. Green, orange and gold read on the ink-black; common.error reads bare but is 4.05:1 on its
+       own wash, so its ink is lifted a step. */
+    --state-positive-ink: #70BF56; /* 8.14:1, 6.32 on its wash */
+    --state-warning-ink: #FF8F40; /* 8.13:1, 6.38 on its wash */
+    --state-negative-ink: #DD6767; /* 5.45:1, 4.61 on its wash */
+    --accent-ink: #E6B450; /* 9.67:1, 5.84 on its wash */
+
+    --chart-neutral: #5A6673; /* palette.gray */
+    --chart-neutral-dim: #343B47;
+
+    --material-ultrathin: rgba(20, 24, 33, .58);
+    --material-thin: rgba(18, 22, 30, .72);
+    --material-regular: rgba(16, 20, 28, .84);
+    --material-thick: rgba(13, 16, 23, .93);
+
+    --shadow-1: 0 1px 2px rgba(6, 7, 10, .32);
+    --shadow-2: 0 4px 12px -2px rgba(6, 7, 10, .48), 0 1px 3px rgba(6, 7, 10, .32);
+    --shadow-3: 0 16px 40px -8px rgba(6, 7, 10, .62), 0 4px 12px rgba(6, 7, 10, .38);
+    --shadow-sheet: 0 32px 80px -12px rgba(6, 7, 10, .78), 0 8px 24px rgba(6, 7, 10, .48);
+    --shadow-inset: inset 0 1px 2px rgba(6, 7, 10, .38);
+
+    --sheen: rgba(252, 248, 236, .16);
+    --sheen-soft: rgba(252, 248, 236, .06);
+    --knob: #FCF8EC; /* editor.fg */
+    --key-press: rgba(6, 7, 10, .30);
+}
+
+/* Ayu Light. surface.lift (#FCFCFC, the editor) is the panel and surface.sunk
+   the ground; Ayu has no opaque control tones, so the raised and hover tones
+   are its ui.line (#6B7D8F) laid over the panel at 16% and 26%. Primary is
+   editor.fg's ink at 84% — Ayu sets code at 64%, 6.09:1, which is this desk's
+   second tier, not its first — and secondary ui.fg (#021A3C), 48% as published
+   (3.17:1), at a strength that reads. The hues are fills on the near-white
+   (green 2.23, yellow-brown 2.40, red 3.64:1), so each ink is its hue deepened; the
+   gold keeps its dark label and needs no change, and common.error carries the
+   same dark label, so its hover lifts. */
+
+[data-theme="ayu-light"] {
+    color-scheme: light;
+
+    --surface-0: #EBEEF0; /* surface.sunk */
+    --surface-1: #FCFCFC; /* surface.lift, the editor */
+    --surface-2: #E5E8EB; /* ui.line at 16% over the panel */
+    --surface-3: #D6DBE0; /* ui.line at 26% over the panel */
+
+    --separator: rgba(2, 26, 60, .12);
+    --separator-strong: rgba(2, 26, 60, .20);
+
+    /* editor.fg (#020A12) for primary and ui.fg (#021A3C) for the quieter tiers. Secondary measures
+       5.26:1 over --surface-1, 4.64:1 over --surface-3. */
+    --text-primary: rgba(2, 10, 18, .84);
+    --text-secondary: rgba(2, 26, 60, .64);
+    --text-tertiary: rgba(2, 26, 60, .30);
+
+    --accent: #F29718; /* common.accent */
+    --accent-hover: #E18C16;
+    --accent-press: #D38315;
+    --on-accent: #020A12; /* editor.fg's ink, opaque */
+
+    --state-positive: #6CBF43; /* vcs.added */
+    --state-negative: #E65050; /* common.error: the dark label reads 5.34:1 */
+    --state-negative-hover: #E86161; /* lifted away from the dark label, 1.12:1 from rest */
+    /* Not palette.orange (#FA8532): beside the gold accent a warning tag read as
+       the accent. Ayu has no amber of its own away from the gold, so the warning
+       is the nearest yellow-brown that keeps orange's 2.4:1 as a dot on the panel. */
+    --state-warning: #C2A30A;
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Each hue deepened until it reads on the raised tone and on its wash. */
+    --state-positive-ink: #417328; /* 4.60:1 raised, 5.52 on the panel */
+    --state-warning-ink: #6F5F00; /* 5.15:1 raised, 6.18 on the panel, 5.53 on its wash */
+    --state-negative-ink: #B33E3E; /* 4.65:1 raised, 5.57 on the panel */
+    --accent-ink: #8F590E; /* 5.68:1, 4.60 on its wash */
+
+    --chart-neutral: #8A9199; /* ui.fg's grey, opaque */
+    --chart-neutral-dim: #C3C9D0;
+
+    --material-ultrathin: rgba(252, 252, 252, .62);
+    --material-thin: rgba(246, 247, 248, .76);
+    --material-regular: rgba(241, 243, 244, .86);
+    --material-thick: rgba(235, 238, 240, .94);
+
+    --shadow-1: 0 1px 2px rgba(2, 10, 18, .10);
+    --shadow-2: 0 4px 12px -2px rgba(2, 10, 18, .14), 0 1px 3px rgba(2, 10, 18, .10);
+    --shadow-3: 0 16px 40px -8px rgba(2, 10, 18, .20), 0 4px 12px rgba(2, 10, 18, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(2, 10, 18, .28), 0 8px 24px rgba(2, 10, 18, .16);
+    --shadow-inset: inset 0 1px 2px rgba(2, 10, 18, .08);
+
+    --sheen: rgba(2, 10, 18, .10);
+    --sheen-soft: rgba(2, 10, 18, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(2, 10, 18, .14);
+}
+
+/* -------------------------------------------------------------- Primer ----
+   GitHub's design system, from @primer/primitives' functional tokens: the dark
+   default theme by night, the light default by day. Every surface is one of
+   Primer's own backgrounds — bgColor-inset under bgColor-default, bgColor-muted
+   for the raised tier (Primer's box headers and overlays) and the control hover
+   fill for the hover tier — and the tiers are fgColor-default at opacity, the
+   secondary tier at fgColor-muted's own weight. The accent is Primer's blue:
+   accent.emphasis for the filled key, accent.fg as the ink. The states are
+   success, danger and attention, in Primer's own fg and emphasis pairs.
+
+   Where Primer had to move. The dark emphasis blue measures 4.63:1 under the
+   white label, which leaves a hover no room to lighten, so at rest the fill is
+   deepened a step (#1E6BE3) and the published #1F6FEB is the hover. On the
+   light desk the inks are Primer's fg values except where the raised tier
+   (control hover, #EFF2F5) takes them under 4.5:1: success, attention and
+   danger are deepened by a few per cent, and the accent ink is blue-6
+   (#0550AE), the next step of Primer's own scale, because accent.fg reads
+   3.89:1 on its strong wash. */
+
+[data-theme="primer-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #010409; /* bgColor-inset */
+    --surface-1: #0D1117; /* bgColor-default */
+    --surface-2: #151B23; /* bgColor-muted */
+    --surface-3: #262C36; /* control-bgColor-hover */
+
+    /* borderColor-muted and borderColor-default, as alphas of the foreground. */
+    --separator: rgba(240, 246, 252, .15);
+    --separator-strong: rgba(240, 246, 252, .21);
+
+    /* fgColor-default (#F0F6FC) at tiers; secondary at .58 is fgColor-muted
+       (#9198A1) over the panel. It measures 6.33:1 there and 5.40:1 over
+       --surface-3 (Standard: 5.72 and 4.78). */
+    --text-primary: rgba(240, 246, 252, .92);
+    --text-secondary: rgba(240, 246, 252, .58);
+    --text-tertiary: rgba(240, 246, 252, .30);
+
+    --accent: #1E6BE3; /* accent.emphasis deepened a step, so the hover can lighten */
+    --accent-hover: #1F6FEB; /* accent.emphasis */
+    --accent-press: #1158C7; /* blue-6 */
+    --accent-wash-alpha: .16;
+    --accent-wash-strong-alpha: .22;
+    --on-accent: #FFFFFF; /* fgColor-onEmphasis */
+
+    --state-positive: #3FB950; /* success.fg */
+    --state-negative: #DA3633; /* danger.emphasis: the white destructive label reads 4.61:1 */
+    --state-negative-hover: #CA322F; /* deepens, away from its label: 1.14:1 from rest */
+    --state-warning: #D29922; /* attention.fg */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. Primer's fg values read on the dark panel as published. */
+    --state-positive-ink: #3FB950; /* success.fg */
+    --state-warning-ink: #D29922; /* attention.fg */
+    --state-negative-ink: #F85149; /* danger.fg */
+    --accent-ink: #4493F8; /* accent.fg */
+
+    --chart-neutral: #9198A1; /* fgColor-muted */
+    --chart-neutral-dim: #3D444D; /* borderColor-default */
+
+    --material-ultrathin: rgba(21, 27, 35, .55);
+    --material-thin: rgba(17, 22, 29, .70);
+    --material-regular: rgba(13, 17, 23, .82);
+    --material-thick: rgba(7, 10, 16, .92);
+
+    --shadow-1: 0 1px 2px rgba(1, 4, 9, .30);
+    --shadow-2: 0 4px 12px -2px rgba(1, 4, 9, .45), 0 1px 3px rgba(1, 4, 9, .30);
+    --shadow-3: 0 16px 40px -8px rgba(1, 4, 9, .60), 0 4px 12px rgba(1, 4, 9, .35);
+    --shadow-sheet: 0 32px 80px -12px rgba(1, 4, 9, .75), 0 8px 24px rgba(1, 4, 9, .45);
+    --shadow-inset: inset 0 1px 2px rgba(1, 4, 9, .35);
+
+    --sheen: rgba(240, 246, 252, .16);
+    --sheen-soft: rgba(240, 246, 252, .06);
+    --knob: #F0F6FC; /* fgColor-default */
+    --key-press: rgba(1, 4, 9, .30);
+}
+
+[data-theme="primer-light"] {
+    color-scheme: light;
+
+    --surface-0: #F6F8FA; /* bgColor-muted, as the ground */
+    --surface-1: #FFFFFF; /* bgColor-default */
+    --surface-2: #EFF2F5; /* control-bgColor-hover */
+    --surface-3: #E6EAEF; /* control-bgColor-active */
+
+    --separator: rgba(31, 35, 40, .14); /* borderColor-muted, as an alpha of the foreground */
+    --separator-strong: rgba(31, 35, 40, .20); /* borderColor-default */
+
+    /* fgColor-default (#1F2328) at tiers; secondary at .74 is fgColor-muted
+       (#59636E) on white. It measures 6.70:1 over --surface-1. */
+    --text-primary: rgba(31, 35, 40, .92);
+    --text-secondary: rgba(31, 35, 40, .74);
+    --text-tertiary: rgba(31, 35, 40, .34);
+
+    --accent: #0969DA; /* accent.emphasis */
+    --accent-hover: #0860CA;
+    --accent-press: #0550AE; /* blue-6 */
+    --on-accent: #FFFFFF; /* fgColor-onEmphasis */
+
+    --state-positive: #1F883D; /* success.emphasis */
+    --state-negative: #CF222E; /* danger.emphasis: the white destructive label reads 5.36:1 */
+    --state-negative-hover: #A40E26; /* button-danger-bgColor-hover */
+    --state-warning: #9A6700; /* attention.emphasis */
+    --state-positive-wash-alpha: .12;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .12;
+
+    /* Ink. Primer's fg values clear 4.5:1 on white but success (4.52), attention
+       (4.33) and danger (4.67, 4.4 on its wash) fall short on the raised tier or
+       their washes, so each is deepened until it reads; the accent ink is blue-6. */
+    --state-positive-ink: #197A35; /* success.fg deepened */
+    --state-warning-ink: #906000; /* attention.fg deepened */
+    --state-negative-ink: #C9232D; /* danger.fg deepened */
+    --accent-ink: #0550AE; /* blue-6: accent.fg is 3.89:1 on the strong wash */
+
+    --chart-neutral: #818B98; /* fgColor-disabled */
+    --chart-neutral-dim: #C8D1DA; /* the overlay backdrop's grey */
+
+    --material-ultrathin: rgba(255, 255, 255, .62);
+    --material-thin: rgba(250, 251, 252, .76);
+    --material-regular: rgba(246, 248, 250, .86);
+    --material-thick: rgba(239, 242, 245, .94);
+
+    --shadow-1: 0 1px 2px rgba(31, 35, 40, .10);
+    --shadow-2: 0 4px 12px -2px rgba(31, 35, 40, .14), 0 1px 3px rgba(31, 35, 40, .10);
+    --shadow-3: 0 16px 40px -8px rgba(31, 35, 40, .20), 0 4px 12px rgba(31, 35, 40, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(31, 35, 40, .28), 0 8px 24px rgba(31, 35, 40, .16);
+    --shadow-inset: inset 0 1px 2px rgba(31, 35, 40, .08);
+
+    --sheen: rgba(31, 35, 40, .10);
+    --sheen-soft: rgba(31, 35, 40, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(31, 35, 40, .14);
+}
+
+/* ----------------------------------------------------------- Night Owl ----
+   Sarah Drasner's palette, from the VS Code theme's own colour files: Night Owl
+   by night, Light Owl — the theme's published light variant — by day. Night
+   Owl's navy (#011627) is the dark panel, with the inactive tab's deeper navy
+   under it as the ground, the input fill as the raised tier and the selection
+   colour as the hover. Light Owl's off-white editor is the light panel on its
+   #F0F0F0 sidebar grey, with its #E0E0E0 selection as the hover; the raised
+   tier between them (#E8E8E8) is not in the palette and is drawn halfway.
+
+   The accent is the palette's blue in both: #82AAFF by night, pale enough that
+   a filled control takes the navy as ink, and Light Owl's #4876D6 by day,
+   deepened a few per cent to carry white (as published it measures 4.34:1
+   under it). The states are the terminal's green and red with the bright
+   yellow at night; by day Light Owl's own green, red and yellow, the red
+   deepened for the white destructive label (4.34:1 as published) and every
+   ink deepened until it reads on the raised tier — Light Owl's hues are
+   syntax colours, tuned for an off-white editor and not for a grey control. */
+
+[data-theme="night-owl-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #01111D; /* tab.inactiveBackground */
+    --surface-1: #011627; /* editor.background */
+    --surface-2: #0B253A; /* input.background */
+    --surface-3: #1D3B53; /* editor.selectionBackground */
+
+    --separator: rgba(214, 222, 235, .10);
+    --separator-strong: rgba(214, 222, 235, .16);
+
+    /* editor.foreground (#D6DEEB) at tiers. Secondary measures 4.90:1 over the
+       selection-blue --surface-3, where tags and badges set it, and 6.73:1 on the
+       panel. */
+    --text-primary: rgba(214, 222, 235, .92);
+    --text-secondary: rgba(214, 222, 235, .68);
+    --text-tertiary: rgba(214, 222, 235, .32);
+
+    --accent: #82AAFF; /* blue */
+    --accent-hover: #8FB3FF;
+    --accent-press: #7AA0F0;
+    --accent-wash-alpha: .16;
+    --accent-wash-strong-alpha: .22;
+    --on-accent: #011627; /* editor.background */
+
+    --state-positive: #22DA6E; /* terminal green */
+    --state-negative: #EF5350; /* errorForeground: the navy destructive label reads 5.26:1 */
+    --state-negative-hover: #F16663; /* lightens, away from its label */
+    --state-warning: #FFEB95; /* terminal bright yellow */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. Green, yellow and blue read on the navy as published; the red is 4.50:1
+       on the input fill, so its ink is lifted a hair. */
+    --state-positive-ink: #22DA6E;
+    --state-warning-ink: #FFEB95;
+    --state-negative-ink: #EF5855; /* errorForeground lifted a hair */
+    --accent-ink: #82AAFF;
+
+    --chart-neutral: #637777; /* comment */
+    --chart-neutral-dim: #4B6479; /* editorLineNumber.foreground */
+
+    --material-ultrathin: rgba(11, 37, 58, .55);
+    --material-thin: rgba(6, 29, 48, .70);
+    --material-regular: rgba(1, 22, 39, .82);
+    --material-thick: rgba(1, 17, 29, .92);
+
+    --shadow-1: 0 1px 2px rgba(0, 6, 12, .30);
+    --shadow-2: 0 4px 12px -2px rgba(0, 6, 12, .45), 0 1px 3px rgba(0, 6, 12, .30);
+    --shadow-3: 0 16px 40px -8px rgba(0, 6, 12, .60), 0 4px 12px rgba(0, 6, 12, .35);
+    --shadow-sheet: 0 32px 80px -12px rgba(0, 6, 12, .75), 0 8px 24px rgba(0, 6, 12, .45);
+    --shadow-inset: inset 0 1px 2px rgba(0, 6, 12, .35);
+
+    --sheen: rgba(214, 222, 235, .16);
+    --sheen-soft: rgba(214, 222, 235, .06);
+    --knob: #D6DEEB; /* editor.foreground */
+    --key-press: rgba(0, 6, 12, .30);
+}
+
+[data-theme="night-owl-light"] {
+    color-scheme: light;
+
+    --surface-0: #F0F0F0; /* Light Owl sideBar.background, as the ground */
+    --surface-1: #FBFBFB; /* Light Owl editor.background */
+    --surface-2: #E8E8E8; /* halfway to the selection: not in the palette */
+    --surface-3: #E0E0E0; /* Light Owl editor.selectionBackground */
+
+    --separator: rgba(64, 63, 83, .12);
+    --separator-strong: rgba(64, 63, 83, .20);
+
+    /* Light Owl's foreground (#403F53) at tiers. Secondary measures 5.87:1 over
+       --surface-1 and 4.95:1 over --surface-3. */
+    --text-primary: rgba(64, 63, 83, .92);
+    --text-secondary: rgba(64, 63, 83, .82);
+    --text-tertiary: rgba(64, 63, 83, .36);
+
+    --accent: #4571CD; /* Light Owl blue (#4876D6), deepened to carry white */
+    --accent-hover: #4069BF;
+    --accent-press: #3A5FAC;
+    --on-accent: #FFFFFF;
+
+    --state-positive: #08916A; /* Light Owl green */
+    --state-negative: #D63B39; /* Light Owl red (#DE3D3B), deepened: the white destructive label reads 4.62:1 */
+    --state-negative-hover: #C63735;
+    --state-warning: #DAAA01; /* Light Owl yellow */
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Every Light Owl hue is a fill on the grey controls (green 3.0, red 3.3,
+       yellow 1.6:1 as text), so each ink is its hue deepened; the accent ink is
+       --accent-press. */
+    --state-positive-ink: #067556;
+    --state-warning-ink: #806301;
+    --state-negative-ink: #B0302F;
+    --accent-ink: #3A5FAC;
+
+    --chart-neutral: #989FB1; /* Light Owl comment */
+    --chart-neutral-dim: #CDD1D9; /* the comment grey, lifted toward the ground */
+
+    --material-ultrathin: rgba(251, 251, 251, .62);
+    --material-thin: rgba(247, 247, 247, .76);
+    --material-regular: rgba(243, 243, 243, .86);
+    --material-thick: rgba(240, 240, 240, .94);
+
+    --shadow-1: 0 1px 2px rgba(64, 63, 83, .10);
+    --shadow-2: 0 4px 12px -2px rgba(64, 63, 83, .14), 0 1px 3px rgba(64, 63, 83, .10);
+    --shadow-3: 0 16px 40px -8px rgba(64, 63, 83, .20), 0 4px 12px rgba(64, 63, 83, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(64, 63, 83, .28), 0 8px 24px rgba(64, 63, 83, .16);
+    --shadow-inset: inset 0 1px 2px rgba(64, 63, 83, .08);
+
+    --sheen: rgba(64, 63, 83, .10);
+    --sheen-soft: rgba(64, 63, 83, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(64, 63, 83, .14);
+}
+
+/* ----------------------------------------------------------- Palenight ----
+   Material Theme's Palenight, from its published colour palette, by night, and
+   Material Lighter — the same theme's light variant — by day. Palenight's
+   Background (#292D3E) is the dark panel, with Contrast under it as the ground,
+   Buttons as the raised tier and the line-number guide (#3A3F58) as the hover;
+   Lighter's Background (#FAFAFA) is the light panel on its Contrast grey, with
+   Highlight and Disabled stepping down from it.
+
+   Material gives its text three roles, and the tiers take them: the plain code
+   text ("White", #EEFFFF) is primary, the UI Foreground (#A6ACCD) secondary and
+   Text (#676E95) the hint. Palenight is tuned soft, so Foreground is the
+   brightest secondary that still reads on the hover tier (4.63:1 there).
+   Lighter's Foreground (#546E7A) measures 3.63:1 on its Disabled grey, so the
+   light secondary is that blue-grey deepened toward the code ink (#272727).
+
+   Purple is the accent in both: Palenight's #C792EA, pale enough that a filled
+   control takes the Background as ink, and Lighter's #7C4DFF, which carries
+   white as published. Material's own UI accent for Palenight (#AB47BC) reads
+   2.83:1 under that ink and 2.58:1 as text, so it is not used. Palenight is
+   light enough that a wash lifts the ground under a pale ink: the accent ink
+   and the red are lifted toward white until they read on their washes, and by
+   day every ink is its hue deepened for the grey controls. */
+
+[data-theme="palenight-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #202331; /* Contrast */
+    --surface-1: #292D3E; /* Background */
+    --surface-2: #303348; /* Buttons */
+    --surface-3: #3A3F58; /* line numbers and guides */
+
+    --separator: rgba(166, 172, 205, .12);
+    --separator-strong: rgba(166, 172, 205, .20);
+
+    /* White, Foreground and Text: the palette's own three text roles. Secondary
+       measures 6.11:1 over --surface-1 and 4.63:1 over --surface-3. */
+    --text-primary: rgba(238, 255, 255, .86);
+    --text-secondary: #A6ACCD;
+    --text-tertiary: #676E95;
+
+    --accent: #C792EA; /* purple */
+    --accent-hover: #CE9FED;
+    --accent-press: #BB89DC;
+    --accent-wash-alpha: .16;
+    --accent-wash-strong-alpha: .22;
+    --on-accent: #292D3E; /* Background */
+
+    --state-positive: #C3E88D; /* green */
+    --state-negative: #F07178; /* red: the Background destructive label reads 4.77:1 */
+    --state-negative-hover: #F28288; /* lightens, away from its label */
+    --state-warning: #FFCB6B; /* yellow */
+    --state-negative-wash-alpha: .16;
+
+    /* Ink. Green and yellow read on Palenight as published. The red is 4.34:1 on
+       Buttons and purple 3.66:1 on its strong wash, so each is lifted toward
+       white until it reads. */
+    --state-positive-ink: #C3E88D;
+    --state-warning-ink: #FFCB6B;
+    --state-negative-ink: #F38C92;
+    --accent-ink: #D3A9EE;
+
+    --chart-neutral: #676E95; /* Text, the comment grey */
+    --chart-neutral-dim: #515772; /* Disabled */
+
+    --material-ultrathin: rgba(48, 51, 72, .55);
+    --material-thin: rgba(44, 48, 67, .70);
+    --material-regular: rgba(41, 45, 62, .82);
+    --material-thick: rgba(32, 35, 49, .92);
+
+    --shadow-1: 0 1px 2px rgba(15, 17, 26, .30);
+    --shadow-2: 0 4px 12px -2px rgba(15, 17, 26, .45), 0 1px 3px rgba(15, 17, 26, .30);
+    --shadow-3: 0 16px 40px -8px rgba(15, 17, 26, .60), 0 4px 12px rgba(15, 17, 26, .35);
+    --shadow-sheet: 0 32px 80px -12px rgba(15, 17, 26, .75), 0 8px 24px rgba(15, 17, 26, .45);
+    --shadow-inset: inset 0 1px 2px rgba(15, 17, 26, .35);
+
+    --sheen: rgba(238, 255, 255, .14);
+    --sheen-soft: rgba(238, 255, 255, .05);
+    --knob: #EEFFFF; /* White */
+    --key-press: rgba(15, 17, 26, .30);
+}
+
+[data-theme="palenight-light"] {
+    color-scheme: light;
+
+    --surface-0: #EEEEEE; /* Lighter Contrast, as the ground */
+    --surface-1: #FAFAFA; /* Lighter Background */
+    --surface-2: #E7E7E8; /* Lighter Highlight */
+    --surface-3: #D2D4D5; /* Lighter Disabled */
+
+    --separator: rgba(39, 39, 39, .11);
+    --separator-strong: rgba(39, 39, 39, .19);
+
+    /* Code ink, Foreground deepened and Text. Secondary measures 6.62:1 over
+       --surface-1 and 4.64:1 over --surface-3. */
+    --text-primary: rgba(39, 39, 39, .92);
+    --text-secondary: #495D66; /* Foreground (#546E7A), deepened toward the code ink */
+    --text-tertiary: #94A7B0; /* Text */
+
+    --accent: #7C4DFF; /* Lighter purple */
+    --accent-hover: #7348ED;
+    --accent-press: #6B42DB;
+    --on-accent: #FFFFFF;
+
+    --state-positive: #91B859; /* Lighter green */
+    --state-negative: #D83632; /* Lighter red (#E53935), deepened: the white destructive label reads 4.67:1 */
+    --state-negative-hover: #C9322E;
+    --state-warning: #F6A434; /* Lighter yellow */
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Lighter's hues are fills on its greys (green 1.9, yellow 1.7, red 3.4:1
+       as text on Highlight), so each ink is its hue deepened; purple is 3.90:1 on
+       Highlight and takes a deeper step than its press. */
+    --state-positive-ink: #566D35;
+    --state-warning-ink: #8A5C1D;
+    --state-negative-ink: #B02C29;
+    --accent-ink: #6841D6;
+
+    --chart-neutral: #94A7B0; /* Text */
+    --chart-neutral-dim: #CCD7DA; /* the excluded-files grey */
+
+    --material-ultrathin: rgba(250, 250, 250, .62);
+    --material-thin: rgba(246, 246, 246, .76);
+    --material-regular: rgba(242, 242, 242, .86);
+    --material-thick: rgba(238, 238, 238, .94);
+
+    --shadow-1: 0 1px 2px rgba(39, 39, 39, .10);
+    --shadow-2: 0 4px 12px -2px rgba(39, 39, 39, .14), 0 1px 3px rgba(39, 39, 39, .10);
+    --shadow-3: 0 16px 40px -8px rgba(39, 39, 39, .20), 0 4px 12px rgba(39, 39, 39, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(39, 39, 39, .28), 0 8px 24px rgba(39, 39, 39, .16);
+    --shadow-inset: inset 0 1px 2px rgba(39, 39, 39, .08);
+
+    --sheen: rgba(39, 39, 39, .10);
+    --sheen-soft: rgba(39, 39, 39, .05);
+    --knob: #FFFFFF;
+    --key-press: rgba(39, 39, 39, .14);
+}
+
+/* ------------------------------------------------------------- Zenburn ----
+   Jani Nurminen's low-contrast palette, as zenburn-emacs publishes it
+   (zenburn-default-colors-alist). Zenburn has no light variant, so the light
+   desk is a counterpart drawn from the same alist: fg+1 (#FFFFEF) as the paper,
+   Zenburn's own fg (#DCDCCC) as the hover, its bg (#3F3F3F) as the ink, and the
+   palette's darkest published steps — blue-4/-5, green-2/-4, red-3/-4, fg-1 —
+   for everything that has to carry or be read as text. Only the ground and the
+   raised tier between paper and fg (#F0F0E0, #E8E8D8) are drawn, not published.
+
+   By night Zenburn is kept as it is: bg (#3F3F3F) is the panel, bg-05 the
+   ground, bg+05 and bg+1 the raised and hover tiers, and a filled control takes
+   bg-1 (#2B2B2B) as its label — the one place the dark desk reaches past bg,
+   because bg itself leaves the red destructive key at 4.0:1. What the rules
+   lifted is the inks and nothing else. A grey panel as bright as #3F3F3F makes
+   every wash a lighter grey, so the published fills that read on bare bg do not
+   read on their own tint: each ink is the next published step up its own ramp
+   (blue+3, green+2, red+2), where one exists. Text is fg itself at the top tier,
+   since Zenburn's fg is already the palette's quiet one, and fg at .84 for
+   secondary, the least that clears 4.5:1 on bg+1. */
+
+[data-theme="zenburn-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #383838; /* bg-05 */
+    --surface-1: #3F3F3F; /* bg */
+    --surface-2: #494949; /* bg+05 */
+    --surface-3: #4F4F4F; /* bg+1 */
+
+    --separator: rgba(220, 220, 204, .10);
+    --separator-strong: rgba(220, 220, 204, .16);
+
+    /* fg (#DCDCCC) at tiers. Secondary measures 5.91:1 over --surface-1 and
+       4.72:1 over --surface-3. */
+    --text-primary: rgba(220, 220, 204, 1);
+    --text-secondary: rgba(220, 220, 204, .84);
+    --text-tertiary: rgba(220, 220, 204, .40);
+
+    --accent: #8CD0D3; /* blue */
+    --accent-hover: #ACE0E3; /* blue+2 */
+    --accent-press: #7CB8BB; /* blue-1 */
+    --accent-wash-alpha: .16;
+    --accent-wash-strong-alpha: .22;
+    --on-accent: #2B2B2B; /* bg-1 */
+
+    --state-positive: #7F9F7F; /* green */
+    --state-negative: #CC9393; /* red: the bg-1 destructive label reads 5.50:1 */
+    --state-negative-hover: #DCA3A3; /* red+1: lightens, away from its label */
+    --state-warning: #DFAF8F; /* orange: yellow (#F0DFAF) is all but fg, so a warning read as body text */
+    --state-positive-wash-alpha: .12;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .12;
+
+    /* Ink. Green (3.07:1 on bg+05), red (3.50) and blue (3.69 on its strong
+       wash) take the published step above them. Orange has no ramp and reads
+       4.29:1 on its own wash, so its ink is drawn: orange lifted a step toward
+       fg+1, 6.12:1 on bg, 5.24 on bg+05 and 4.91 on its wash. */
+    --state-positive-ink: #9FC59F; /* green+2 */
+    --state-warning-ink: #E8BD9F; /* orange, lifted */
+    --state-negative-ink: #ECB3B3; /* red+2 */
+    --accent-ink: #BDE0F3; /* blue+3 */
+
+    --chart-neutral: #989890; /* fg-05 */
+    --chart-neutral-dim: #656555; /* fg-1 */
+
+    --material-ultrathin: rgba(73, 73, 73, .55);
+    --material-thin: rgba(68, 68, 68, .70);
+    --material-regular: rgba(63, 63, 63, .82);
+    --material-thick: rgba(56, 56, 56, .92);
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .30);
+    --shadow-2: 0 4px 12px -2px rgba(0, 0, 0, .42), 0 1px 3px rgba(0, 0, 0, .28);
+    --shadow-3: 0 16px 40px -8px rgba(0, 0, 0, .55), 0 4px 12px rgba(0, 0, 0, .32);
+    --shadow-sheet: 0 32px 80px -12px rgba(0, 0, 0, .70), 0 8px 24px rgba(0, 0, 0, .42);
+    --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, .32);
+
+    --sheen: rgba(255, 255, 239, .14);
+    --sheen-soft: rgba(255, 255, 239, .05);
+    --knob: #DCDCCC; /* fg */
+    --key-press: rgba(0, 0, 0, .30);
+}
+
+[data-theme="zenburn-light"] {
+    color-scheme: light;
+
+    --surface-0: #F0F0E0; /* between fg+1 and fg: drawn, not published */
+    --surface-1: #FFFFEF; /* fg+1 */
+    --surface-2: #E8E8D8; /* drawn, as --surface-0 is */
+    --surface-3: #DCDCCC; /* fg */
+
+    --separator: rgba(63, 63, 63, .12);
+    --separator-strong: rgba(63, 63, 63, .20);
+
+    /* bg (#3F3F3F) at tiers: Zenburn's ground becomes the ink. Secondary
+       measures 6.10:1 over --surface-1 and 4.90:1 over --surface-3. */
+    --text-primary: rgba(63, 63, 63, .94);
+    --text-secondary: rgba(63, 63, 63, .82);
+    --text-tertiary: rgba(63, 63, 63, .38);
+
+    --accent: #4C7073; /* blue-4 */
+    --accent-hover: #46676A;
+    --accent-press: #366060; /* blue-5 */
+    --on-accent: #FFFFEF; /* fg+1 */
+
+    --state-positive: #5F7F5F; /* green-2 */
+    --state-negative: #9C6363; /* red-3: the fg+1 destructive label reads 4.75:1 */
+    --state-negative-hover: #8C5353; /* red-4 */
+    --state-warning: #DFAF8F; /* orange */
+    --state-positive-wash-alpha: .12;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .16;
+
+    /* Ink. Each is the palette's own deeper step where it has one — green-4,
+       red-4, blue-5. Zenburn's orange stops at #DFAF8F (1.9:1 on the paper), so
+       the warning ink is that orange deepened; it is the one drawn ink. */
+    --state-positive-ink: #3F5F3F; /* green-4 */
+    --state-warning-ink: #7B604F; /* orange, deepened */
+    --state-negative-ink: #8C5353; /* red-4 */
+    --accent-ink: #366060; /* blue-5 */
+
+    --chart-neutral: #989890; /* fg-05 */
+    --chart-neutral-dim: #C4C4B4; /* fg-05 lifted toward the paper */
+
+    --material-ultrathin: rgba(255, 255, 239, .62);
+    --material-thin: rgba(250, 250, 234, .76);
+    --material-regular: rgba(245, 245, 229, .86);
+    --material-thick: rgba(240, 240, 224, .94);
+
+    --shadow-1: 0 1px 2px rgba(63, 63, 63, .10);
+    --shadow-2: 0 4px 12px -2px rgba(63, 63, 63, .14), 0 1px 3px rgba(63, 63, 63, .10);
+    --shadow-3: 0 16px 40px -8px rgba(63, 63, 63, .20), 0 4px 12px rgba(63, 63, 63, .12);
+    --shadow-sheet: 0 32px 80px -12px rgba(63, 63, 63, .28), 0 8px 24px rgba(63, 63, 63, .16);
+    --shadow-inset: inset 0 1px 2px rgba(63, 63, 63, .08);
+
+    --sheen: rgba(63, 63, 63, .10);
+    --sheen-soft: rgba(63, 63, 63, .05);
+    --knob: #FFFFFD; /* fg+2 */
+    --key-press: rgba(63, 63, 63, .14);
+}
+
+
+/* ------------------------------------------------------- High contrast ----
+   For a desk read from across a room, and for eyes that need more than AA.
+   Secondary text clears AAA (7:1) rather than AA, hairlines are visible at a
+   glance rather than felt, and the accent carries ink that clears 7:1 on it.
+   Materials go almost opaque, because translucency is contrast given away.
+
+   Tertiary text still sits below AA, and deliberately: it is a hint, a
+   placeholder, a unit nobody must read, on this desk as on every other. A high-
+   contrast desk whose hints shout as loud as its values has flattened the one
+   hierarchy the operator relies on. It is raised — about 3.4–3.8:1, against
+   2.1–2.7 elsewhere — and no further. */
+
+[data-theme="contrast-dark"] {
+    color-scheme: dark;
+
+    --surface-0: #000000;
+    --surface-1: #0A0A0A;
+    --surface-2: #1F1F1F;
+    --surface-3: #333333;
+
+    --separator: rgba(255, 255, 255, .38);
+    --separator-strong: rgba(255, 255, 255, .60);
+
+    /* Secondary measures 12.58:1 over --surface-1; tertiary 3.77:1. */
+    --text-primary: rgba(255, 255, 255, 1);
+    --text-secondary: rgba(255, 255, 255, .80);
+    --text-tertiary: rgba(255, 255, 255, .40);
+
+    --accent: #4DB8FF;
+    --accent-hover: #80CCFF;
+    --accent-press: #2FA4F0;
+    --accent-wash-alpha: .22;
+    --accent-wash-strong-alpha: .34;
+    --on-accent: #000000;
+
+    --state-positive: #3DDC6E;
+    --state-negative: #FF5C5C;
+    --state-negative-hover: #FF8080;
+    --state-warning: #FFB224;
+    --state-positive-wash-alpha: .20;
+    --state-negative-wash-alpha: .20;
+    --state-warning-wash-alpha: .20;
+
+    /* Ink. Already built to be read: the inks are the fills. */
+    --state-positive-ink: #3DDC6E; /* 10.99:1 */
+    --state-warning-ink: #FFB224; /* 10.98:1 */
+    --state-negative-ink: #FF5C5C; /* 6.54:1 */
+    --accent-ink: #4DB8FF; /* 9.07:1 */
+
+    --chart-neutral: #A0A0A0;
+    --chart-neutral-dim: #6E6E6E;
+
+    --material-ultrathin: rgba(20, 20, 20, .92);
+    --material-thin: rgba(14, 14, 14, .95);
+    --material-regular: rgba(8, 8, 8, .97);
+    --material-thick: rgba(0, 0, 0, .98);
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .60);
+    --shadow-2: 0 4px 12px -2px rgba(0, 0, 0, .75), 0 1px 3px rgba(0, 0, 0, .60);
+    --shadow-3: 0 16px 40px -8px rgba(0, 0, 0, .85), 0 4px 12px rgba(0, 0, 0, .65);
+    --shadow-sheet: 0 32px 80px -12px rgba(0, 0, 0, .90), 0 8px 24px rgba(0, 0, 0, .70);
+    --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, .60);
+
+    --sheen: rgba(255, 255, 255, .24);
+    --sheen-soft: rgba(255, 255, 255, .10);
+    --knob: #FFFFFF;
+    --key-highlight-alpha: 0; /* none: High contrast keys are flat, their edges are the system's */
+    --key-gloss-alpha: 0;
+    --key-press: rgba(0, 0, 0, .40);
+}
+
+[data-theme="contrast-light"] {
+    color-scheme: light;
+
+    --surface-0: #E6E6E6;
+    --surface-1: #FFFFFF;
+    --surface-2: #D4D4D4;
+    --surface-3: #BDBDBD;
+
+    --separator: rgba(0, 0, 0, .40);
+    --separator-strong: rgba(0, 0, 0, .62);
+
+    /* Secondary measures 12.63:1 over --surface-1; tertiary 3.35:1. */
+    --text-primary: rgba(0, 0, 0, 1);
+    --text-secondary: rgba(0, 0, 0, .80);
+    --text-tertiary: rgba(0, 0, 0, .45);
+
+    --accent: #0050C8;
+    --accent-hover: #003F9E;
+    --accent-press: #00337F;
+    --accent-wash-alpha: .14;
+    --accent-wash-strong-alpha: .24;
+    --on-accent: #FFFFFF;
+
+    --state-positive: #007A1F;
+    --state-negative: #C8001E;
+    --state-negative-hover: #A00018;
+    --state-warning: #A35A00;
+    --state-positive-wash-alpha: .14;
+    --state-negative-wash-alpha: .12;
+    --state-warning-wash-alpha: .14;
+
+    /* Ink. Already built to be read: the inks are the fills. */
+    --state-positive-ink: #006A1B; /* 4.60:1 raised, more on the panel */
+    --state-warning-ink: #884B00; /* 4.64:1 raised, more on the panel */
+    --state-negative-ink: #B9001C; /* 4.60:1 raised, more on the panel */
+    --accent-ink: #0050C8; /* 7.04:1 */
+
+    --chart-neutral: #6E6E6E;
+    --chart-neutral-dim: #A8A8A8;
+
+    --material-ultrathin: rgba(255, 255, 255, .94);
+    --material-thin: rgba(252, 252, 252, .96);
+    --material-regular: rgba(248, 248, 248, .98);
+    --material-thick: rgba(242, 242, 242, .99);
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .20);
+    --shadow-2: 0 4px 12px -2px rgba(0, 0, 0, .26), 0 1px 3px rgba(0, 0, 0, .20);
+    --shadow-3: 0 16px 40px -8px rgba(0, 0, 0, .32), 0 4px 12px rgba(0, 0, 0, .22);
+    --shadow-sheet: 0 32px 80px -12px rgba(0, 0, 0, .40), 0 8px 24px rgba(0, 0, 0, .26);
+    --shadow-inset: inset 0 1px 2px rgba(0, 0, 0, .18);
+
+    --sheen: rgba(0, 0, 0, .14);
+    --sheen-soft: rgba(0, 0, 0, .07);
+    --knob: #FFFFFF;
+    --key-highlight-alpha: 0; /* none: High contrast keys are flat, their edges are the system's */
+    --key-gloss-alpha: 0;
+    --key-press: rgba(0, 0, 0, .24);
+}
+
+

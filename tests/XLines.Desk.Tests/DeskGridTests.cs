@@ -306,7 +306,7 @@ public class DeskGridHeadingTests : DeskTestContext
     [Fact]
     public void An_open_rows_answer_is_capped_to_the_grid_in_view_and_the_indent_folds_when_narrow()
     {
-        var css = File.ReadAllText(Path.Combine(XLines.Desk.Tests.Support.Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
 
         Assert.Contains(".deskgrid__child > .deskgrid__child-cell > .rowacts__snippet { max-width: min(100%, 720px, calc(100cqw - 2 * var(--deskgrid-inset))); }", css);
         Assert.Contains(".deskgrid__child > .deskgrid__child-cell > .rowacts { max-width: calc(100cqw - 2 * var(--deskgrid-inset)); }", css);

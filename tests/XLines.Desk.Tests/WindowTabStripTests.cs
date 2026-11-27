@@ -346,7 +346,7 @@ public class WindowTabStripTests : SampleDeskTestContext
 
         // Told apart by shape, not hue alone: a ring for a warning, a dot for a breach, and both
         // kept in forced colours.
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.Matches(@"\.wtabs__state\.pulse--warn\s*\{[^}]*background:\s*transparent;[^}]*border:\s*1\.5px solid var\(--state-warning\)", css);
         Assert.Contains(":root :is(.wtabs__state.pulse--critical, .menu__attention--negative) { border: 4px solid CanvasText; }", css);
         var controls = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "controls.css"));
@@ -403,7 +403,7 @@ public class WindowTabStripTests : SampleDeskTestContext
         // The layers come before the key, so it paints over them without a z-index.
         Assert.Contains("wtabs__layer", tabs.Children[0].ClassName);
 
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.Contains(".wtabs__layer--1 { translate: var(--tab-step) 0; scale: 1 .78;", css);
         Assert.Contains(".wtabs__layer--2 { translate: calc(2 * var(--tab-step)) 0; scale: 1 .56;", css);
         Assert.Contains(".win__bar--group .win__status { margin-left: var(--space-3); }", css);
@@ -430,7 +430,7 @@ public class WindowTabStripTests : SampleDeskTestContext
     [Fact]
     public void A_held_tab_key_keeps_its_focus_ring()
     {
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.Matches(@"\.wtabs__menu \.wtabs__tab:focus-visible:active\s*\{\s*box-shadow:\s*inset 0 1px 2px var\(--key-press\), var\(--focus-ring\);", css);
         Assert.True(
             css.IndexOf(".wtabs__menu .wtabs__tab:focus-visible:active", StringComparison.Ordinal)
@@ -463,7 +463,7 @@ public class WindowTabStripTests : SampleDeskTestContext
         Assert.Equal("Health", tabs[0].GetAttribute("title"));
         Assert.NotNull(tabs[1].QuerySelector(".menu__remove"));
 
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.Matches(@"\.wtabs__menu \.wtabs__tab\s*\{[^}]*background-image:\s*linear-gradient\(to bottom, var\(--key-gloss\), transparent 38%\)", css);
         Assert.Matches(@"\.wtabs__menu \.wtabs__tab--showing,\s*\.wtabs__menu \.wtabs__tab--showing:hover\s*\{\s*background-color:\s*var\(--accent-wash-strong\)", css);
         Assert.Matches(@"\.wtabs__tab \.menu__label,\s*\.wtabs__tab \.menu__desc\s*\{[^}]*white-space:\s*nowrap;[^}]*text-overflow:\s*ellipsis", css);
@@ -491,7 +491,7 @@ public class WindowTabStripTests : SampleDeskTestContext
     [Fact]
     public void The_strip_and_its_width_fitting_are_gone()
     {
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
         Assert.DoesNotContain(".wtab ", css);
         Assert.DoesNotContain(".wtab__", css);
         Assert.DoesNotContain(".wtabs__more", css);

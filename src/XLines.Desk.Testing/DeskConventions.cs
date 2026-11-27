@@ -307,7 +307,13 @@ public static partial class DeskConventions
     // ---- The Desk's sheets -----------------------------------------------------------
 
     /// <summary>The Desk's stylesheets, in the order DeskHead links them.</summary>
-    public static IReadOnlyList<string> DeskSheetNames { get; } = ["desk.css", "controls.css", "themes.css", "mud-bridge.css"];
+    public static IReadOnlyList<string> DeskSheetNames { get; } =
+    [
+        "desk.css", "desk-shell.css", "desk-windows.css", "desk-primitives.css", "desk-feedback.css", "desk-appearance.css",
+        "controls.css",
+        "themes.css", "themes-more.css", "themes-accents.css",
+        "mud-bridge.css",
+    ];
 
     /// <summary>One of the Desk's stylesheets as this package was built with it, comments and all.</summary>
     public static string DeskSheet(string name)

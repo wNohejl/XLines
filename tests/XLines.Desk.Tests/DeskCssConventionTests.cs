@@ -14,8 +14,7 @@ namespace XLines.Desk.Tests;
 /// </summary>
 public class DeskCssConventionTests
 {
-    private static string Css(string name) =>
-        File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", name));
+    private static string Css(string name) => DeskCss.Sheet(name);
 
     private static string WithoutComments(string css) => DeskConventions.WithoutComments(css);
 
@@ -429,6 +428,6 @@ public class DeskCssConventionTests
 
         Assert.Equal(shipped, DeskConventions.DeskSheetNames.Order().ToArray());
         foreach (var name in DeskConventions.DeskSheetNames)
-            Assert.Equal(Css(name), DeskConventions.DeskSheet(name));
+            Assert.Equal(DeskCss.Raw(name), DeskConventions.DeskSheet(name));
     }
 }

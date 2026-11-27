@@ -186,7 +186,7 @@ public class GameWindowCardsTests : DeskTestContext
         Assert.NotEmpty(nums);
         Assert.All(nums, n => Assert.Null(n.QuerySelector(".gamelines__side")));
 
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+        var css = Support.Sheets.App;
         Assert.Matches(@"\.gamelines__num \{[^}]*white-space: nowrap", css);
         Assert.Matches(@"@container wflow \(min-width: 856px\) \{\s*\.gamewin > \.gamewin__pair \{ grid-column: span 2; \}", css);
     }
@@ -255,7 +255,7 @@ public class GameWindowCardsTests : DeskTestContext
         // No tabs: a game has one wide reading, and the overview holds the rest.
         Assert.Empty(cut.FindAll("[role=tab]"));
 
-        var css = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "wwwroot", "css", "xlines.css"));
+        var css = Support.Sheets.App;
         // At the flow's leading edge, as the cards above it are, not centred away from them.
         Assert.Matches(@"\.gameroster__block \{[^}]*max-width: 1100px;[^}]*margin-inline: 0;", css);
         Assert.Matches(@"@container wflow \(min-width: 1320px\) \{[^}]*\}\s*\.gameroster__cols \{ grid-template-columns: repeat\(2, minmax\(0, 1fr\)\); \}", css);

@@ -63,7 +63,7 @@ public class DeskChromeAccessibilityTests : DeskTestContext
     [Fact]
     public void The_error_banner_is_hidden_until_shown_and_floats_like_a_toast()
     {
-        var css = DeskConventions.WithoutComments(Read("XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = DeskConventions.WithoutComments(DeskCss.Sheet("desk.css"));
         var rule = Regex.Match(css, @"#blazor-error-ui\s*\{[^}]*\}").Value;
 
         Assert.NotEmpty(rule);

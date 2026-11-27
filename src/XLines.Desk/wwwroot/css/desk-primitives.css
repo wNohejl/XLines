@@ -1,0 +1,1128 @@
+/* ------------------------------------------------------------------ buttons ---
+   Apple's three-level hierarchy, and nothing else. ADR 0008 made gloss mean
+   "pressable" and hue mean "consequence"; ADR 0016 retires both. Under the old
+   rule every button was a moulded, tinted cap, which meant a panel with five
+   buttons had five primary actions and therefore none.
+
+   Now weight carries the message. Filled is the one action a context commits to.
+   Tinted is a secondary action that still has to be findable. Plain is chrome —
+   transparent until pointed at. Red is reserved for Role.Destructive and is the
+   only place a button borrows a state colour.
+
+   .btn is kept in the selector so that any hand-written .btn markup picks up the
+   same recipe rather than needing its own rule; none currently exists on the
+   desk; every hand-written button has already been migrated to DeskButton. The
+   selector stays cheap insurance against a stray .btn reappearing with its own,
+   second button language.
+   --------------------------------------------------------------------------- */
+
+.desk-btn, .btn {
+    /* The two dials every variant below spends. */
+    --btn-fill: transparent;
+    --btn-ink: var(--text-secondary);
+
+    /* And the one none of them touches: the space between a key's glyph, its label and a
+       pull-down's chevron. One value for every emphasis and size, so a toolbar of keys keeps
+       one rhythm. Six points, a step and a half of the ramp: --space-1 crowded a 15px glyph
+       against a capital, --space-2 parted them into two things. MudButton wraps a key's
+       contents in a span of its own, so this reaches them through mud-bridge.css's button
+       seam, not through the flex gap below alone. */
+    --btn-gap: calc(var(--space-1) * 1.5);
+
+    position: relative;
+    overflow: hidden; /* clips the in-flight shimmer */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--btn-gap);
+    height: var(--control-h);
+    min-width: 0;
+    padding: 0 var(--space-3);
+    box-sizing: border-box;
+
+    border: none; /* depth comes from fill and shadow, never an outline */
+    border-radius: var(--radius);
+
+    background-color: var(--btn-fill);
+    color: var(--btn-ink);
+
+    font-family: var(--face-ui);
+    font-size: var(--text-body);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0; /* the uppercase tracking went with the gloss */
+    text-transform: none;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+
+    transition: background-color var(--dur-fast) var(--ease-standard),
+                color var(--dur-fast) var(--ease-standard),
+                transform var(--dur-fast) var(--ease-standard);
+}
+
+.desk-btn svg, .btn svg { width: var(--glyph); height: var(--glyph); flex: 0 0 auto; }
+
+/* One focus ring for the whole desk, sitting outside the control on an offset. */
+.desk-btn:focus-visible, .btn:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+/* Apple answers a press with a fast, small scale rather than travel. */
+.desk-btn:active:not(:disabled), .btn:active:not(:disabled) {
+    transform: scale(.97);
+    transition-duration: calc(var(--dur-fast) / 3);
+}
+
+.desk-btn:disabled, .desk-btn[disabled],
+.btn:disabled, .btn[disabled] {
+    opacity: .40;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* --- Plain: chrome. Transparent until pointed at. ------------------------- */
+.desk-btn--plain { --btn-fill: transparent; --btn-ink: var(--text-secondary); }
+
+.desk-btn--plain:hover:not(:disabled) {
+    --btn-fill: var(--surface-3);
+    --btn-ink: var(--text-primary);
+}
+
+/* --- Tinted: an accent wash behind accent text. --------------------------- */
+.desk-btn--tinted { --btn-fill: var(--accent-wash); --btn-ink: var(--accent-ink); }
+
+.desk-btn--tinted:hover:not(:disabled) { --btn-fill: var(--accent-wash-strong); }
+
+/* --- Filled: the one action the context commits to. ----------------------- */
+.desk-btn--filled {
+    --btn-fill: var(--accent);
+    --btn-ink: var(--on-accent);
+    font-weight: var(--weight-semibold);
+    box-shadow: var(--shadow-1);
+}
+
+.desk-btn--filled:hover:not(:disabled) { --btn-fill: var(--accent-hover); }
+.desk-btn--filled:active:not(:disabled) { --btn-fill: var(--accent-press); }
+
+/* --- Destructive: the only place a button borrows a state colour. ---------- */
+.desk-btn--destructive.desk-btn--plain { --btn-ink: var(--state-negative-ink); }
+
+.desk-btn--destructive.desk-btn--plain:hover:not(:disabled) {
+    --btn-fill: var(--state-negative-wash);
+    --btn-ink: var(--state-negative-ink);
+}
+
+.desk-btn--destructive.desk-btn--tinted { --btn-fill: var(--state-negative-wash); --btn-ink: var(--state-negative-ink); }
+
+.desk-btn--destructive.desk-btn--tinted:hover:not(:disabled) {
+    --btn-fill: color-mix(in oklab, var(--state-negative) 24%, transparent);
+}
+
+/* --on-accent is the ink for any saturated fill, not only the accent one — a
+   destructive fill is exactly as saturated, so it spends the same token rather
+   than restating white. */
+.desk-btn--destructive.desk-btn--filled { --btn-fill: var(--state-negative); --btn-ink: var(--on-accent); }
+
+.desk-btn--destructive.desk-btn--filled:hover:not(:disabled) {
+    --btn-fill: var(--state-negative-hover);
+}
+
+/* --- Finish. ---------------------------------------------------------------
+   The owner asked for keys with more finish (21 November 2026). Not ADR 0008's moulded caps,
+   which ADR 0016 retired because gloss had come to mean "pressable" on every key alike: the
+   weights above still carry the hierarchy, and this is the same finish on each of them, as a
+   macOS push button wears it. A 1px light line along the top edge (--key-highlight) and a
+   sheen that has faded out by 38% of the height (--key-gloss), so it lies above the label's
+   cap height and never behind the words; held down, the sheen goes and the key takes an inner
+   shade (--key-press) under the scale it already had. Filled wears it fully, Tinted lightly,
+   Plain only while pointed at — at rest it is still nothing, and no key gains an outline.
+   Every family declares the three tokens; High contrast declares them empty, so its keys are
+   flat. */
+.desk-btn--filled,
+.desk-btn--tinted {
+    background-image: linear-gradient(to bottom, var(--key-gloss), transparent 38%);
+}
+
+.desk-btn--filled { box-shadow: inset 0 1px 0 var(--key-highlight), var(--shadow-1); }
+.desk-btn--tinted { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 60%, transparent); }
+
+.desk-btn--plain:hover:not(:disabled) {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 50%, transparent);
+}
+
+/* The focus ring keeps the Filled key's top line, so focus adds a ring rather than taking the
+   finish away. */
+.desk-btn--filled:focus-visible { box-shadow: inset 0 1px 0 var(--key-highlight), var(--focus-ring); }
+
+.desk-btn:active:not(:disabled),
+.btn:active:not(:disabled) {
+    background-image: none;
+    box-shadow: inset 0 1px 2px var(--key-press);
+}
+
+.desk-btn:disabled, .desk-btn[disabled] {
+    background-image: none;
+    box-shadow: none;
+}
+
+/* The ring is never the casualty. The hover and press rules above outweigh :focus-visible on
+   its own, so a focused key pointed at, or held down with Space, would lose its ring; these
+   carry the ring alongside whatever finish that moment draws. */
+.desk-btn:focus-visible:hover:not(:disabled) { box-shadow: var(--focus-ring); }
+
+.desk-btn--plain:focus-visible:hover:not(:disabled) {
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--key-highlight) 50%, transparent), var(--focus-ring);
+}
+
+.desk-btn--filled:focus-visible:hover:not(:disabled) {
+    box-shadow: inset 0 1px 0 var(--key-highlight), var(--focus-ring);
+}
+
+.desk-btn:focus-visible:active:not(:disabled),
+.btn:focus-visible:active:not(:disabled) {
+    box-shadow: inset 0 1px 2px var(--key-press), var(--focus-ring);
+}
+
+/* Dimmed, not disabled: a key that must keep the focus it has when it stops acting — the Window
+   manager's "Reset appearance", pressed until there is nothing left to reset — is aria-disabled
+   and refuses the press itself. It looks as a disabled key does, and pointing at it or holding it
+   down moves nothing. */
+.desk-btn[aria-disabled="true"] {
+    opacity: .40;
+    cursor: not-allowed;
+    background-image: none;
+    box-shadow: none;
+}
+
+.desk-btn[aria-disabled="true"]:hover,
+.desk-btn[aria-disabled="true"]:active {
+    transform: none;
+    background-image: none;
+    box-shadow: none;
+}
+
+.desk-btn--plain[aria-disabled="true"]:hover {
+    --btn-fill: transparent;
+    --btn-ink: var(--text-secondary);
+}
+
+/* --- Sizes. The control changes height and padding; the recipe does not. --- */
+/* Small is a key inside a 29px grid row, so 24px; in a toolbar it is a toolbar control and
+   takes the toolbar's 28px (audit §5: nothing on the desk is 22px or less). */
+.desk-btn--sm { height: var(--control-h-sm); padding: 0 var(--space-2); font-size: var(--text-footnote); }
+.desk-btn--sm svg { width: var(--glyph-sm); height: var(--glyph-sm); }
+/* In a toolbar a small key is a toolbar key whole — height, inset, type and glyph — so it never
+   stands beside the keys around it in smaller words. */
+.ptoolbar .desk-btn--sm { height: var(--control-h); padding: 0 var(--space-3); font-size: var(--text-body); }
+.ptoolbar .desk-btn--sm svg { width: var(--glyph); height: var(--glyph); }
+.ptoolbar .desk-btn--icon.desk-btn--sm { width: var(--control-h); padding: 0; }
+.desk-btn--lg { height: var(--control-h-lg); padding: 0 var(--space-4); font-size: var(--text-title3); }
+.desk-btn--lg svg { width: var(--glyph-lg); height: var(--glyph-lg); }
+
+/* --- Icon-only: square, so it reads as a control rather than a clipped button. */
+.desk-btn--icon { padding: 0; width: var(--control-h); }
+.desk-btn--icon.desk-btn--sm { width: var(--control-h-sm); }
+.desk-btn--icon.desk-btn--lg { width: var(--control-h-lg); }
+
+/* --- Busy: occupied, not inert. Keeps its fill and runs a sheen across it. -- */
+.desk-btn--busy,
+.desk-btn--busy:disabled {
+    opacity: 1;
+    cursor: progress;
+}
+
+.desk-btn--busy::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--sheen) 50%,
+        transparent 100%);
+    animation: desk-btn-sheen var(--dur-sweep) var(--ease-standard) infinite;
+}
+
+@keyframes desk-btn-sheen {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .desk-btn--busy::after { animation: none; opacity: .35; }
+    .desk-btn:active:not(:disabled), .btn:active:not(:disabled) { transform: none; }
+}
+
+/* The key without MudBlazor (ADR 0034, step 1). Everything above already draws it. These four
+   are what a bare <button> was taking from MudBlazor's own reset, said here so the key does not
+   change on the day that stylesheet is no longer loaded. */
+.desk-btn--native {
+    appearance: none;
+    margin: 0;
+    user-select: none;
+    vertical-align: middle;
+}
+
+/* MudBlazor forced a disabled button's ink to the tertiary label, whatever its emphasis. The key
+   keeps that: a disabled key gives up its accent as well as its weight. */
+.desk-btn--native:disabled { color: var(--text-tertiary); }
+
+/* The chip without MudBlazor (ADR 0034, step 3): a <button> that is the capsule itself. With
+   MudBlazor the capsule is .mud-chip dressed by .desk-chip in mud-bridge.css; this block says the
+   same capsule whole, so nothing of it is left behind in that stylesheet's reset. The figures are
+   the ones that rule holds: .tag's 14px line in a 22px key, the pointer and the press deepening
+   the fill toward the ink, pressed in the primary ink and a semibold word, and the accent spent
+   on the focus ring alone. */
+.desk-chip--native {
+    appearance: none;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    max-width: 100%;
+    min-height: 22px;
+    margin: 0;
+    padding: 3px var(--space-3);
+    border: 0;
+    border-radius: 999px;
+    outline: 0;
+    background-color: var(--surface-3);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-medium);
+    line-height: 14px;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+/* The fold's chevron, at the small key's glyph size, leading the words. */
+.desk-chip--native svg { width: var(--glyph-sm); height: var(--glyph-sm); flex: 0 0 auto; margin-inline-start: -2px; }
+
+@media (hover: hover) and (pointer: fine) {
+    .desk-chip--native:hover:not(:disabled) {
+        background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 8%);
+        color: var(--text-primary);
+    }
+}
+
+.desk-chip--native:focus-visible { box-shadow: var(--focus-ring); }
+
+.desk-chip--native:active:not(:disabled),
+.desk-chip--native.desk-chip--pressed {
+    background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 14%);
+    color: var(--text-primary);
+}
+
+.desk-chip--native.desk-chip--pressed { font-weight: var(--weight-semibold); }
+
+@media (hover: hover) and (pointer: fine) {
+    .desk-chip--native.desk-chip--pressed:hover:not(:disabled) {
+        background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 20%);
+    }
+}
+
+/* Disabled: dimmed as MudBlazor dimmed it, and it takes the pointer so the cursor and the title
+   still say why, as the native key does. */
+.desk-chip--native:disabled { opacity: .5; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+    .desk-chip--native { transition: none; }
+}
+
+/* ------------------------------------------------------------------- fields ---
+   A field is a place to put something, so it is cut into the surface rather than
+   raised off it: a darker well, a hairline, and no fill of its own. ADR 0008 had
+   fields inheriting a button recipe with text-transform patched off at every call
+   site; that inversion is gone with the gloss it was correcting.
+   --------------------------------------------------------------------------- */
+
+.field {
+    display: block;
+    width: 100%;
+    height: var(--control-h);
+    padding: 0 var(--space-2);
+    box-sizing: border-box;
+
+    /* A fill and no stroke at rest, as the pop-up beside it is: a field in a card is not a box
+       inside the box. The border is kept, transparent, so the focus stroke costs no layout. */
+    background: var(--control-fill);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+
+    color: var(--text-primary);
+    font-family: var(--face-ui);
+    font-size: var(--text-body);
+    font-weight: var(--weight-regular);
+    letter-spacing: 0;
+    text-transform: none;
+
+    transition: border-color var(--dur-fast) var(--ease-standard),
+                background-color var(--dur-fast) var(--ease-standard),
+                box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.field::placeholder { color: var(--text-tertiary); }
+
+.field:hover:not(:disabled) { background-color: var(--control-fill-hover); }
+
+.field:focus, .field:focus-visible {
+    outline: none;
+    border-color: var(--accent-ink); /* the ring's own stroke colour, so the edge and the ring are one line */
+    box-shadow: var(--focus-ring);
+}
+
+.field:disabled {
+    opacity: .40;
+    cursor: not-allowed;
+}
+
+.field.num { font-variant-numeric: tabular-nums; }
+
+textarea.field {
+    height: auto;
+    padding: var(--space-1) var(--space-2);
+    line-height: var(--leading-body);
+    resize: vertical;
+}
+
+select.field {
+    appearance: none;
+    padding-right: var(--space-6);
+    cursor: pointer;
+    /* The chevron is drawn rather than imported, so it takes the text colour. */
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+                      linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 12px, calc(100% - 9px) 12px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+
+select.field option { background: var(--surface-2); color: var(--text-primary); }
+
+/* The small field: a picker beside small keys inside a 29px grid row, at their 24px and their
+   footnote size. The caret moves up with the box. */
+.field--sm { height: var(--control-h-sm); font-size: var(--text-footnote); }
+select.field--sm { background-position: calc(100% - 14px) 10px, calc(100% - 9px) 10px; }
+
+/* The count field: a small number beside its stepper, the one capsule DeskStepper draws, so
+   it is as wide as two digits need and carries no spinner of its own — the capsule is the
+   stepper. */
+.field--count { width: 7ch; text-align: center; appearance: textfield; }
+.field--count::-webkit-inner-spin-button,
+.field--count::-webkit-outer-spin-button { appearance: none; margin: 0; }
+
+/* Row and stack read their gap from --desk-gap so a component can set one rung of
+   the spacing ramp inline without a modifier class per step. The fallback is the
+   gap they have always had, so a bare .row / .stack is unchanged.
+
+   The `--desk-gap: initial` is load-bearing, not tidiness: custom properties inherit,
+   so without it a plain row nested inside a spaced one would silently adopt its
+   parent's gap. Setting it to the guaranteed-invalid value makes var() fall through
+   to the default, while an inline --desk-gap on the element still wins. */
+.row { --desk-gap: initial; display: flex; align-items: center; gap: var(--desk-gap, var(--space-2)); flex-wrap: wrap; }
+
+/* ---- The field's frame ----------------------------------------------------
+   Only present when a field has something to say about itself. A field with no
+   label and no error renders bare, so the controls that sit straight in a .row
+   with their own max-width keep sitting there — the frame is an addition, not a
+   new baseline. Where it does appear it owns the layout, and the control fills
+   it, so max-width on the wrapper still means what the caller meant.
+   --------------------------------------------------------------------------- */
+
+.field-set { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.field-set > .field { width: 100%; }
+
+.field-lbl {
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-medium);
+    color: var(--text-secondary);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.field-req { color: var(--state-negative-ink); margin-left: 3px; }
+
+.field-err {
+    /* Carried across from the old block: .field-err renders as a <p> in
+       DeskField/DeskSelect/DeskTextArea, whose default margin would otherwise
+       reopen the vertical rhythm .field-set's gap is meant to own. */
+    margin: 0;
+    font-size: var(--text-footnote);
+    color: var(--state-negative-ink);
+}
+
+.field[aria-invalid="true"] { border-color: var(--state-negative); }
+
+.field[aria-invalid="true"]:focus,
+.field[aria-invalid="true"]:focus-visible {
+    border-color: var(--state-negative);
+    box-shadow: 0 0 0 3px var(--state-negative-wash), 0 0 0 1px var(--state-negative);
+}
+
+/* ---- Checkbox ---------------------------------------------------------------
+   One setting, on or off, said by shape: an empty box or a ticked one. The row is
+   the toolbar's 28px so it lines up with the fields and keys beside it. The native
+   input sits invisibly over the drawn box, so it keeps the browser's focus, Space
+   and screen-reader behaviour, and the box only paints its state.
+   --------------------------------------------------------------------------- */
+
+.checkbox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-h); /* a floor, so a label that wraps grows the row */
+    color: var(--text-primary);
+    font-size: var(--text-body);
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox__input {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    opacity: 0;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.checkbox__box {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    background: var(--surface-0);
+    border: 1px solid var(--separator-strong);
+    border-radius: var(--radius-sm);
+    transition: background var(--dur-fast) var(--ease-standard),
+                border-color var(--dur-fast) var(--ease-standard);
+}
+
+.checkbox__input:checked + .checkbox__box {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+/* The tick, drawn rather than imported so it takes the ink for a saturated fill. */
+.checkbox__input:checked + .checkbox__box::after {
+    content: "";
+    width: 4px;
+    height: 8px;
+    border: solid var(--on-accent);
+    border-width: 0 2px 2px 0;
+    transform: translateY(-1px) rotate(45deg);
+}
+
+.checkbox__input:focus-visible + .checkbox__box { box-shadow: var(--focus-ring); }
+
+.checkbox__input:disabled,
+.checkbox__input:disabled + .checkbox__box { cursor: not-allowed; opacity: .40; }
+
+.checkbox__label { min-width: 0; } /* wraps in a narrow card; the box keeps its size */
+.row--end { justify-content: flex-end; }
+.row--start { justify-content: flex-start; }
+.row--center { justify-content: center; }
+.row--between { justify-content: space-between; }
+.row--top { align-items: flex-start; }
+.row--bottom { align-items: flex-end; }
+.row--stretch { align-items: stretch; }
+.row--baseline { align-items: baseline; }
+.row--nowrap { flex-wrap: nowrap; }
+.stack { --desk-gap: initial; display: flex; flex-direction: column; gap: var(--desk-gap, var(--space-2)); }
+.stack--start { align-items: flex-start; }
+.stack--center { align-items: center; }
+.stack--end { align-items: flex-end; }
+
+/* ---- Panel anatomy (spec 2026-10-24) -------------------------------------
+   Every window body renders its parts in one order: title, toolbar, note,
+   metrics, sections, forms. Each part owns the air beneath it, so a panel never
+   writes a margin. Single-class and sibling selectors only; nothing here needs
+   to out-specify anything, because the panels stopped writing inline spacing.
+   --------------------------------------------------------------------------- */
+
+/* Meta. A count, date or aside beside the text it qualifies: one rung under the body, in
+   secondary ink. It replaces the inline calc(11.5px …) spans the panels used to write. */
+.meta { font-size: var(--text-subheadline); color: var(--text-secondary); }
+
+/* 1 · Title. The name of the thing the window is about, in the title ramp. */
+.ptitle { margin: 0 0 var(--space-4); }
+.ptitle__row { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); }
+.ptitle__name {
+    font-family: var(--face-display);
+    margin: 0;
+    font-size: var(--text-title2);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-title);
+    color: var(--text-primary);
+}
+.ptitle__meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+    font-size: var(--text-subheadline);
+    color: var(--text-secondary);
+}
+/* The detail line is a row of facts, not a sentence: Razor drops the whitespace between
+   a span and the code block that follows it, so two facts in one inline span ran together. */
+.ptitle__text { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); }
+.ptitle__text strong, .ptitle__em { color: var(--text-primary); font-weight: var(--weight-regular); }
+.ptitle__keys { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+/* 2 · Toolbar. Pickers, then a compact trailing search field (controls.css), then a quiet
+   message, then the actions slot at the right edge — where the one Filled key lives
+   in every window. A bare search field is an <input> straight in the row; a labelled
+   one is wrapped in .field-set. Either is sized like the compact search, not stretched. */
+/* The row is a container: a desk of two or three windows side by side gives a 1500px
+   viewport 400px windows, so the toolbar asks how wide it is, not how wide the screen is.
+   Nothing in it shrinks to fit (a picker or a key that does is clipped mid-word); the row
+   wraps instead. Adjacent views stack as space shrinks (HIG, Layout). */
+.ptoolbar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-3);
+    container-type: inline-size;
+    container-name: ptoolbar;
+}
+.ptoolbar > input.field, .ptoolbar > .field-set { flex: 0 1 calc(var(--text-body) * 17); min-width: min(calc(var(--text-body) * 11), 100%); }
+/* A select is sized to its words, not to the row: .field is width:100% for the forms
+   it sits in, and a picker that took the whole toolbar would push everything after it
+   onto the next line. Callers that want a longer picker still say so with max-width.
+   It does not shrink below its words either: flex-shrink can cut "All sources" to a
+   letter and a caret. A row too narrow for it wraps it onto the next line instead. */
+.ptoolbar > select.field { width: auto; flex: 0 0 auto; min-width: min(5rem, 100%); max-width: 100%; }
+.ptoolbar > .gate { max-width: 100%; }
+.ptoolbar__msg { flex: 0 1 auto; min-width: 0; font-size: var(--text-subheadline); color: var(--text-secondary); }
+/* The keys wrap inside their slot rather than run off the window's edge, each line flush
+   right, so the Filled key (last in source) stays last on screen. A key never shrinks:
+   .desk-btn clips its own label (overflow: hidden, for the shimmer). */
+.ptoolbar__actions {
+    margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end;
+    align-items: center; gap: var(--space-2); max-width: 100%;
+}
+.ptoolbar__actions > *, .ptoolbar > .desk-btn { flex: 0 0 auto; max-width: 100%; }
+/* How a narrow toolbar folds is controls.css's business: it holds the row to one line and
+   toolbar.js moves what does not fit into More. Its @container ptoolbar rule is the only
+   one, so there is no second rule here for the cascade to settle between. */
+
+/* 5 · Section. The air between sections is the section's; its rule renders Tight,
+   so the global "heading after content" rule stands down and this one decides. */
+.psection { margin: 0; min-width: 0; }
+.psection + .psection { margin-top: var(--space-5); } /* the card flow's row gap (.wflow), so both section systems keep one rhythm */
+/* A section after content that is not a slot — a grid, a chart, a stack of rows — takes
+   the same air a section takes after a section. The slots (title, toolbar, note, metrics,
+   form) own the air beneath them already, so they are left out; everything else used to
+   lean on the global "heading after content" rule, which cannot reach a rule inside a
+   section's head. Found in the browser after the sweep, as ADR 0016 said it would be. */
+.win__body > :not(.psection):not(.ptitle):not(.ptoolbar):not(.metrics):not(.note):not(.pform) + .psection,
+.psection__body > :not(.psection):not(.metrics):not(.note):not(.pform) + .psection { margin-top: var(--space-6); }
+.psection + .tabs__bar { margin-top: var(--space-4); }
+/* A row of keys after a section — a log's Show more — sits under it as it would under a grid. */
+.psection + .row { margin-top: var(--space-3); }
+.psection__body > .row + .note, .psection__body > .stack + .note, .psection__body > .gridwrap + .note,
+.psection__body > .deskgrid + .note { margin-top: var(--space-2); }
+/* A picker on a rule's line is sized to its words, for the same reason a toolbar's is. */
+.psection__keys .field { width: auto; }
+.psection__head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
+.psection__keys { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+.psection__meta {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin: calc(-1 * var(--space-1)) 0 var(--space-2);
+    font-size: var(--text-subheadline);
+    color: var(--text-secondary);
+    /* A meta line is mostly counts ("14 of 21 with a closing line") that change as the section
+       refreshes; tabular figures keep the words after them from shuffling sideways each time. */
+    font-variant-numeric: tabular-nums;
+}
+/* The reading on a meta line that qualifies the rest of it — "14 of 21 with a closing line" —
+   pinned to the trailing edge. */
+.psection__aside { margin-left: auto; }
+.psection--subject .panel-h { color: var(--text-primary); }
+/* Rows that follow one another inside a section body space themselves. */
+.psection__body > .row + .row { margin-top: var(--space-2); }
+
+/* 6 · Form. A form is its title and its grouped fields; the group is the only edge. It has no
+   fill, frame or padding of its own, so a .wgroup inside it — or a form inside a section —
+   never draws a box inside a box. The footer's order is the form's, not the caller's. */
+.pform {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-4);
+}
+.pform__foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); }
+.pform__keys { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+/* The title and its detail line are one unit, 2px apart, so the detail reads as the title's
+   and not as the first line of the fields. */
+.pform__head { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pform__detail {
+    margin: 0;
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-body);
+    color: var(--text-secondary);
+}
+/* A form whose fields are a grouped form (.wgroup rows) reads at a form's width, and its keys
+   lead, under the group. It is a section of the window in its own right, so it takes a
+   section's air beneath it before the list it edits. */
+.pform--grouped {
+    max-width: 560px;
+    gap: var(--space-3);
+    margin-bottom: var(--space-6);
+}
+/* Its title names the task, so it reads as a title: title 3, semibold, the primary label
+   colour, on the group's edge. It was the quiet group-header voice (subheadline, regular,
+   secondary, inset), and with a note between it and the group it floated, attached to
+   nothing (user report, Oct 26). Group headers inside the form keep the quiet voice. */
+.pform--grouped > .pform__head { padding: 0 var(--space-1); }
+.pform--grouped > .pform__head > .panel-h {
+    font-family: var(--face-display);
+    margin: 0;
+    border: 0;
+    font-size: var(--text-title3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+}
+.pform--grouped > .pform__head > .panel-h::after { display: none; }
+/* The fields' notes and groups stack at the form's own rhythm. */
+.pform--grouped > .pform__body { gap: var(--space-3); }
+.pform--grouped .pform__body > .note { margin: 0; }
+.pform--grouped .pform__keys { margin-left: 0; flex-direction: row-reverse; justify-content: flex-end; }
+
+/* ---- The grouped form: sections, groups and their rows ---------------------------------
+   Built as Apple's grouped list: a window is a run of SECTIONS, each a filled group — a
+   section card. The group is --surface-2 on the --surface-1 body — one step up the ramp —
+   edged by one 1px hairline, the way macOS draws a grouped form. Its name sits inside it, in a
+   header bar at its top (.wgroup__bar: the title in the headline style, a key or filter
+   trailing), divided from the rows by one full-width hairline; rows inside are divided by an
+   inset hairline that starts where the text does, not at the group's edge. The footer that
+   explains a group sits under the card.
+
+   The name used to be a quiet grey line standing outside the group (.wgroup__head, kept for
+   the windows that still spell it), and on a window of several sections they ran together
+   (user report, Nov 22): the card's own edge and its bar are what separate one section from
+   the next now, not a header floating in a gap.
+
+   Sections stack in a column (.wsections) or flow in cards (.wflow); a settings screen, a form
+   of fields and a wizard's steps are all built from them; a check (a mark leading a sentence)
+   is one kind of row in it. */
+
+.wsections { display: flex; flex-direction: column; gap: var(--space-6); }
+.wsection { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.wsection > .panel-h { margin: 0; padding: 0 var(--space-1); }
+
+/* The card flow: a window with several sections gives them as many columns as its width allows.
+   Each track is at least 420px — wide enough that a card's form rows keep their labels beside
+   their controls (they stack under 400px of card), a label column and a four-segment gate side
+   by side; at 360px every row of a settings card stacked and the card stood twice as tall — and
+   they share what is left, so a wide window gets more cards, never wider ones: at 1600px a
+   section is three cards across, not one box the width of the desk with its controls a screen apart (forms.md,
+   rule 8). auto-fill keeps the empty tracks, so two cards in a wide window stay two card-widths.
+   Cards align to the start of their row: a short card keeps its own height beside a tall
+   neighbour rather than stretching into an empty box. Under 420px the track is the window, and a ~680px window is one column. The
+   flow is a container, so a card that spans asks the flow's width, not the window's. */
+.wflow {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+    align-items: start;
+    gap: var(--space-5) var(--space-4);
+    container-type: inline-size;
+    container-name: wflow;
+}
+/* A card whose body is a grid of its own (a library of tiles) takes the whole row. */
+.wflow > .wsection--span { grid-column: 1 / -1; }
+/* The one large card beside the card that leads the flow: the whole row while one track is all
+   there is, the rest of the first row once two fit (2 × 420px + the gap). It must be the flow's
+   second card; anything after it flows on beneath. */
+.wflow > .wsection--rest { grid-column: 1 / -1; }
+/* A card whose body is a table of several columns: two tracks once two fit, the whole row while
+   one track is all there is. Spanning the whole of a wide row set a table's figures a screen from
+   its names (1560px of card for a 700px table); two tracks keep it at a table's width, and in a
+   flow of three the third track takes a card beside it — the next one-track card, or a second
+   table — so the width becomes another column rather than a gutter inside every row. */
+.wflow > .wsection--pair { grid-column: 1 / -1; }
+@container wflow (min-width: 856px) {
+    .wflow > .wsection--rest { grid-column: 2 / -1; }
+    .wflow > .wsection--pair { grid-column: span 2; }
+}
+
+/* A window whose content is a table, or two tables one above the other, with the toolbar that
+   filters them: the whole of it at a table's reading width, centred in a wider window. The
+   toolbar's keys then sit at the trailing edge of the rows they act on, not 900px past them, and
+   the window's title, tabs, tables and footnote share one leading edge. It is not for a flow of
+   cards (that takes columns, never a cap) and never narrows a window below its own width.
+   --wmeasure is the window's to set: var(--measure-table-narrow) for a list of a few short columns. */
+.wmeasure {
+    width: 100%;
+    max-width: var(--wmeasure, var(--measure-table));
+    min-width: 0;
+    margin-inline: auto;
+}
+.wmeasure--narrow { --wmeasure: var(--measure-table-narrow); }
+
+/* The house rule on groups. A group is a fill one level above the body with one hairline edge:
+   the HIG's grouped list (a secondary grouped background on the primary), drawn the way macOS
+   draws a grouped form and the package wizard draws its sections. Rows inside it are divided by
+   inset hairlines, from the label's leading edge, as grouped lists draw them. A group never sits
+   inside another edged thing — a box inside a box "feels busy and constrained"
+   (apple-hig-components, forms.md) — which is why a form has no frame of its own and the
+   wizard's card, which is the group, unborders the .wgroup inside it. */
+.wgroup {
+    background: var(--surface-2);
+    border: 1px solid var(--separator-strong);
+    border-radius: var(--radius-panel);
+    overflow: hidden;
+    /* Its rows ask how wide the group is, not the window: see the @container block after the
+       form-row rules, which must follow them to win the cascade. */
+    container-type: inline-size;
+}
+
+.wgroup__row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--row-h);
+    /* --space-4 inline, the card's one inset: the bar's title, the form rows, the inset
+       hairline and the footer all start there, so a row the caller draws does too. */
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+}
+
+/* The inset hairline: from the label's leading edge to the group's trailing edge. */
+.wgroup__row + .wgroup__row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: var(--space-4);
+    border-top: 1px solid var(--separator);
+}
+
+.wgroup__row--pad { padding: var(--space-3) var(--space-4); }
+
+/* The card's header bar: its name inside it, at its top, in the headline style — semibold, the
+   primary ink — with what qualifies the card trailing (a small key, a count, a segmented filter
+   over its rows). A full-width hairline divides it from the rows: it is the card's own threshold,
+   not a row, so it is not inset. Its fill sits between the card's and the body's — half a step
+   back down the ramp, in every family and both appearances, from the two tokens it lies between
+   — so the bar reads as the card's head and not as its first row. It wraps: in a narrow card the
+   filter drops beneath the title rather than squeezing it. */
+.wgroup__bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3);
+    min-height: var(--row-h);
+    padding: var(--space-2) var(--space-4);
+    background: color-mix(in srgb, var(--surface-2) 50%, var(--surface-1));
+    border-bottom: 1px solid var(--separator);
+}
+.wgroup__title {
+    margin: 0;
+    font-size: var(--text-headline);
+    font-weight: var(--weight-semibold);
+    line-height: var(--leading-tight);
+    color: var(--text-primary);
+}
+.wgroup__keys {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-left: auto;
+    min-width: 0;
+    max-width: 100%;
+    font-size: var(--text-footnote);
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+.wgroup__keys > .gate { max-width: 100%; }
+/* A bar with nothing but its keys keeps them at the leading edge, where the rows start. */
+.wgroup__bar > .wgroup__keys:first-child { margin-left: 0; }
+
+/* The split row: two compact, related controls side by side in one row (a mode beside an
+   accent), each cell its own label leading its control, divided by a vertical hairline inset
+   top and bottom as the row hairlines are inset at the leading edge. Under 720px of card — two
+   cells that each fit a label column and a three-segment gate — the cells stack and the divider turns into the ordinary inset row hairline: see the @container
+   block after the form-row rules. A split row with one cell is that cell, the whole row. */
+.wgroup__row.wgroup__split {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+}
+.wgroup__cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    /* One line while the cells are side by side or stacked: the split stacks before a cell would
+       wrap, so the two cells always lay out alike. Only under 400px does a label go above its
+       control, in both cells at once. */
+    flex-wrap: nowrap;
+    gap: var(--space-2) var(--space-3);
+    min-width: 0;
+    min-height: var(--form-row-h);
+    padding: var(--space-1) var(--space-4);
+}
+.wgroup__cell > .gate { max-width: 100%; }
+/* The first cell's label takes the group's label column, so its control lines up with the
+   controls of the rows beneath it; the second cell's label is as wide as its word. */
+.wgroup__cell > .wgroup__label { flex: none; }
+.wgroup__cell:first-child > .wgroup__label { min-width: var(--form-label, calc(var(--text-body) * 6.75)); }
+.wgroup__cell + .wgroup__cell::before {
+    content: "";
+    position: absolute;
+    top: var(--space-2);
+    bottom: var(--space-2);
+    left: 0;
+    border-left: 1px solid var(--separator);
+}
+
+/* What a card holds that is not a row. Each window that put one of these in a card wrote the same
+   three rules in its own scoped sheet (Nov 22); they are the card's, so they are here, once.
+
+   A table in a card: the card is its frame. A DeskGrid that is the card's own content starts its
+   text where the bar's title does — the card's inset less the cell's own (--deskgrid-inset, on
+   .deskgrid in mud-bridge.css) — and its last row's hairline stands down, because the card's edge
+   is under it: two lines a pixel apart read as a box inside the box. The rows above keep theirs;
+   they are the table's dividers, not a frame. The hairline rule outranks mud-bridge.css's
+   `.deskgrid .mud-table-body .mud-table-cell` by weight, not by order, because mud-bridge.css
+   loads after this sheet (the seam, mudblazor-seam.md). */
+.wgroup > .deskgrid { padding-inline: calc(var(--space-4) - var(--deskgrid-inset)); }
+.wgroup .deskgrid .mud-table-body .mud-table-row:last-child > .mud-table-cell { border-bottom: 0; }
+
+/* A sentence that is the card's whole content — an all-clear, an empty timeline — sits at the
+   rows' inset, not against the card's edge. One inside a row is that row's, and keeps the row's
+   inset instead. */
+.wgroup .empty:not(.wgroup__row .empty) { margin: 0; padding: var(--space-3) var(--space-4); }
+
+/* An inline confirm that is a row of the card starts at the labels' edge, as the rows around it do. */
+.wgroup > .confirm { padding: var(--space-2) var(--space-4); }
+
+/* A form row: the label leads in one column the whole group shares, so the controls line
+   up down the page; the control takes the rest. --form-label is the group's to set. */
+.wgroup__row--form {
+    display: grid;
+    /* 88px at the default Text size, and wider as the type grows (6.75 body ems), so a label
+       column made for 13px words still holds them at 140%. */
+    grid-template-columns: var(--form-label, calc(var(--text-body) * 6.75)) minmax(0, 1fr);
+    align-items: center;
+    column-gap: var(--space-3);
+    min-height: var(--form-row-h);
+    padding: var(--space-1) var(--space-4);
+}
+/* A label longer than its column wraps inside it rather than running under the control. */
+.wgroup__label {
+    min-width: 0;
+    font-size: var(--text-body);
+    color: var(--text-primary);
+    overflow-wrap: break-word;
+}
+
+/* A segmented control in a form row is as wide as its segments. A grid item stretches by
+   default, so "Buy | Sell" ran the whole control column, two words 400px apart; a choice group's
+   selection controls opt back into the column's width (.selection-gate, below). */
+.wgroup__row--form > .gate {
+    justify-self: start;
+    /* Each segment at least 64px, as a macOS segment has a floor, so "PIT | NO" is two keys
+       and not two abbreviations touching; never wider than the row. */
+    min-width: min(100%, calc(var(--n, 2) * 64px));
+    max-width: 100%;
+}
+/* Footers explain, under the group, in the secondary colour: the sentence about what a group
+   will do is not a box of its own. */
+.wgroup__foot {
+    margin: var(--space-2) 0 0;
+    padding: 0 var(--space-4);
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-body);
+    color: var(--text-secondary);
+}
+.wgroup__foot strong { color: var(--text-primary); font-weight: var(--weight-semibold); }
+/* Fields inside a form row: one short width shared by a group's short fields, or the rest
+   of the row for a note. */
+.wfield--short { width: 100%; max-width: 160px; }
+.wfield--fill { width: 100%; }
+/* A group's header: a quiet sentence-case name above it, not a tracked all-caps rule. */
+.wgroup__head {
+    margin: 0 0 var(--space-1);
+    padding: 0 var(--space-4);
+    font-size: var(--text-subheadline);
+    font-weight: var(--weight-regular);
+    color: var(--text-secondary);
+}
+.wsection > .wgroup__foot { margin-top: 0; }
+
+/* A narrow group (a window beside other windows) stacks each label above its control — HIG:
+   "horizontally adjacent views may need to stack vertically". Placed after the form-row rules
+   on purpose: same specificity, so it has to come later to win. */
+@container (max-width: 400px) {
+    .wgroup__row--form {
+        grid-template-columns: minmax(0, 1fr);
+        row-gap: var(--space-1);
+        padding-top: var(--space-2);
+        padding-bottom: var(--space-2);
+    }
+    .wgroup__row--form > .wgroup__label { font-size: var(--text-subheadline); color: var(--text-secondary); }
+}
+
+/* A split row in a card narrower than its two cells stacks them, the second under the first,
+   divided as any two rows are: by the inset hairline from the leading edge, not the vertical one. */
+@container (max-width: 720px) {
+    .wgroup__row.wgroup__split { grid-auto-flow: row; grid-auto-columns: auto; }
+    .wgroup__cell + .wgroup__cell::before {
+        top: 0;
+        bottom: auto;
+        left: var(--space-4);
+        right: 0;
+        border-left: 0;
+        border-top: 1px solid var(--separator);
+    }
+    .wgroup__cell > .wgroup__label { min-width: var(--form-label, calc(var(--text-body) * 6.75)); }
+}
+/* Narrower still, a cell's label stacks above its control, as a form row's does at this width. */
+@container (max-width: 400px) {
+    .wgroup__cell { flex-wrap: wrap; }
+    .wgroup__cell > .wgroup__label,
+    .wgroup__cell:first-child > .wgroup__label {
+        flex-basis: 100%;
+        min-width: 0;
+        font-size: var(--text-subheadline);
+        color: var(--text-secondary);
+    }
+}
+
+/* ---- The checks: a grouped list of facts, a mark leading each row. */
+/* Wraps rather than squeezes: in a narrow window the remedy key drops beneath its sentence,
+   right-aligned, instead of pinching the sentence into a column one word wide. */
+.check { align-items: flex-start; flex-wrap: wrap; row-gap: var(--space-2); }
+.check__mark {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-top: 6px;             /* centred on the first line of a sentence that may wrap */
+    border-radius: 50%;
+    background: var(--text-tertiary);
+}
+.check--positive .check__mark { background: var(--state-positive); }
+.check--warning .check__mark { background: var(--state-warning); }
+.check--negative .check__mark { background: var(--state-negative); }
+.check__text { flex: 1 1 200px; min-width: 0; color: var(--text-primary); }
+.check .desk-btn { flex: none; margin-left: auto; }
+
+.wfoot { margin: 0; font-size: var(--text-footnote); line-height: var(--leading-body); color: var(--text-secondary); }
+
+/* ---- A section header with something of its own beside it: a key, or a count. */
+.wsection__head { display: flex; align-items: center; gap: var(--space-2); min-height: 24px; padding: 0 var(--space-1); }
+.wsection__head > .panel-h { margin: 0; }
+.wsection__head > .desk-btn { margin-left: auto; }
+.wsection__aside { margin-left: auto; font-size: var(--text-footnote); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
+/* A narrow group (a window beside two others, ~300-480px) gives its inset back to its
+   controls: the rows, the bar, the split cells, a table, a lone sentence, a confirm and the
+   footer under the group take --space-3
+   rather than --space-4, and the footer steps down to footnote size. */
+@container (max-width: 480px) {
+    .wgroup__row { padding-left: var(--space-3); padding-right: var(--space-3); }
+    /* The inset hairlines follow the inset, so they still start where the labels do. */
+    .wgroup__row + .wgroup__row::before,
+    .wgroup__cell + .wgroup__cell::before { left: var(--space-3); }
+    .wgroup__cell, .wgroup__bar { padding-left: var(--space-3); padding-right: var(--space-3); }
+    .wgroup > .confirm { padding-left: var(--space-3); padding-right: var(--space-3); }
+    .wgroup .empty:not(.wgroup__row .empty) { padding-left: var(--space-3); padding-right: var(--space-3); }
+    .wgroup > .deskgrid { padding-inline: calc(var(--space-3) - var(--deskgrid-inset)); }
+    .wgroup__foot { padding: 0 var(--space-3); font-size: var(--text-footnote); }
+}
+
+/* 3 · 4 · Note and metrics in a window body own the air beneath them too. The space
+   above comes from whatever precedes them. A Note rendered inline is a span and is
+   not a slot, which is why this is scoped to a block note straight in the body. */
+.win__body > .note, .psection__body > .note { margin: 0 0 var(--space-4); }
+.win__body > .metrics, .psection__body > .metrics { margin: 0 0 var(--space-4); }
+.psection__body > .note:last-child, .psection__body > .metrics:last-child { margin-bottom: 0; }
+
+.metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-2); }
+/* A row of figures is as wide as its figures, not the window: four tiles across a 1600px window
+   were 390px apiece, each figure a word at the leading edge of a wide empty box. The row stops
+   at as many --metric-max tiles as it holds and the gaps between them, at the leading
+   edge, so a wider window leaves the tiles their size; a narrower one still shares its width
+   among them and wraps them as the row's own grid says. One to six tiles are counted from the
+   row's children, so no caller states how many it drew; a longer row keeps the whole width. */
+.metrics { --metric-max: 240px; }
+.metrics:has(> :only-child) { max-width: var(--metric-max); }
+.metrics:has(> :nth-child(2):last-child) { max-width: calc(2 * var(--metric-max) + var(--space-2)); }
+.metrics:has(> :nth-child(3):last-child) { max-width: calc(3 * var(--metric-max) + 2 * var(--space-2)); }
+.metrics:has(> :nth-child(4):last-child) { max-width: calc(4 * var(--metric-max) + 3 * var(--space-2)); }
+.metrics:has(> :nth-child(5):last-child) { max-width: calc(5 * var(--metric-max) + 4 * var(--space-2)); }
+.metrics:has(> :nth-child(6):last-child) { max-width: calc(6 * var(--metric-max) + 5 * var(--space-2)); }
+
+/* A note is a filled shape, not a framed one. It used to carry a hairline outline and a 2px
+   accent bar down its left edge — the Material callout this system replaced (ADR 0016:
+   hairlines separate, they never outline; accent means interactivity, and a note is not
+   interactive). The fill alone sets it apart from the body; a warning takes the warning
+   wash, so the one distinction a note makes is still made, by tint, alongside the text
+   that says what the cost is. */
+.note {
+    /* A reading width, as body copy has one (HIG, Typography: 45–75 characters a line). On a
+       wide window a note ran the whole body, a single 180-character line under the toolbar. */
+    max-width: 80ch;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-body);
+}
+
+.note--warn {
+    background: var(--state-warning-wash);
+    color: var(--text-primary);
+}
+
+/* An empty state is an absence, not a card: no border, no fill, no box — just a line
+   of --text-secondary at the desk's body size. The old --text-tertiary was the tier for
+   an annotation nobody has to read, and a panel explaining why it has nothing in it is
+   the opposite of that: it is the only thing on the screen.
+
+   .empty is also the desk's plain quiet-note class — the Parts window sets whole
+   paragraphs of prose in it — so the base stays in the flow it was written for and only
+   the two genuine "there is nothing here" kinds below centre themselves. */
+.empty { color: var(--text-secondary); font-size: var(--text-body); padding: var(--space-3) 0; line-height: 1.55; }
+
+/* Nothing yet, or nothing matching. Centred in the space it is failing to fill, which is
+   what makes it read as the absence rather than as the first line of something. */
+.empty--new,
+.empty--filtered {
+    text-align: center;
+    padding: var(--space-6) var(--space-4);
+}
+
+/* Error is the exception: "the load failed" and "nothing here yet" are indistinguishable
+   as grey sentences, so it takes a rule in --state-warning *and* the inset that rule
+   creates — hue plus shape, never hue alone. See ADR 0008. It stays left-aligned, because
+   a rule down the left of centred text is an edge with nothing to align to. */
+.empty--error {
+    border-left: 2px solid var(--state-warning);
+    padding-left: var(--space-3);
+}
+
+/* The one next step, on its own line so it reads as an offer rather than as the tail of
+   the sentence above it. */
+.empty__action { display: block; margin-top: var(--space-2); }
+

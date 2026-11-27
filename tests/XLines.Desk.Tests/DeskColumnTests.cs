@@ -182,7 +182,7 @@ public class DeskColumnTests : DeskTestContext
     [Fact]
     public void The_bar_gives_way_by_its_own_width_status_first()
     {
-        var css = File.ReadAllText(Path.Combine(Support.Repo.Root(), "src", "XLines.Desk", "wwwroot", "css", "desk.css"));
+        var css = Support.DeskCss.Sheet("desk.css");
 
         Assert.Matches(@"\.win__bar\s*\{[^}]*container:\s*winbar\s*/\s*inline-size", css);
         Assert.Matches(@"@container winbar \(max-width: 380px\)\s*\{\s*\.win__status\s*\{\s*display:\s*none", css);

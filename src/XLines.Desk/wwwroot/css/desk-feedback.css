@@ -1,0 +1,861 @@
+/* ============================================================================
+   LOADING VOCABULARY — .skel, .prog, .deskgrid__skeleton
+   Components/Desk/DeskSkeleton.razor · DeskProgress.razor · DeskGrid.razor
+
+   The desk's only "something is happening" signal used to be the window pulse
+   strip, which reports that a window is busy without saying where the answer
+   will land. These two say where, and how far along.
+
+   Both are matte on purpose. ADR 0008 makes gloss the affordance channel — a
+   surface that catches the light is one you can press — and neither of these is
+   pressable, so neither has a crown highlight or a seat shadow. The shimmer
+   travels *through* a flat surface; it is not a sheen sitting on one.
+
+   Motion spends the desk's shared tokens — --ease-standard and --dur-fast — so a
+   bar advancing and a marble sliding are the same gesture at different sizes, and
+   the skeleton's sweep is literally the button's: both run desk-btn-sheen, because
+   "this surface is occupied" should look the same whatever the surface is.
+   ============================================================================ */
+
+.skel {
+    display: block;
+    min-width: 0;
+    --skel-h: 9px;
+}
+
+.skel--lines { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.skel__line,
+.skel__block {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    border-radius: calc(var(--radius-xs) - 1px);
+
+    /* One step up from the window body, so a placeholder reads as an absence in
+       the surface rather than a new element painted on it. */
+    background: var(--surface-2);
+}
+
+/* A radius per thing stood in for: a line of prose is nearly square-cut, a block is a
+   tile or a chart and takes the control radius those wear. */
+.skel__line { height: 9px; width: 100%; }
+.skel__block { height: var(--skel-h, 9px); width: 100%; border-radius: var(--radius); }
+
+/* The travelling band. Wide and low-contrast: this is a hint that the surface is
+   live, not a second pulse strip competing with the real one. */
+.skel__line::after,
+.skel__block::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, var(--sheen-soft), transparent);
+    transform: translateX(-100%);
+    animation: desk-btn-sheen var(--dur-shimmer) var(--ease-standard) infinite;
+}
+
+/* Staggered so a stack of lines reads as one surface being swept, not as three
+   independent bars each doing their own thing. */
+.skel--lines .skel__line:nth-child(2)::after { animation-delay: var(--dur-fast); }
+.skel--lines .skel__line:nth-child(3)::after { animation-delay: calc(var(--dur-fast) * 2); }
+.skel--lines .skel__line:nth-child(n+4)::after { animation-delay: calc(var(--dur-fast) * 3); }
+
+/* ---- Grid rows ------------------------------------------------------------
+   Same row rhythm and hairline as .deskgrid's real body (see mud-bridge.css), so
+   the header stays put and the panel does not collapse and then jump back when
+   the first page lands.
+   --------------------------------------------------------------------------- */
+
+.deskgrid__skeleton { display: flex; flex-direction: column; }
+
+/* What a real row measures, from the same tokens (mud-bridge.css: --cell-pad-y either side of a
+   20px line box, plus the hairline) — 29px at Standard, 37px under Roomy. It was a literal 29px,
+   so under Roomy a page of placeholders stood 8px a row short of the rows that replaced it; before
+   that 30px at an 8px inset, and every first bar started 2px left of its text. The inset is the
+   grid's own (--deskgrid-inset, mud-bridge.css), so a narrow grid's placeholders narrow with its
+   cells. */
+.deskgrid__skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    height: calc(20px + 2 * var(--cell-pad-y) + 1px);
+    padding: 0 var(--deskgrid-inset, 10px);
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--separator);
+}
+
+.deskgrid__skeleton-row:last-child { border-bottom: 0; }
+
+/* ---- The progress bar -----------------------------------------------------
+   The pulse strip's band, given a denominator. Same accent, same slimness, so the
+   desk keeps one word for "in flight" rather than acquiring a spinner too.
+
+   A 4px neutral track with a fully rounded accent fill, and no seat shadow cut into
+   it: the track is not a well, it is the part of the journey not yet made.
+   --------------------------------------------------------------------------- */
+
+.prog { display: block; min-width: 0; }
+
+.prog__label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 5px;
+    color: var(--text-secondary);
+    font-family: var(--face-ui);
+    font-size: var(--text-footnote);
+    line-height: 1.3;
+}
+
+.prog__pct { color: var(--text-primary); font-size: var(--text-footnote); flex: 0 0 auto; }
+
+.prog__track {
+    height: 4px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--surface-3);
+}
+
+.prog__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+}
+
+/* Determinate travel uses the desk's glide, so the bar advances the way every
+   other moving thing on the surface does. */
+.prog--determinate .prog__fill {
+    width: 0;
+    transition: width var(--dur-fast) var(--ease-standard);
+}
+
+/* Indeterminate borrows the pulse strip's sweep outright — one idiom, not two. It
+   slides; it does not pulse. The track underneath stays the same neutral the
+   determinate one uses, so the two bars are one bar in two states rather than two
+   different objects. */
+.prog--indeterminate .prog__fill {
+    width: 34%;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: prog-sweep var(--dur-sweep) linear infinite;
+}
+
+@keyframes prog-sweep {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(320%); }
+}
+
+/* Reduced motion drops the travel, never the state: a placeholder is still a
+   placeholder, and an indeterminate bar still says work is in flight — it just
+   says it with a steady band instead of a moving one. */
+@media (prefers-reduced-motion: reduce) {
+    .skel__line::after,
+    .skel__block::after { animation: none; transform: none; background: none; }
+
+    .prog--determinate .prog__fill { transition: none; }
+
+    .prog--indeterminate .prog__fill {
+        animation: none;
+        width: 100%;
+        background: var(--accent);
+        opacity: .5;
+    }
+}
+
+/* ------------------------------------------------------------ a11y --------- */
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ------------------------------------------------- the failed-circuit banner ---
+   The framework's banner for a circuit that failed (Layout/MainLayout.razor). Blazor shows
+   it by writing display:block inline, which out-weighs this rule, so the sheet only ever
+   hides it: until then it is out of the page and out of the accessibility tree. Shown, it
+   is laid out like a toast — the raised surface, one hairline, the sheet's shadow, the
+   failure carried on a lit edge — and pinned bottom-centre above the footer, above
+   everything, because nothing on the desk works until it is answered. (The desk's own notices
+   live in the header now, ADR 0028, so the two never share a place.) Its contents are laid out
+   by a row inside it rather than by its own display, which belongs to Blazor. */
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--footer-h) + var(--space-8));
+    translate: -50% 0;
+    z-index: var(--z-toast);
+    width: min(440px, calc(100vw - 2 * var(--space-4)));
+    box-sizing: border-box;
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+    background: var(--surface-2);
+    border: 1px solid var(--separator-strong);
+    border-left: 2px solid var(--state-negative);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sheet);
+    color: var(--text-primary);
+    font-family: var(--face-ui);
+    font-size: var(--text-subheadline);
+}
+
+/* Sentence, key and dismiss on one line, the way a toast holds its text and its one key. */
+.blazor-error-ui__row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.blazor-error-ui__text { margin: 0; flex: 1 1 auto; }
+
+/* The toast's key: a plain key in primary ink, semibold — an escape hatch, not a commitment. */
+#blazor-error-ui .reload {
+    --btn-ink: var(--text-primary);
+    flex: none;
+    font-size: var(--text-subheadline);
+    font-weight: var(--weight-semibold);
+}
+
+#blazor-error-ui .dismiss { flex: none; }
+
+/* One focus ring, everywhere: --focus-ring, a 1px accent edge in a 3px wash. This was
+   a 2px outline, a second shape beside the ring the desk's own keys draw, so a Tab
+   through a window showed two different rings (HIG audit 2026-10-25). A control whose
+   parent clips its edge takes --focus-ring-inset in its own rule. */
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* A horizontal row of tabs cannot host itself usefully on a narrow screen — there is no
+   room to drag a tab past a neighbour with a thumb. Windows stack into a single scrolling
+   column instead: same components, same state, a layout that fits the hand. Reordering and
+   resizing are both pointer gestures for a wide desk, so neither applies here. */
+@media (max-width: 720px) {
+    .shell__body { flex-direction: column !important; }
+
+    .desk {
+        overflow-y: auto;
+        padding: 8px;
+        background-image: none;
+    }
+
+    .desk__surface {
+        width: auto !important;
+        height: auto !important;
+    }
+
+    .hdr { height: auto; flex-wrap: wrap; padding: var(--space-1) var(--space-2); gap: var(--space-2); }
+    /* The banner keeps the page's narrow gutter, closer to the footer. */
+    #blazor-error-ui {
+        bottom: calc(var(--footer-h) + var(--space-3));
+        width: calc(100vw - 2 * var(--space-2));
+    }
+    .ftr__stat:not(:last-child), .ftr__divider { display: none; }
+
+    .win {
+        position: relative !important;
+        left: auto !important;
+        width: auto !important;
+        /* dvh where it is known: 78vh counts the browser's own toolbar on a phone, and the
+           window's last rows sat under it. */
+        max-height: 78vh;
+        max-height: 78dvh;
+        margin-bottom: var(--space-2);
+    }
+
+    .win--collapsed { max-height: none; }
+
+    /* A collapsed window is a full-width row here, not a column's stub: its name beside its icon,
+       as a row reads, rather than one icon centred in a strip of nothing. */
+    .win--collapsed .win__bar { flex-direction: row; }
+    .win__restore { flex-direction: row; justify-content: flex-start; padding: 0 var(--space-3); }
+    .win__title--stub { display: block; }
+
+    /* Stacked, a tab behind has no column box to share: kept hidden it would hold its own
+       height of blank page under the window it is behind. Out of the flow instead — still
+       mounted, input and all; only its scroll is not kept on a phone. */
+    .win--behind { display: none; }
+
+    .divider { display: none; }
+}
+
+/* Under a finger the title bar's keys and the header's are the 44px the HIG asks of a touch
+   target; 28px is a pointer's size. The bar grows to hold them. */
+@media (max-width: 720px) and (pointer: coarse) {
+    .win { --titlebar-h: 44px; }
+    .win__ctl, .win__nav-btn, .hdr__tools .rail__btn { width: 44px; height: 44px; }
+}
+
+/* ---- Two-stage disclosure: row actions, snippets, log rows -----------------
+   Opening a row shows what you can do with it; pressing one of those answers
+   the question in place. Only if the answer is not enough does a window get
+   spent — which matters because past the column limit a new window covers another as a
+   tab (ADR 0027), and
+   browsing must never rearrange the desk out from under the operator.
+
+   The strip sits in one of two places. In a detail window's row it sits inside
+   a cell, under that row's own text, at the cell's width. In a list it is the
+   first line of the row the grid opens under the open one (DeskGrid's child
+   row): a list's columns are narrow and its row click is the toggle, so a strip
+   inside a cell wrapped into stacked keys and a near miss closed the row. Either
+   way only the open row changes height.
+   -------------------------------------------------------------------------- */
+
+/* On the ramp, so the strip follows Density and its keys stand as far apart as they do in the
+   list's open line (--space-2, below) and in every toolbar. */
+.rowacts {
+    margin-top: var(--space-2);
+    border-top: 1px solid var(--separator);
+}
+
+.rowacts__keys {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    padding: var(--space-2) 0 var(--space-1);
+}
+
+/* The air between the views (one segmented control: which answer shows on the row) and the
+   commands after it (keys that open a window), so the two read as different kinds of thing. */
+.rowacts__gap { flex: none; width: var(--space-2); }
+
+/* A snippet its strip handed to the host — on a list, the row under the open one. It spans
+   that row from the first cell's edge, up to a measure a list can be read across. */
+.rowacts__snippet { max-width: 720px; }
+.rowacts__snippet > .snippet { margin: 0; }
+
+/* The strip as a list's open line: the first thing in the child row, keys on one line.
+   No rule above it and no margin — the child row shares the open row's wash, so the row and
+   its keys read as one selection, and a hairline between them would cut it in two.
+
+   28px keys, not the grid row's 24px: here the strip is a row of its own, a toolbar in all
+   but name, so it takes the toolbar's height (.ptoolbar .desk-btn--sm), which is the desk's
+   pointer floor for a control on its own line (HIG: 28pt on macOS; each key's and segment's hit
+   region is 44, below, and the child row stops every press inside it). The segmented control's Small track
+   is already 28px with its 2px inset, so the glances and the commands now stand level.
+   --space-2 between keys, so nothing touches; the gap span adds a second to part the
+   glances from the commands. Wraps only as a last resort, --space-5 apart: a wrapped line's
+   hit regions (below) reach 8–10px past what is drawn, and at --space-2 the line above took
+   presses meant for the key under it. */
+.deskgrid__child-cell > .rowacts {
+    margin: 0;
+    border-top: 0;
+}
+
+.deskgrid__child-cell > .rowacts > .rowacts__keys {
+    gap: var(--space-5) var(--space-2);
+    padding: var(--space-1) 0;
+}
+
+.deskgrid__child-cell > .rowacts > .rowacts__keys > .desk-btn--sm { height: var(--control-h); }
+
+/* A hit region of 44, drawn at 28 (HIG: a control's hit region may be larger than its visible
+   bounds). The strip is where a finger lands on a touch screen beside the desk, and a 28px key
+   is a near miss in waiting. The region grows up and down only, never sideways: keys are 8px
+   apart, so a sideways inset would hand a press between two keys to whichever was drawn last.
+
+   The key's region is its ::before: ::after is the busy sheen. The key clips that sheen with
+   overflow: hidden, which would clip the region too, so here the key lets its box overflow and
+   the sheen stays inside by moving its gradient across a fixed layer (background-position)
+   rather than moving the layer itself (transform) — the layer keeps the key's corners. */
+.deskgrid__child-cell > .rowacts > .rowacts__keys > .desk-btn--sm { overflow: visible; }
+
+.deskgrid__child-cell > .rowacts > .rowacts__keys > .desk-btn--sm::before {
+    content: '';
+    position: absolute;
+    inset: -8px 0;
+}
+
+.deskgrid__child-cell > .rowacts > .rowacts__keys > .desk-btn--busy::after {
+    border-radius: inherit;
+    background: linear-gradient(90deg,
+        transparent 33.33%,
+        var(--sheen) 50%,
+        transparent 66.67%) 100% 0 / 300% 100% no-repeat;
+    animation-name: desk-btn-sheen-in-place;
+}
+
+@keyframes desk-btn-sheen-in-place {
+    from { transform: none; background-position: 100% 0; }
+    to { transform: none; background-position: 0% 0; }
+}
+
+/* Still, the sheen rests across the key's middle, as the plain key's still sheen does. */
+@media (prefers-reduced-motion: reduce) {
+    .deskgrid__child-cell > .rowacts > .rowacts__keys > .desk-btn--busy::after {
+        animation: none;
+        background-position: 50% 0;
+    }
+}
+
+/* A segment's region the same way: 24px drawn in a 28px track, 44 to the finger. The segment
+   is already above the cap (position: relative; z-index: 1) and the cap takes no pointer, so the
+   region sits over the track's 2px rim and nothing covers the cap's drawing or its travel. */
+.deskgrid__child-cell > .rowacts > .rowacts__keys > .gate > .gate__opt::after {
+    content: '';
+    position: absolute;
+    inset: -10px 0;
+}
+
+/* A segment clips its words to an ellipsis, which would clip that region too; these short
+   segments fit their words, so here the segment lets its box overflow, as the keys do. */
+.deskgrid__child-cell > .rowacts > .rowacts__keys > .gate > .gate__opt { overflow: visible; }
+
+/* The answer under the keys, in the same cell: a step below them, and clear of the row's
+   bottom hairline. */
+.deskgrid__child-cell > .rowacts + .rowacts__snippet { margin: var(--space-1) 0 var(--space-2); }
+
+/* The button whose snippet is showing. Held down rather than merely highlighted,
+   because it is a state the operator is in, not a hover. It reads as selected
+   rather than as its own colour, so it borrows the tinted wash instead of a tone. */
+.desk-btn--on {
+    --btn-fill: var(--accent-wash);
+    --btn-ink: var(--accent-ink);
+}
+
+/* The inline answer, on the section-card contract (ADR 0032). Inset from the row so it reads as
+   belonging to it rather than as the next row along.
+
+   The shell itself draws nothing: it is a .wsection, and what it holds is either one card — the
+   default, .snippet__card, a .wgroup with the name in its header bar and the answer as its rows —
+   or, for content that draws cards of its own (.snippet--panes), an unframed pane header over
+   them, because a card inside a card is the one nesting the house rule forbids. Either way the
+   title is the card bar's title, in the headline voice, so a drawer under a row and a window's
+   sections read alike. It used to be a fill with no edge under a footnote-sized grey bar with a
+   symbol: the last frame on the desk that was not a card. */
+.snippet {
+    margin: var(--space-2) 0 var(--space-1);
+}
+
+/* The snippet arrives rather than appears: it fades in from 4px above, the side its key is
+   on, so the answer reads as coming out of the press. It takes --ease-enter, which
+   decelerates into place and neither bounces (--ease-spring) nor eases in first
+   (--ease-standard): an inline answer should settle, not wobble. It plays once, on
+   insertion — a re-render keeps the element and does not replay it. Reduced motion keeps the
+   fade and drops the travel. */
+.snippet--arrive { animation: snippet-arrive var(--dur-fast) var(--ease-enter); }
+
+@keyframes snippet-arrive {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes snippet-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .snippet--arrive { animation-name: snippet-fade; }
+}
+
+/* The bar is a card's bar (.wgroup__bar, .wgroup__title, .wgroup__keys); it only keeps the
+   escape's symbol sized and the note beside the title. */
+.snippet__bar { flex-wrap: nowrap; }
+
+/* Glyph draws a bare <svg> with no size of its own; in the bar's flex row it collapsed to
+   nothing beside a short title and swelled beside a long one. Sized as the key's type. */
+.snippet__open svg { width: 14px; height: 14px; flex: 0 0 auto; }
+
+.snippet__note { color: var(--text-secondary); font-size: var(--text-footnote); min-width: 0; }
+
+/* Over cards of its own the bar is a pane header: the same title and key, no fill and no edge,
+   aligned with the cards' own bars below it. */
+.snippet--panes > .snippet__bar {
+    padding-inline: var(--space-1);
+    background: none;
+    border-bottom: 0;
+}
+
+/* The snippet asks how wide it is, not the window: the same answer opens in a list's full-width
+   row and in a window beside two others. A container of its own also means its content cannot
+   push it wider than the row it opened in — the row clips nothing because nothing overruns it.
+   The title is a name, kept to one line. */
+.snippet { container: snippet / inline-size; }
+.snippet__title { flex: none; white-space: nowrap; }
+
+/* In a narrow snippet the escape keeps its symbol and gives up its word, as a toolbar key that
+   folds does in a narrow toolbar: the word stays in the page as the key's accessible name, out
+   of sight, and the key's title says it to the pointer. 400px is the width the Desk stacks a
+   narrow group's rows at, and about where a title, a note and a three-word escape stop fitting
+   one line. */
+@container snippet (max-width: 400px) {
+    .snippet__open-word {
+        position: absolute; width: 1px; height: 1px;
+        padding: 0; margin: -1px; overflow: hidden;
+        clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+    }
+    .snippet__open { flex: none; justify-content: center; width: var(--control-h-sm); padding: 0; }
+
+    /* The note takes a line of its own under the title rather than squeezing into a third of a
+       line beside it and breaking a short sentence over three. */
+    .snippet__bar { flex-wrap: wrap; row-gap: 0; }
+    .snippet__note { order: 1; flex: 1 1 100%; }
+}
+
+/* The escape hatch: the bar's one trailing key. Quiet by default — the snippet is usually the
+   answer, and a loud "open window" would suggest otherwise. */
+.snippet__open {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: var(--control-h-sm);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-xs);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--text-footnote);
+    padding: 0 var(--space-2);
+    cursor: pointer;
+    transition: color var(--dur-fast) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard);
+}
+
+/* Neutral: the button brightens and takes the --surface-3 hover fill every plain control
+   on the desk takes, never an outline. Accent here would say "chosen", and nothing has
+   been chosen yet. */
+.snippet__open:hover { color: var(--text-primary); background: var(--surface-3); }
+
+/* In the card the answer is its rows, inset as a card's rows are; over cards of its own the
+   body adds nothing, and the cards bring their own padding. */
+.snippet__card > .snippet__body { padding: var(--space-2) var(--space-3); }
+.snippet--panes > .snippet__body { padding: 0; }
+
+/* A row of labelled readings, for a single record expanded. */
+.snippet__facts {
+    display: flex;
+    gap: var(--space-5);
+    flex-wrap: wrap;
+}
+
+.fact__label {
+    font-size: var(--text-footnote);
+    color: var(--text-secondary);
+    margin-bottom: 3px;
+}
+
+.fact__value { font-size: var(--text-subheadline); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.fact__value .good { color: var(--state-positive-ink); }
+.fact__value .bad { color: var(--state-negative-ink); }
+
+/* A tighter grid, for tables that live inside a snippet rather than a window. */
+.grid--tight { font-size: var(--text-subheadline); }
+.grid--tight th { padding: 0 7px 5px; position: static; }
+.grid--tight td { padding: 5px 7px; }
+
+/* ---- Log rows --------------------------------------------------------------
+   A record or a person, expandable in place. Not a table, because the expanded
+   body is a block rather than more cells — and a colspan row that pretends
+   otherwise breaks every column alignment above it.
+   -------------------------------------------------------------------------- */
+
+/* A list of log rows is one group: the list carries the fill and the single hairline edge,
+   as .snippet and the grouped list do, and the rows inside it carry no edge of their own —
+   a bordered row in a bordered list is a box inside a box. */
+.loglist {
+    background: var(--surface-2);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+/* A row is parted from the one above by a hairline inset to its text's leading edge, the
+   way a grouped list draws it (.wgroup__row). Each row is a DeskDisclosure: the leading
+   triangle says open or closed. It was a trailing chevron that flipped down and up — the
+   HIG's disclosure button, which belongs under a control, on rows that want a triangle. */
+.logrow { position: relative; }
+
+.logrow + .logrow::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: var(--space-3);
+    border-top: 1px solid var(--separator);
+}
+
+.logrow__head {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: transparent;
+    border: 0;
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--text-subheadline);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-standard);
+}
+
+/* The row's own measure over the disclosure's: controls.css loads after this sheet and
+   sets the summary's type and corner, so these are stated one step more specifically. A
+   row is square inside its list — the list's corner is the only one. */
+.logrow > .logrow__head {
+    font-size: var(--text-subheadline);
+    border-radius: 0;
+}
+
+/* The row's cells, in the disclosure's label: one line, the opponent taking the width. */
+.logrow__head .disclosure__label {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* The body runs the row's full width under its hairline rather than indenting to the
+   label; it carries its own padding. */
+.logrow > .disclosure__content { padding-left: 0; }
+
+/* Neutral, and the same --surface-3 every other hover fill on the desk uses. The row
+   is being pointed at, not opened — opening it is what the turned triangle reports. */
+.logrow__head:hover { background: var(--surface-3); }
+
+/* A row's shape while the log loads (TeamPanel): the row's measure, none of its press. */
+.logrow__head--placeholder { cursor: default; }
+.logrow__head--placeholder:hover { background: transparent; }
+
+.logrow__date { font-size: var(--text-footnote); min-width: 7ch; font-variant-numeric: tabular-nums; }
+
+.logrow__body {
+    padding: var(--space-3);
+    border-top: 1px solid var(--separator);
+    background: var(--surface-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logrow__head, .snippet__open { transition: none; }
+}
+
+/* Coverage, stated under the thing it qualifies. A column of dashes is ambiguous
+   between "no data held" and "nothing to report", and only one of those is worth
+   acting on — so the snippet says which rather than leaving it to be inferred. */
+.snippet__coverage {
+    margin: var(--space-2) 0 0;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--separator);
+    color: var(--text-secondary);
+    font-size: var(--text-footnote);
+    line-height: 1.5;
+}
+
+/* A row that opens has to look like one. Without this, "click a row for its
+   actions" is a rule you can only learn by accident: the pointer is the only
+   hint, and it arrives after you have already decided not to try. The open
+   row gets the same accent wash "selected" uses everywhere else — see
+   the app sheet's .board__row--open rule — never a border or a left-edge
+   bar, which was the retired dial's habit. */
+.deskgrid--clickable .mud-table-row { cursor: pointer; }
+
+/* An open row's child (ChildContent) is a row of its own beneath it. Its cell spans the row and
+   wraps rather than widening the table, and it carries the open row's wash, so the row and what
+   it opened read as one selection rather than as the next row along. The cell is named with its
+   row so it outranks a host's `.x td { width: 1%; white-space: nowrap }` sizing rule. */
+.deskgrid__child > td { background: var(--accent-wash); }
+.deskgrid__child > .deskgrid__child-cell { width: auto; white-space: normal; }
+
+/* Under 600px MudBlazor stacks a row's cells as label-and-value flex rows. The child cell
+   holds two things, the strip and the answer under it, and as a flex row it laid them side by
+   side, the answer running past the window's edge. A column keeps them stacked; in the table
+   layout a cell is not a flex box and the declaration is inert. */
+.deskgrid__child > .deskgrid__child-cell { flex-direction: column; align-items: stretch; }
+.deskgrid__child > .deskgrid__child-cell > .rowacts__snippet { max-width: 100%; min-width: 0; }
+
+/* At the narrowest a grid's table can still be wider than its window, and scrolls sideways in
+   its own container (mud-bridge.css). The open row's strip and answer are what the operator is
+   working in, so they keep to the width that is in view — the grid's (100cqw: the deskgrid
+   container), less the cell's inset each side — rather than the table's, and never sit half past
+   the scroll's edge. Wide, the grid is wider than either and nothing changes. */
+.deskgrid__child > .deskgrid__child-cell > .rowacts { max-width: calc(100cqw - 2 * var(--deskgrid-inset)); }
+.deskgrid__child > .deskgrid__child-cell > .rowacts__snippet { max-width: min(100%, 720px, calc(100cqw - 2 * var(--deskgrid-inset))); }
+
+/* That cap is the grid's whole width, but an indented child (ChildRowIndent) starts past its lead
+   cell, so in a column narrower than the indent plus the answer it ran off the trailing edge by
+   the lead's width: the answer's last keys sat past the scroll, the reason cut mid-word, and the
+   answer itself widened the table so the grid scrolled sideways. Below the width where the
+   indent and a full answer (720px) both fit, the lead gives up its cell and the child spans the
+   grid from its leading edge, so the cap above is exactly the width in view. The cap is spent
+   against the cell's own inset (--deskgrid-inset), not a step of the ramp, so the content box
+   never exceeds it. */
+@container deskgrid (max-width: 960px) {
+    .deskgrid__child > .deskgrid__child-lead { display: none; }
+}
+
+/* The row a child row opened under gives up its hairline: the two are one selection, and
+   the one edge they share is the child row's, below both. */
+.deskgrid .mud-table-body .mud-table-row:has(+ .deskgrid__child) > .mud-table-cell {
+    border-bottom-color: transparent;
+}
+
+/* Keyboard focus is visible on every new control. The desk answers a press with
+   travel, which a keyboard user never sees — so focus gets its own ring rather
+   than relying on the hover treatment. */
+.logrow__head:focus-visible,
+.snippet__open:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring-inset);
+    border-radius: var(--radius-xs);
+}
+
+/* A log row's summary is also a disclosure's, whose ring (controls.css, loaded later) is
+   drawn outside — and the list clips its rows, so an outside ring would be cut off. */
+.logrow > .logrow__head:focus-visible { box-shadow: var(--focus-ring-inset); }
+
+/* A destination window — one that is about an order, a customer or a product. Listed so
+   the view is discoverable, but not openable, because without a subject it has
+   nothing to show. Dimmed rather than hidden, with the route to it in place of
+   the description. */
+.launcher__item--destination {
+    opacity: .55;
+    cursor: default;
+}
+
+.launcher__item--destination:hover { background: transparent; }
+
+.launcher__item--destination .launcher__desc { font-style: italic; }
+
+/* ---- The sparkline --------------------------------------------------------------- */
+/* The sparkline (DeskSparkline). Word-sized and inline, centred on the row's text so a
+   20px plot sits in a 28px row without moving it. The path is the secondary ink and the
+   last point the primary one, so the eye lands where the series ended; there is no state
+   colour, because a figure moving is not good or bad and hue on this desk names a state. */
+.sparkline { display: inline-flex; align-items: center; vertical-align: middle; line-height: 0; }
+.sparkline svg { display: block; overflow: visible; }
+.sparkline__line {
+    fill: none;
+    stroke: var(--text-secondary);
+    stroke-width: 1.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+.sparkline__dot { fill: var(--text-primary); }
+/* Seen once: a dash in the cell's own type, not a drawing of a market nobody watched twice. */
+.sparkline--none { line-height: inherit; color: var(--text-secondary); }
+
+/* -------------------------------------------------------------------- sheet ---
+   A modal sheet. Rises from slightly below and settles — the motion says it came
+   from the task, not from the edge of the screen.
+
+   Every surface rule here is written as .mud-dialog.desk-sheet, two classes, on
+   purpose. MudBlazor's own stylesheet declares .mud-dialog (background, radius,
+   shadow, and a mud-open-dialog-center animation) at one class, and mud-bridge.css
+   re-declares .mud-dialog at one class for ordinary Mud dialogs. mud-bridge.css
+   loads AFTER this file, so a single-class rule here would lose the tie to the
+   bridge on source order and never reach the screen. Two classes settle it on
+   specificity instead, in both directions, and leave the bridge's plain dialog
+   styling intact for the dialogs that are not sheets.
+
+   The scrim is deliberately absent, and it is not stylable from CSS at all: MudBlazor
+   paints .mud-overlay-scrim.mud-overlay-dark straight from --mud-palette-overlay-dark,
+   which is DeskTheme.cs's OverlayDark. That is the scrim — the desk void at 62%. */
+
+.mud-dialog.desk-sheet { /* Mud owns the surface; the desk owns how it looks. */
+    background: var(--material-thick);
+    backdrop-filter: var(--material-blur);
+    -webkit-backdrop-filter: var(--material-blur);
+    border: 1px solid var(--separator);
+    border-radius: var(--radius-sheet);
+    box-shadow: var(--shadow-sheet);
+    animation: desk-sheet-in var(--dur-base) var(--ease-spring);
+}
+
+@keyframes desk-sheet-in {
+    from { opacity: 0; transform: translateY(12px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Mud pads its own title, content and actions wrappers (16px/24px, at two classes
+   each). The sheet's head, body and foot carry the desk's spacing themselves, so
+   those wrappers are emptied out — three classes, which clears Mud's two — or the
+   padding would be applied twice and the sheet would read as loose. */
+.mud-dialog.desk-sheet .mud-dialog-title,
+.mud-dialog.desk-sheet .mud-dialog-content,
+.mud-dialog.desk-sheet .mud-dialog-actions {
+    padding: 0;
+    letter-spacing: normal;
+}
+
+.desk-sheet__head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-4) var(--space-2);
+}
+
+.desk-sheet__titles { display: flex; flex-direction: column; gap: calc(var(--space-1) / 2); min-width: 0; flex: 1; }
+
+.desk-sheet__title {
+    font-family: var(--face-display);
+    font-size: var(--text-title3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+}
+
+.desk-sheet__sub { font-size: var(--text-subheadline); color: var(--text-secondary); }
+
+/* The close is a Plain icon DeskButton — neutral, not red: closing a sheet discards nothing.
+   It only keeps its place at the head's trailing edge. */
+.desk-sheet__close { flex: none; }
+
+.desk-sheet__body { padding: 0 var(--space-4) var(--space-4); }
+
+.desk-sheet__foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--separator);
+    width: 100%;
+}
+
+/* The entrance is the only motion the sheet has, so neutralising it is the whole of
+   the reduced-motion story. Two classes again, to match the rule it is undoing. */
+@media (prefers-reduced-motion: reduce) {
+    .mud-dialog.desk-sheet { animation: none; }
+}
+
+/* -------------------------------------------------------------------- alert ---
+   Narrow, centred, and quiet. Everything here is subordinate to the question.
+
+   Nothing in this block touches Mud's own surface, so none of it needs the sheet's
+   two-class treatment: the alert renders as bare content inside .mud-dialog and
+   takes that surface as mud-bridge.css already draws it — opaque --surface-1, so
+   there is no material here and nothing to register in the fallback block below. */
+
+.desk-alert {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    text-align: center;
+    max-width: 320px;
+}
+
+.desk-alert__heading {
+    font-family: var(--face-display);
+    font-size: var(--text-title3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+}
+
+.desk-alert__message {
+    font-size: var(--text-subheadline);
+    line-height: var(--leading-body);
+    color: var(--text-secondary);
+}
+
+.desk-alert__actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+/* No rule marks the default confirm. There used to be one — a painted box-shadow copied
+   from --focus-ring — and it drew a focus ring on a button that did not have focus, which
+   a keyboard operator could not tell from the real thing. DeskAlert now focuses the default
+   button outright, so .desk-btn:focus-visible paints it when a keyboard opened the alert
+   and leaves it alone when a pointer did. The ring is earned rather than drawn. */
+
