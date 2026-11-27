@@ -10,6 +10,7 @@ namespace XLines.Tests.Reliability;
 /// games tomorrow as it does today. The readers take a season where one is named and keep
 /// the window for callers that have none.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GameLogSeasonTests(PostgresFixture fixture)
 {

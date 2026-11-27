@@ -31,6 +31,7 @@ namespace XLines.Tests.Reliability;
 /// spent" is proven.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class OddsDefaultSourceTests(PostgresFixture fixture)
 {

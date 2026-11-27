@@ -14,6 +14,7 @@ namespace XLines.Tests.Reliability;
 /// number": on a handicap the line outranks the price, and which line is better depends on
 /// which side you are taking.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class BoardServiceTests(PostgresFixture fixture)
 {

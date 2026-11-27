@@ -18,6 +18,7 @@ namespace XLines.Tests.Reliability;
 /// that states more fills and corrects, a fetch that states less erases nothing, a crew or a lineup
 /// is replaced whole, and the open sits beside the close without ever being read as it.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GameContextIngestionTests(PostgresFixture fixture)
 {

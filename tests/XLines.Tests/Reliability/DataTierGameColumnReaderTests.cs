@@ -11,6 +11,7 @@ namespace XLines.Tests.Reliability;
 /// readers that hand a <see cref="Game"/> back besides the board: the box score, the matchup's
 /// form and the game search. <see cref="DataTierRemainingReaderTests"/> holds the board's.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class DataTierGameColumnReaderTests(PostgresFixture fixture)
 {

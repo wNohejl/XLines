@@ -11,6 +11,7 @@ namespace XLines.Tests.Reliability;
 /// order; and the window draws from records, never from jsonb, so every json column arrives
 /// parsed — or as nothing, when it cannot be read.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GamecastServiceTests(PostgresFixture fixture)
 {

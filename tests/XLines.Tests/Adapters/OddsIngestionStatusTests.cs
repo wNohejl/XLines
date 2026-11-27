@@ -14,6 +14,7 @@ namespace XLines.Tests.Adapters;
 /// calendar is a normal, free answer; games the provider cannot price are still the signature of
 /// a silent upstream break.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class OddsIngestionStatusTests(PostgresFixture fixture)
 {

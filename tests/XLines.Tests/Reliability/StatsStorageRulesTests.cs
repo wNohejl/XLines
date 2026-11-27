@@ -17,6 +17,7 @@ namespace XLines.Tests.Reliability;
 /// because every such row costs an index entry and is read by nothing. This is enforced in the
 /// shared persist path rather than per adapter, so a future source cannot opt out of it.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class StatsStorageRulesTests(PostgresFixture fixture)
 {

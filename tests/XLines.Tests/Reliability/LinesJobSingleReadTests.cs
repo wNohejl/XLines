@@ -19,6 +19,7 @@ namespace XLines.Tests.Reliability;
 /// key, no key at all, and a spent month. A Board row press reads the single entry, so it must say
 /// exactly what the pull menu says, price, refusal and question included.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class LinesJobSingleReadTests(PostgresFixture fixture)
 {

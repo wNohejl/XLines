@@ -27,10 +27,33 @@ jobs:
       - name: Verify formatting
         run: dotnet format --verify-no-changes --no-restore
 
+      # Unit tests need no Docker: everything that reaches Postgres carries
+      # [Trait("Category", "Integration")], and IntegrationTraitTests refuses a class without it.
+      - name: Unit tests
+        run: >-
+          dotnet test --no-build --configuration Release
+          --filter "Category!=Integration"
+          --logger trx --logger "console;verbosity=normal"
+          --collect:"XPlat Code Coverage"
+          --results-directory TestResults/unit
+
       # Integration tests start their own PostgreSQL via Testcontainers, using the
       # Docker daemon already present on the runner — no service container needed.
-      - name: Test
-        run: dotnet test --no-build --configuration Release --logger "console;verbosity=normal"
+      - name: Integration tests
+        run: >-
+          dotnet test --no-build --configuration Release
+          --filter "Category=Integration"
+          --logger trx --logger "console;verbosity=normal"
+          --collect:"XPlat Code Coverage"
+          --results-directory TestResults/integration
+
+      - name: Upload test results and coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults/
+          if-no-files-found: warn
 
   migrations:
     runs-on: ubuntu-latest

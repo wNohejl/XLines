@@ -15,6 +15,7 @@ namespace XLines.Tests.Reliability;
 /// providers with different ceilings and leaves the guard as the only thing between the
 /// schedule and an overrun.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class LinePollPlannerTests(PostgresFixture fixture)
 {

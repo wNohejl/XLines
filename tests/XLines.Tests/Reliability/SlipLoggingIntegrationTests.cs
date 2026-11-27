@@ -11,6 +11,7 @@ namespace XLines.Tests.Reliability;
 /// with zero-stake legs in its group, a failure that writes nothing, and the lookup the wager
 /// window's duplicate check reads.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class SlipLoggingIntegrationTests(PostgresFixture fixture)
 {

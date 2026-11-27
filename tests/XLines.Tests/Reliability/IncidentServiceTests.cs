@@ -14,6 +14,7 @@ namespace XLines.Tests.Reliability;
 /// asked for in the UI, so it holds no matter who is calling. Which makes it worth pinning:
 /// nothing else in the codebase notices if the enforcement is lost.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class IncidentServiceTests(PostgresFixture fixture)
 {

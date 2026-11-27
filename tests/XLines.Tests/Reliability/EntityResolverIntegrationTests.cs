@@ -10,6 +10,7 @@ namespace XLines.Tests.Reliability;
 /// Entity resolution across sources, which is the genuinely hard part of multi-source
 /// ingestion and the part that fails silently when it fails.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class EntityResolverIntegrationTests(PostgresFixture fixture)
 {

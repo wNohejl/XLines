@@ -11,6 +11,7 @@ namespace XLines.Tests.Reliability;
 /// The journal's writes against real Postgres: an edited result is re-graded rather than left
 /// standing, a parlay settles as one bet when its legs do, and the game search finds a matchup.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class JournalServiceTests(PostgresFixture fixture)
 {

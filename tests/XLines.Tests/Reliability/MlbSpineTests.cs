@@ -16,6 +16,7 @@ namespace XLines.Tests.Reliability;
 /// starters land on the fixture ESPN made, and a doubleheader's two games get the right numbers.
 /// Also the player rule that stops two people with one name becoming one player.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class MlbSpineTests(PostgresFixture fixture)
 {

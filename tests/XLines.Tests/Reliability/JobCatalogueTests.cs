@@ -20,6 +20,7 @@ namespace XLines.Tests.Reliability;
 /// unknown, and no two handlers can both claim one — and a key no handler runs is refused as it
 /// always was, by name.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class JobCatalogueTests(PostgresFixture fixture)
 {

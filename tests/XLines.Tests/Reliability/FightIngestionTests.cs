@@ -16,6 +16,7 @@ namespace XLines.Tests.Reliability;
 /// center recorded it, stored as bouts between fighters; a book's fight attached to the bout in
 /// either corner and never created; and the fight rules applied at settlement.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class FightIngestionTests(PostgresFixture fixture)
 {

@@ -21,6 +21,7 @@ namespace XLines.Tests.Reliability;
 /// closing scan writes a run or makes a request, while an operator's press of the same job still
 /// runs. Through the real jobs, a recording wire for The Odds API, and real Postgres.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class UnattendedLineReserveTests(PostgresFixture fixture)
 {

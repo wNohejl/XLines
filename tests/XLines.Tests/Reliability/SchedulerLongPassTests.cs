@@ -21,6 +21,7 @@ namespace XLines.Tests.Reliability;
 /// scheduler, planner and unattended line entry on real Postgres; every job body is a recording
 /// stand-in, so nothing reaches ESPN or The Odds API.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class SchedulerLongPassTests(PostgresFixture fixture)
 {

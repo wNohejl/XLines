@@ -18,6 +18,7 @@ namespace XLines.Tests.Reliability;
 /// writes the box score once and lets the game go. A fake port states each game, so a test can
 /// say exactly what ESPN would.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GamecastFeedTests(PostgresFixture fixture)
 {

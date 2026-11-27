@@ -13,6 +13,7 @@ namespace XLines.Tests.Reliability;
 /// seconds while a game is on and a write is what raises the desk's change notice, so a poll
 /// that saw nothing new must write nothing — and one that saw the clock move must write once.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class LiveGameStateIntegrationTests(PostgresFixture fixture)
 {

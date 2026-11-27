@@ -17,6 +17,7 @@ namespace XLines.Tests.Reliability;
 /// everyone on a local desk, read exactly what they read before.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class DataTierReaderTests(PostgresFixture fixture)
 {

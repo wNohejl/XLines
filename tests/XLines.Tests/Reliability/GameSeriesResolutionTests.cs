@@ -25,6 +25,7 @@ namespace XLines.Tests.Reliability;
 /// merged away.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GameSeriesResolutionTests(PostgresFixture fixture)
 {

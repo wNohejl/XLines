@@ -16,6 +16,7 @@ namespace XLines.Tests.Reliability;
 /// existing database heals itself rather than waiting for someone to run a script.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class RetiredSourceCleanupTests(PostgresFixture fixture)
 {

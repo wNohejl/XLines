@@ -20,6 +20,7 @@ namespace XLines.Tests.Reliability;
 /// hand in one database and travelled in the snapshot, so a fresh volume seeded all four.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class ReferenceReconcilerTests(PostgresFixture fixture)
 {

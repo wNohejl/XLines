@@ -15,6 +15,7 @@ namespace XLines.Tests.Reliability;
 /// deletion beats an older edit and loses to a newer one; and importing the same file twice
 /// changes nothing the second time. Also the audit and tombstones every journal write leaves.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class JournalTransferTests(PostgresFixture fixture)
 {

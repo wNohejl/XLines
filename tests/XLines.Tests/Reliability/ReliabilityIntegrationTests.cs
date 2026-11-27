@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace XLines.Tests.Reliability;
 
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class ReliabilityIntegrationTests(PostgresFixture fixture)
 {

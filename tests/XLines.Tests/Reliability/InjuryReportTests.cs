@@ -12,6 +12,7 @@ namespace XLines.Tests.Reliability;
 /// where the id is not on file, never creating a player, and leaving alone a player the report
 /// no longer names. One run row for the pass.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class InjuryReportTests(PostgresFixture fixture)
 {

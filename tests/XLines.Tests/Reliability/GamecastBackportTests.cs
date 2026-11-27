@@ -18,6 +18,7 @@ namespace XLines.Tests.Reliability;
 /// no plays yet, newest first, a batch a run, through <see cref="GamecastWriter"/>. A fake port
 /// states each game, so a test can say exactly what ESPN would.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GamecastBackportTests(PostgresFixture fixture)
 {

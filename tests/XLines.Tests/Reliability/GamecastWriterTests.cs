@@ -17,6 +17,7 @@ namespace XLines.Tests.Reliability;
 /// saw nothing new must write nothing, and a play ESPN rewrote after the fact must change in
 /// place rather than arrive twice.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GamecastWriterTests(PostgresFixture fixture)
 {

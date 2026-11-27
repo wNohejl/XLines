@@ -14,6 +14,7 @@ namespace XLines.Tests.Reliability;
 /// with closing-line value resolved against the stored snapshots. This is the payoff of the
 /// append-only odds table, so it is verified against real Postgres.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class SettlementIntegrationTests(PostgresFixture fixture)
 {

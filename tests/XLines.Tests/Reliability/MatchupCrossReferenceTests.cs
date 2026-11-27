@@ -14,6 +14,7 @@ namespace XLines.Tests.Reliability;
 /// just as there is no stat row in storage. Zero and absent are different facts and the
 /// difference has to survive the whole way to the screen.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class MatchupCrossReferenceTests(PostgresFixture fixture)
 {

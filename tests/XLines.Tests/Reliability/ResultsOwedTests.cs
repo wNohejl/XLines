@@ -21,6 +21,7 @@ namespace XLines.Tests.Reliability;
 /// self-healing cannot have a horizon shorter than the outage it is healing from.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class ResultsOwedTests(PostgresFixture fixture)
 {

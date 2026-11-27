@@ -15,6 +15,7 @@ namespace XLines.Tests.Reliability;
 /// what is written for them, that a close once written is left alone, and that a game the
 /// provider has no close for is set aside rather than asked again on every press.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class ClosingLineRefillTests(PostgresFixture fixture)
 {

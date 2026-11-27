@@ -13,6 +13,7 @@ namespace XLines.Tests.Reliability;
 /// does: the budget guard, the month's count and pacing read the runs, and a failed run that
 /// recorded nothing left the month reading low until the next good call.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class StatsFailedRunCostTests(PostgresFixture fixture)
 {

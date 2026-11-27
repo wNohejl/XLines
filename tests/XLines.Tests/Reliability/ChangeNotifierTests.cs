@@ -11,6 +11,7 @@ namespace XLines.Tests.Reliability;
 /// A save is announced on the change channel, naming the topics it touched, so a window in
 /// another process hears about it. Against real Postgres, because LISTEN/NOTIFY is the point.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class ChangeNotifierTests(PostgresFixture fixture)
 {

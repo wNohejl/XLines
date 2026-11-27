@@ -11,6 +11,7 @@ namespace XLines.Tests.Reliability;
 /// The data rules: what is wrong with the games rather than with a feed. Each test seeds its own
 /// sport, so the counts it asserts on are its own whatever else the shared database holds.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class DataQualityTests(PostgresFixture fixture)
 {

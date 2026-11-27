@@ -22,6 +22,7 @@ namespace XLines.Tests.Reliability;
 /// is left alone unless a re-pull is asked for. ESPN is a fake handler here, with the real
 /// adapter reading what it serves.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class RangePullTests(PostgresFixture fixture)
 {

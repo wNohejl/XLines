@@ -16,6 +16,7 @@ namespace XLines.Tests.Reliability;
 /// right row out of a partitioned table, and that pruning does not take a close with it — are
 /// exactly the parts an in-memory provider would not model.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class OddsRetentionIntegrationTests(PostgresFixture fixture)
 {

@@ -20,6 +20,7 @@ namespace XLines.Tests.Reliability;
 /// and is walked again once the wait is over. Before the clock was injected this could only be
 /// seen by waiting the half hour out.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class ResultsBackOffClockTests(PostgresFixture fixture)
 {

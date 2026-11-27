@@ -13,6 +13,7 @@ namespace XLines.Tests.Reliability;
 /// read from the handicap quoted against <i>that</i> team; and consensus across disagreeing
 /// books must not be moved by one stale outlier.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class GameLogServiceTests(PostgresFixture fixture)
 {

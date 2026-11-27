@@ -19,6 +19,7 @@ namespace XLines.Tests.Reliability;
 /// source supplied, and says so in the words the desk already uses for a game with nothing yet.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class DataTierRemainingReaderTests(PostgresFixture fixture)
 {

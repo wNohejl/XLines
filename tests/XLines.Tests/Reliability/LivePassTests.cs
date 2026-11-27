@@ -25,6 +25,7 @@ namespace XLines.Tests.Reliability;
 /// gamecast that wants the score fifteen seconds after it moves.
 /// </para>
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class LivePassTests(PostgresFixture fixture)
 {

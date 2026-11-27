@@ -9,6 +9,7 @@ namespace XLines.Tests.Reliability;
 /// window: every word matches one of the fields it could mean, only enabled sports, and a typed
 /// wildcard is a character.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class SearchServiceTests(PostgresFixture fixture)
 {

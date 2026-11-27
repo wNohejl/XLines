@@ -18,6 +18,7 @@ namespace XLines.Tests.Reliability;
 /// season of numbers on a side that never fielded him — while the side that did lost him from
 /// the season he actually played in.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class AppearanceTeamTests(PostgresFixture fixture)
 {

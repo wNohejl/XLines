@@ -11,6 +11,7 @@ namespace XLines.Tests.Reliability;
 /// and the take's price fields all ask for it on opening; a save through the journal drops it, so
 /// a book just typed is offered at once.
 /// </summary>
+[Trait("Category", "Integration")]
 [Collection(PostgresCollection.Name)]
 public class JournalBooksCacheTests(PostgresFixture fixture)
 {
