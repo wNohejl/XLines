@@ -377,6 +377,38 @@
     [JSInvokable]
     public void OnPageRequested(int delta) => PageFocused(Manager, delta);
 
+    /// <summary>Alt+R outside a field: the focused window's Refresh key. See windowing.js.</summary>
+    [JSInvokable]
+    public void OnRefreshRequested()
+    {
+        if (Manager.FocusedId is { } id)
+            Manager.Refresh(id);
+    }
+
+    /// <summary>
+    /// Alt+W outside a field closes the focused window; a middle click on a window's bar, or on
+    /// its key in the header, closes that one (<paramref name="id"/>). Both take the close key's
+    /// road, so a window holding unsaved input asks first.
+    /// </summary>
+    [JSInvokable]
+    public void OnCloseRequested(string? id)
+    {
+        if ((id ?? Manager.FocusedId) is { } target)
+            Manager.TryClose(target);
+    }
+
+    /// <summary>
+    /// Ctrl+Shift+] and Ctrl+Shift+[ outside a field: the focused column's next tab, or the one
+    /// just left (<see cref="WindowManager.CycleTab"/>). A plain window has no tabs, and the
+    /// chord does nothing.
+    /// </summary>
+    [JSInvokable]
+    public void OnTabRequested(int delta)
+    {
+        if (Manager.FocusedId is { } id)
+            Manager.CycleTab(id, delta);
+    }
+
     /// <summary>
     /// Turns the focused window back or forward a page. Nothing focused, or nowhere to go, is a
     /// chord that does nothing — the same answer its dimmed key gives.

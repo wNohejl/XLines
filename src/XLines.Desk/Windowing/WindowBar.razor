@@ -112,6 +112,8 @@
                                 tabindex="@(index == currentSlot || (pinned && index == firstSlot) ? "0" : "-1")"
                                 title="@Tip(item)"
                                 aria-label="@Label(item)"
+                                aria-keyshortcuts="@(open is not null ? "Delete" : null)"
+                                data-close-window="@open?.Id"
                                 @ref="_refs[index]"
                                 @onkeydown="e => OnKeyDown(e, index)"
                                 @onclick="() => Press(item)">
@@ -121,6 +123,15 @@
                             @if (open is not null)
                             {
                                 <span class="bar__pulse @PulseClass(open.Pulse)" aria-hidden="true"></span>
+
+                                @* The pointer's way to close a window from where every window is
+                                   listed, as a tab's row has in its menu (DeskMenuItem's remove):
+                                   a glyph at the row's end, not a key of its own — the keyboard
+                                   closes with Delete on the row, a middle click closes too. *@
+                                <span class="bar__close" title="Close @item.Title" aria-hidden="true"
+                                      @onclick="() => CloseAsync(open)" @onclick:stopPropagation="true">
+                                    <Glyph Icon="@Icons.Material.Filled.Close" />
+                                </span>
                             }
                         </button>
                     }
@@ -246,6 +257,10 @@
         else if (item.Definition is not null)
             Manager.Open(item.Definition);
     }
+
+    // The drawer stays open on a close: the row is still there, now as a closed key, and the next
+    // window to close is usually the row beside it.
+    private Task CloseAsync(WindowInstance window) => WindowClosing.CloseAsync(Manager, Alerts, window);
 
     private void TogglePin(string group) => _pinned = _pinned == group ? null : group;
 

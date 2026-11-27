@@ -9,8 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace XLines.Web.Tests;
 
 /// <summary>
-/// The Board's toolbar: its three keys — Refresh, Pull data, and Date range with its popover —
-/// and its value filter.
+/// The Board's toolbar: its two keys — Pull data, and Date range with its popover — and its
+/// value filter. Refresh is on the window's bar, as it is on every window's.
 ///
 /// The value filter is an on/off, so it is a checkbox — not a key that swaps
 /// between Plain and Tinted to say which state it is in. It reads and writes nothing, so a
@@ -75,15 +75,18 @@ public class BoardToolbarTests : DeskTestContext
     }
 
     [Fact]
-    public void The_board_s_keys_are_refresh_pull_data_and_date_range_in_that_order()
+    public void The_board_s_keys_are_pull_data_and_date_range_in_that_order_and_refresh_is_the_window_s()
     {
         var actions = Slot(BoardSource(), "Actions");
 
-        var refresh = actions.IndexOf("Title=\"Refresh\"", StringComparison.Ordinal);
         var pull = actions.IndexOf("<DeskJobMenu", StringComparison.Ordinal);
         var range = actions.IndexOf("<RangePullKey", StringComparison.Ordinal);
 
-        Assert.True(refresh >= 0 && pull > refresh && range > pull, $"Refresh {refresh}, Pull data {pull}, Date range {range}");
+        Assert.True(pull >= 0 && range > pull, $"Pull data {pull}, Date range {range}");
+
+        // The window's bar carries Refresh, as every window's does; a second in the toolbar
+        // would be the same key twice.
+        Assert.DoesNotContain("Title=\"Refresh\"", actions);
         Assert.Contains("Label=\"Pull data\"", actions);
 
         // The key spends, so only an operator's toolbar draws it, as the panel's other operator controls check.

@@ -105,7 +105,11 @@
                                   OnClick="MoveShowing" />
                     <DeskMenuItem Command="true"
                                   Label="@($"Close {showing.Title}")"
+                                  Detail="Alt+W"
                                   OnClick="() => CloseAsync(showing)" />
+                    <DeskMenuItem Command="true"
+                                  Label="@(hidden.Count == 1 ? $"Close {hidden[0].Title}" : $"Close the {hidden.Count} other tabs")"
+                                  OnClick="CloseOthersAsync" />
                 </DeskMenuGroup>
             </DeskMenu>
         </ChildContent>
@@ -171,7 +175,9 @@
 
     private string MenuLabel => $"Tabs in {Column.Showing.Title}'s column";
 
-    private string GroupLabel => $"{Column.Tabs.Count} tabs, most recent first";
+    // The heading over the rows also says the chords that turn the column without the menu: the
+    // key itself carries no tooltip at rest, so this is where a reader meets them.
+    private string GroupLabel => $"{Column.Tabs.Count} tabs, most recent first · Ctrl+Shift+] turns to the next";
 
     /// <summary>
     /// What the key is heard as: the window showing, its place among the column's tabs, and any
@@ -272,6 +278,32 @@
     }
 
     private void MoveShowing() => Manager.MoveToOwnColumn(Column.Showing.Id);
+
+    /// <summary>
+    /// Closes every tab behind the one showing, each by the close key's road: one holding unsaved
+    /// input asks, and an answer of Keep leaves it and stops there, the rest untouched.
+    /// </summary>
+    private async Task CloseOthersAsync()
+    {
+        if (_asking)
+            return;
+
+        _open = false;
+        _asking = true;
+
+        try
+        {
+            foreach (var tab in Column.Tabs.Skip(1).ToList())
+            {
+                if (!await WindowClosing.CloseAsync(Manager, Alerts, tab))
+                    break;
+            }
+        }
+        finally
+        {
+            _asking = false;
+        }
+    }
 
     /// <summary>
     /// Closes a tab's window without bringing it forward. Closing the one showing reveals the

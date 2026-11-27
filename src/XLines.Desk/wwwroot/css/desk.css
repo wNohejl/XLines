@@ -1271,6 +1271,44 @@ input, textarea, [contenteditable] { caret-color: var(--accent-ink); }
 
 .bar__menu-panel > .glide-plate { border-radius: calc(var(--radius-panel) - var(--radius-inset)); }
 
+/* An open window's row ends in its close glyph, the tab menu's remove glyph at the same size
+   and ink (controls.css, .menu__remove): quiet until the row is under the pointer or holds
+   focus, always drawn where nothing hovers. The row's own name gives way to it, not it to the
+   name. */
+.bar__close {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: var(--control-h-sm);
+    height: var(--control-h-sm);
+    margin-left: auto;
+    margin-right: calc(-1 * var(--space-1));
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    opacity: 0;
+    transition: background-color var(--dur-fast) var(--ease-standard),
+                color var(--dur-fast) var(--ease-standard),
+                opacity var(--dur-fast) var(--ease-standard);
+}
+
+.bar__key .bar__close svg { width: var(--glyph-sm); height: var(--glyph-sm); color: inherit; }
+
+.bar__key:hover .bar__close,
+.bar__key:focus-visible .bar__close { opacity: 1; color: var(--text-secondary); }
+
+.bar__close:hover {
+    background: var(--control-fill-hover);
+    color: var(--text-primary);
+}
+
+@media (hover: none) {
+    .bar__close { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bar__close { transition: none; }
+}
+
 .bar__menu-panel .bar__key-name { display: block; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2545,6 +2583,19 @@ body.tab-dragging [data-tab-drag-id] { cursor: grabbing; }
 
 .win__nav-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
+/* Refresh, third of the leading keys on every bar. While the window loads its glyph turns —
+   the pulse's Active said on the key that asked — and stands still for Reduce Motion, where the
+   pulse strip under the bar already says it. */
+.win__refresh--busy svg { animation: win-refresh-turn var(--dur-spin) linear infinite; }
+
+@keyframes win-refresh-turn {
+    to { rotate: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .win__refresh--busy svg { animation: none; }
+}
+
 /* A 22px plate every icon has, washed only on the focused column, so focusing a window lights
    the plate without moving the title beside it. */
 .win__icon {
@@ -2611,6 +2662,11 @@ body.tab-dragging [data-tab-drag-id] { cursor: grabbing; }
    one key that ends the window. */
 @container winbar (max-width: 380px) {
     .win__nav:not(:has(.win__nav-btn:enabled)) { display: none; }
+}
+
+/* Refresh goes with them: Alt+R still presses it, and a panel reloads itself when its data moves. */
+@container winbar (max-width: 300px) {
+    .win__refresh { display: none; }
 }
 
 @container winbar (max-width: 260px) {
@@ -2944,6 +3000,22 @@ body.tab-dragging [data-tab-drag-id] { cursor: grabbing; }
     padding: var(--win-pad); /* 14px at Standard, moved with Density (the token's comment) */
     scrollbar-width: thin;
     scrollbar-color: var(--surface-3) transparent;
+}
+
+/* One arrival for everything a window turns to: a page followed or stepped back to (the body is
+   built afresh), a tab brought forward, a column restored. A short fade, never a slide — the
+   content has not come from anywhere, it has replaced what was there (HIG, Motion) — and
+   opacity only, so nothing inside is re-anchored while it runs. A tab behind holds no
+   animation, which is what starts it again the moment the tab comes forward. */
+.win__body { animation: win-body-in var(--dur-fast) var(--ease-enter); }
+.win--behind .win__body { animation: none; }
+
+@keyframes win-body-in {
+    from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .win__body { animation: none; }
 }
 
 .win__body::-webkit-scrollbar { width: 10px; height: 10px; }

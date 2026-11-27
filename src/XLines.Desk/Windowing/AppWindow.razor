@@ -98,6 +98,20 @@
                     <Glyph Icon="@Icons.Material.Filled.ChevronRight" />
                 </button>
             </div>
+
+            @* Refresh sits with the keys that move through what the window shows, as a browser's
+               reload sits by its Back: every window carries it in the same place, so no panel
+               needs a Refresh key of its own. It turns while the window is loading — the pulse's
+               Active said as motion on the key that asked. Alt+R presses it on the focused window. *@
+            <button class="win__nav-btn win__refresh @(Window.Pulse == PulseState.Active ? "win__refresh--busy" : null)"
+                    type="button" data-window-control
+                    title="Refresh (Alt+R)"
+                    aria-label="Refresh @Window.Title"
+                    aria-keyshortcuts="Alt+R"
+                    @onclick="Refresh" @onclick:stopPropagation="true"
+                    @ondblclick:stopPropagation="true">
+                <Glyph Icon="@Icons.Material.Filled.Refresh" />
+            </button>
         }
 
         @if (grouped && !Window.Minimised)
@@ -183,7 +197,8 @@
                 @* In a group, Close closes the window showing, as a plain window's does; the next
                    most recent comes forward. Minimise and Maximise act on the column. *@
                 <button class="win__ctl win__ctl--close" type="button" data-window-control
-                        title="Close" aria-label="Close @Window.Title"
+                        title="Close (Alt+W)" aria-label="Close @Window.Title"
+                        aria-keyshortcuts="Alt+W"
                         @onclick="Close" @onclick:stopPropagation="true">
                     <Glyph Icon="@Icons.Material.Filled.Close" />
                 </button>
@@ -368,6 +383,7 @@
 
     private void PageBack() => Manager.PageBack(Window.Id);
     private void PageForward() => Manager.PageForward(Window.Id);
+    private void Refresh() => Manager.Refresh(Window.Id);
     private void Minimise() => Manager.ToggleMinimise(Window.Id);
     private void Maximise() => Manager.ToggleMaximise(Window.Id);
 

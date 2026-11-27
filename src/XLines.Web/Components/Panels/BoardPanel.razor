@@ -92,10 +92,8 @@
        them together and flush right as the window narrows, where a spacer let Pull data wrap
        to a line of its own and leave Refresh behind. *@
     <Actions>
-        @* A symbol, not a word, beside the keys that need their words (HIG toolbars: prefer
-           symbols); it also leaves a 300px window room for More, Pull data and Date range on one
-           line — Date range giving up its word there too, its symbol kept (RangePullKey). *@
-        <DeskButton Icon="@Icons.Material.Filled.Refresh" Title="Refresh" OnClick="LoadAsync" />
+        @* No Refresh key here: every window's bar carries one (AppWindow), and it reloads the
+           Board as this toolbar's own used to. *@
 
         @* One of the two keys here that spend (Date range is the other), and a menu, so Tinted with
            a chevron rather than Filled: the spend is the entry chosen from it. The rest of this

@@ -27,6 +27,10 @@ export function initialise(dotNetRef) {
     document.addEventListener('keydown', holdTabStripKeys);
     document.removeEventListener('pointerdown', beginMenuTabDrag, true);
     document.addEventListener('pointerdown', beginMenuTabDrag, true);
+    document.removeEventListener('mousedown', holdMiddlePress);
+    document.addEventListener('mousedown', holdMiddlePress);
+    document.removeEventListener('auxclick', closeOnMiddleClick);
+    document.addEventListener('auxclick', closeOnMiddleClick);
     reportViewport();
 }
 
@@ -49,6 +53,8 @@ function holdTabStripKeys(e) {
 //   Ctrl/Cmd+Z             undo              (not in a field)
 //   Ctrl/Cmd+Shift+Z, Ctrl+Y  redo           (not in a field)
 //   Ctrl+Alt+Left/Right    move the focused window one place (not in a field)
+//   Ctrl/Cmd+Shift+[ and ] the focused column's last and next tab (not in a field)
+//   Alt+R, Alt+W           the focused window's Refresh and Close (not in a field)
 //   Ctrl/Cmd+[ and ]       the focused window's Back and Forward (not in a field), as Finder
 //                          and Safari have them; the keys on each window's bar do the same
 //
@@ -60,6 +66,17 @@ function deskHotkeys(e) {
     if (e.defaultPrevented || !dotNet) return;
 
     const mod = e.ctrlKey || e.metaKey;
+
+    // Alt+R and Alt+W: the focused window's Refresh and Close. The browser keeps Ctrl+R and
+    // Ctrl+W for the page and its own tab, and neither can be had from it; Alt is free of both.
+    // By physical key, because Option on a Mac turns the letter into a symbol.
+    if (!mod && e.altKey && !e.shiftKey && !inField(e.target)) {
+        const letter = e.code || (e.key.length === 1 ? `Key${e.key.toUpperCase()}` : '');
+
+        if (letter === 'KeyR') return send(e, 'OnRefreshRequested');
+        if (letter === 'KeyW') return send(e, 'OnCloseRequested', null);
+    }
+
     if (!mod) return;
 
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -90,6 +107,44 @@ function deskHotkeys(e) {
     if (!e.altKey && !e.shiftKey && (key === '[' || key === ']')) {
         return send(e, 'OnPageRequested', key === '[' ? -1 : 1);
     }
+
+    // The same pair with Shift turns the focused column's tabs, as Safari's does: ] to the next,
+    // [ to the one just left. By physical key — with Shift held the character is a brace.
+    // A keyboard that reports no code (some remote and on-screen ones) still sends the brace, or
+    // the bracket with Shift held.
+    const left = e.code === 'BracketLeft' || (!e.code && (key === '{' || key === '['));
+    const right = e.code === 'BracketRight' || (!e.code && (key === '}' || key === ']'));
+
+    if (!e.altKey && e.shiftKey && (left || right)) {
+        return send(e, 'OnTabRequested', left ? -1 : 1);
+    }
+}
+
+// A middle click closes what it lands on, as it closes a tab in a browser: a window's bar (not
+// the keys on it), or an open window's key in the header. The press is held so the browser does
+// not start its autoscroll under a pointer that only meant to close.
+function closeTarget(e) {
+    if (e.button !== 1 || !(e.target instanceof Element)) return null;
+
+    const key = e.target.closest('[data-close-window]');
+    if (key) return key.dataset.closeWindow || null;
+
+    if (e.target.closest('[data-window-control]')) return null;
+
+    const win = e.target.closest('[data-tab-handle]')?.closest('.win');
+    return win ? managerId(win.id) : null;
+}
+
+function holdMiddlePress(e) {
+    if (closeTarget(e)) e.preventDefault();
+}
+
+function closeOnMiddleClick(e) {
+    const id = closeTarget(e);
+    if (!id || !dotNet) return;
+
+    e.preventDefault();
+    dotNet.invokeMethodAsync('OnCloseRequested', id);
 }
 
 function send(e, method, ...args) {

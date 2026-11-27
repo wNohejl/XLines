@@ -129,14 +129,14 @@ public class WindowTabStripTests : SampleDeskTestContext
         Key(desk, jobs).Click();
 
         Assert.Equal("true", Key(desk, jobs).GetAttribute("aria-expanded"));
-        Assert.Equal(["Jobs", "Alerts", "Health", "List", "Move Jobs to its own column", "Close Jobs"], MenuLabels(desk, jobs));
+        Assert.Equal(["Jobs", "Alerts", "Health", "List", "Move Jobs to its own column", "Close Jobs", "Close the 3 other tabs"], MenuLabels(desk, jobs));
 
         var items = Win(desk, jobs).QuerySelectorAll(".menu__item");
         var menu = Win(desk, jobs).QuerySelector("[role=menu]")!;
         Assert.Equal("Tabs in Jobs's column", menu.GetAttribute("aria-label"));
 
         // The windows are the pop-up's options, the showing one checked; the rest are commands.
-        Assert.Equal(["menuitemradio", "menuitemradio", "menuitemradio", "menuitemradio", "menuitem", "menuitem"],
+        Assert.Equal(["menuitemradio", "menuitemradio", "menuitemradio", "menuitemradio", "menuitem", "menuitem", "menuitem"],
             items.Select(i => i.GetAttribute("role")));
         Assert.Equal(["true", "false", "false", "false"], items.Take(4).Select(i => i.GetAttribute("aria-checked")));
 
@@ -195,7 +195,7 @@ public class WindowTabStripTests : SampleDeskTestContext
         menu.KeyDown(new KeyboardEventArgs { Key = "h" });
         Assert.Equal("0", Win(desk, jobs).QuerySelectorAll(".menu__item")[2].GetAttribute("tabindex"));
         Win(desk, jobs).QuerySelector("[role=menu]")!.KeyDown(new KeyboardEventArgs { Key = "End" });
-        Assert.Equal("0", Win(desk, jobs).QuerySelectorAll(".menu__item")[5].GetAttribute("tabindex"));
+        Assert.Equal("0", Win(desk, jobs).QuerySelectorAll(".menu__item")[6].GetAttribute("tabindex"));
     }
 
     [Fact]
@@ -210,7 +210,7 @@ public class WindowTabStripTests : SampleDeskTestContext
 
         Assert.DoesNotContain(manager.Windows, w => w.Title == "Alerts");
         Assert.True(manager.IsShowing(jobs));
-        Assert.Equal(["Jobs", "Health", "List", "Move Jobs to its own column", "Close Jobs"], MenuLabels(desk, jobs));
+        Assert.Equal(["Jobs", "Health", "List", "Move Jobs to its own column", "Close Jobs", "Close the 2 other tabs"], MenuLabels(desk, jobs));
 
         // The Tab stop moved to the row that took the closed one's place.
         Assert.Equal("0", Win(desk, jobs).QuerySelectorAll(".menu__item")[1].GetAttribute("tabindex"));
@@ -228,7 +228,7 @@ public class WindowTabStripTests : SampleDeskTestContext
         Win(desk, jobs).QuerySelectorAll(".menu__remove")[1].Click(); // Alerts
 
         Assert.DoesNotContain(manager.Windows, w => w.Title == "Alerts");
-        Assert.Equal(["Jobs", "Health", "List", "Move Jobs to its own column", "Close Jobs"], MenuLabels(desk, jobs));
+        Assert.Equal(["Jobs", "Health", "List", "Move Jobs to its own column", "Close Jobs", "Close the 2 other tabs"], MenuLabels(desk, jobs));
         Assert.Equal("0", Win(desk, jobs).QuerySelectorAll(".menu__item")[1].GetAttribute("tabindex"));
     }
 
@@ -243,6 +243,40 @@ public class WindowTabStripTests : SampleDeskTestContext
 
         Assert.DoesNotContain(jobs, manager.Windows);
         Assert.Equal("Alerts", manager.Columns.Single().Showing.Title);
+    }
+
+    /// <summary>The last command closes every tab behind the one showing and leaves that one.</summary>
+    [Fact]
+    public void Close_the_other_tabs_leaves_the_window_showing_alone_in_its_column()
+    {
+        var (manager, jobs) = FourInOne();
+        var desk = RenderComponent<DeskShell>();
+
+        Key(desk, jobs).Click();
+        Win(desk, jobs).QuerySelectorAll(".menu__item")[6].Click();
+
+        Assert.Equal([jobs], manager.Windows);
+        Assert.Empty(desk.FindAll(".wtabs"));
+    }
+
+    /// <summary>One holding unsaved input asks, and Keep editing stops the sweep there.</summary>
+    [Fact]
+    public void Close_the_other_tabs_stops_at_a_tab_the_operator_keeps()
+    {
+        var alerts = new FakeAlerts { Answer = false };
+        var manager = Manager(columns: 1, alerts);
+        var list = manager.Open(Window(SampleCatalog.List));
+        var health = manager.Open(Window(SampleCatalog.Health));
+        var jobs = manager.Open(Window(SampleCatalog.Jobs));
+        manager.SetUnsaved(health.Id, true, "this note");
+        var desk = RenderComponent<DeskShell>();
+
+        Key(desk, jobs).Click();
+        Win(desk, jobs).QuerySelectorAll(".menu__item")[5].Click();
+
+        Assert.Equal(["Discard this note?"], alerts.Asked);
+        Assert.Contains(health, manager.Windows);
+        Assert.Contains(list, manager.Windows);
     }
 
     [Fact]

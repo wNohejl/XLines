@@ -33,6 +33,67 @@ public class WindowTabGroupTests
 
     private static string[][] Shape(WindowManager desk) => desk.Columns.Select(Keys).ToArray();
 
+    // ------------------------------------------------------------ the keyboard ----
+
+    /// <summary>
+    /// Forward visits every tab in turn (the one shown longest ago comes to the front); back
+    /// returns to the one just left. Three tabs prove the difference: with two, both are the other.
+    /// </summary>
+    [Fact]
+    public void Cycling_forward_visits_every_tab_and_back_returns_to_the_last()
+    {
+        var desk = Desk(columns: 1);
+        desk.Open(Window(SampleCatalog.List));
+        desk.Open(Window(SampleCatalog.Health));
+        var jobs = desk.Open(Window(SampleCatalog.Jobs));
+
+        Assert.Equal([SampleCatalog.Jobs, SampleCatalog.Health, SampleCatalog.List], Keys(desk.Columns[0]));
+
+        Assert.True(desk.CycleTab(jobs.Id, +1));
+        Assert.Equal(SampleCatalog.List, desk.Columns[0].Showing.Definition.Key);
+
+        Assert.True(desk.CycleTab(desk.FocusedId!, +1));
+        Assert.Equal(SampleCatalog.Health, desk.Columns[0].Showing.Definition.Key);
+
+        Assert.True(desk.CycleTab(desk.FocusedId!, +1));
+        Assert.Equal(SampleCatalog.Jobs, desk.Columns[0].Showing.Definition.Key);
+
+        // Back is the tab just left, and pressed again it is the one come from: a toggle.
+        Assert.True(desk.CycleTab(desk.FocusedId!, -1));
+        Assert.Equal(SampleCatalog.Health, desk.Columns[0].Showing.Definition.Key);
+        Assert.True(desk.CycleTab(desk.FocusedId!, -1));
+        Assert.Equal(SampleCatalog.Jobs, desk.Columns[0].Showing.Definition.Key);
+
+        Assert.Equal(3, desk.OpenCount);
+    }
+
+    [Fact]
+    public void A_plain_window_has_no_tab_to_turn_to()
+    {
+        var desk = Desk(columns: 2);
+        var list = desk.Open(Window(SampleCatalog.List));
+
+        Assert.False(desk.CycleTab(list.Id, +1));
+        Assert.False(desk.CycleTab("missing", +1));
+    }
+
+    /// <summary>A refresh is asked of one window by id, and is not a step Back can undo.</summary>
+    [Fact]
+    public void Refresh_names_the_window_and_leaves_history_alone()
+    {
+        var desk = Desk(columns: 2);
+        var list = desk.Open(Window(SampleCatalog.List));
+        var depth = desk.HistoryDepth;
+        var asked = new List<string>();
+        desk.RefreshRequested += asked.Add;
+
+        Assert.True(desk.Refresh(list.Id));
+        Assert.False(desk.Refresh("missing"));
+
+        Assert.Equal([list.Id], asked);
+        Assert.Equal(depth, desk.HistoryDepth);
+    }
+
     // ----------------------------------------------------------------- the limit ----
 
     [Fact]

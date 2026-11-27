@@ -120,6 +120,22 @@ public class DeskPanelBaseTests : DeskTestContext
         Assert.True(panel.Instance.IsLoaded);
     }
 
+    /// <summary>
+    /// The bar's Refresh key reloads the panel in the window it names, at once and not after the
+    /// settle, and no other window's.
+    /// </summary>
+    [Fact]
+    public void The_windows_refresh_key_reloads_its_own_panel_only()
+    {
+        var window = OpenWindow();
+        var panel = InWindow(window);
+
+        Manager.Refresh("some-other-window");
+        Manager.Refresh(window.Id);
+
+        panel.WaitForAssertion(() => Assert.Equal(1, panel.Instance.Refreshes));
+    }
+
     [Fact]
     public void A_watched_topic_refreshes()
     {

@@ -58,6 +58,45 @@ public class WindowManager
     /// <summary>Raised when something asks for the command palette — the hotkey or the header key.</summary>
     public event Action? PaletteRequested;
 
+    /// <summary>
+    /// Raised when a window is asked to reload what it shows — the Refresh key on its bar, or
+    /// Alt+R on the focused one — with its id. The panel inside answers (DeskPanelBase); the
+    /// manager changes nothing itself, so a refresh is never a step Back can undo.
+    /// </summary>
+    public event Action<string>? RefreshRequested;
+
+    /// <summary>
+    /// Asks a window to reload what it shows. True when the window exists; whether anything was
+    /// reloaded is the panel's to say, on its pulse.
+    /// </summary>
+    public bool Refresh(string id)
+    {
+        if (Find(id) is null)
+            return false;
+
+        RefreshRequested?.Invoke(id);
+        return true;
+    }
+
+    /// <summary>
+    /// Turns a tab group to another of its windows from the keyboard. Forward
+    /// (<paramref name="delta"/> above zero) brings the tab shown longest ago to the front, so
+    /// pressing it again and again visits every tab in turn; back brings the one just left, so
+    /// two tabs worked between are one key apart. False for a plain window: there is nothing to
+    /// turn to.
+    /// </summary>
+    public bool CycleTab(string id, int delta)
+    {
+        if (Find(id) is null || ColumnOf(id) is not { IsGroup: true } column)
+            return false;
+
+        var next = delta > 0 ? column.Tabs[^1] : column.Tabs[1];
+
+        RequestTabFocus(next.Id);
+        Focus(next.Id);
+        return true;
+    }
+
     public void RequestPalette() => PaletteRequested?.Invoke();
 
     /// <summary>

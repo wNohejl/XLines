@@ -148,8 +148,50 @@ public abstract class DeskPanelBase : ComponentBase, IDisposable
             _subscribed = true;
         }
 
+        if (!_hearsRefresh)
+        {
+            Manager.RefreshRequested += OnRefreshRequested;
+            _hearsRefresh = true;
+        }
+
         return base.SetParametersAsync(parameters);
     }
+
+    private bool _hearsRefresh;
+
+    // The Refresh key on the window's bar. Every window hears every request; only the one named
+    // reloads, and a panel hosted outside a window (no id) never does.
+    private void OnRefreshRequested(string id)
+    {
+        if (_disposed || WindowId is null || id != WindowId)
+            return;
+
+        _ = InvokeAsync(async () =>
+        {
+            if (_disposed)
+                return;
+
+            try
+            {
+                await RefreshNowAsync();
+                StateHasChanged();
+            }
+            catch (Exception ex) when (!_disposed)
+            {
+                // As a refresh nobody asked for: the circuit stays up and the pulse says it failed.
+                Log.LogError(ex, "{Panel} did not refresh", GetType().Name);
+                Report(PulseState.Warn, "refresh failed");
+            }
+        });
+    }
+
+    /// <summary>
+    /// Reloads the panel because its window's Refresh key was pressed. A panel that watches
+    /// topics reloads as it does when one changes, told everything changed; one that does not
+    /// repeats its last load, filters and all. Override for a panel that loads some other way.
+    /// </summary>
+    protected virtual Task RefreshNowAsync()
+        => Watches.Count > 0 ? RefreshAsync(new HashSet<string>()) : RetryAsync();
 
     private void OnSignal(IReadOnlySet<string> tokens)
     {
@@ -267,6 +309,9 @@ public abstract class DeskPanelBase : ComponentBase, IDisposable
 
         if (_subscribed)
             Signals.Changed -= OnSignal;
+
+        if (_hearsRefresh)
+            Manager.RefreshRequested -= OnRefreshRequested;
 
         // A dialog closed with its input still unsaved takes the input with it; the host it
         // marked has nothing left to protect.

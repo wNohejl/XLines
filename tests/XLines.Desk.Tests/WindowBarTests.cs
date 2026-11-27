@@ -323,7 +323,7 @@ public class WindowBarTests : SampleDeskTestContext
         Assert.Equal(3, keys.Count);
         Assert.All(keys, k => Assert.Contains("win__ctl", k.ClassList));
         Assert.All(keys, k => Assert.NotNull(k.QuerySelector("svg")));
-        Assert.Equal(["Minimise", "Take the whole row", "Close"], keys.Select(k => k.GetAttribute("title")));
+        Assert.Equal(["Minimise", "Take the whole row", "Close (Alt+W)"], keys.Select(k => k.GetAttribute("title")));
         Assert.Equal(["Minimise Notes", "Maximise Notes", "Close Notes"], keys.Select(k => k.GetAttribute("aria-label")));
         Assert.All(keys, k => Assert.Null(k.GetAttribute("data-glide-tone")));
 
