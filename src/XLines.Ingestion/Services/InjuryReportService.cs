@@ -35,7 +35,8 @@ namespace XLines.Ingestion.Services;
 public class InjuryReportService(
     XLinesDbContext db,
     IEnumerable<IInjurySource> sources,
-    ILogger<InjuryReportService> logger)
+    ILogger<InjuryReportService> logger,
+    TimeProvider clock)
 {
     /// <summary>The run row's job key.</summary>
     public const string JobKey = "espn:injuries";
@@ -55,7 +56,7 @@ public class InjuryReportService(
         {
             SourceId = sourceRow.Id,
             JobKey = jobKey,
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = clock.GetUtcNow(),
             Status = RunStatus.Running
         };
 
@@ -73,7 +74,7 @@ public class InjuryReportService(
             logger.LogWarning(ex, "{Source}/{Sport}: injury report unavailable", source.Key, sportKey);
 
             run.RequestsMade = 1;
-            run.FinishedAt = DateTimeOffset.UtcNow;
+            run.FinishedAt = clock.GetUtcNow();
             run.Status = RunStatus.Failed;
             run.Error = RunRecord.Describe(ex);
             await db.SaveChangesAsync(ct);
@@ -81,7 +82,7 @@ public class InjuryReportService(
             return new IngestionOutcome(run.Id, run.Status, 0, run.Error);
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var players = await db.Players.Where(p => p.SportId == sport.Id).ToListAsync(ct);
         var teams = await db.Teams.AsNoTracking().Where(t => t.SportId == sport.Id).ToDictionaryAsync(t => t.Id, ct);
 
@@ -125,7 +126,7 @@ public class InjuryReportService(
 
         run.RequestsMade = 1;
         run.RowsIngested = named.Count;
-        run.FinishedAt = DateTimeOffset.UtcNow;
+        run.FinishedAt = clock.GetUtcNow();
         run.Status = RunStatus.Success;
         run.Detail = $"{report.Count} on the report, {named.Count} matched, {unmatched} not on file.";
         await db.SaveChangesAsync(ct);

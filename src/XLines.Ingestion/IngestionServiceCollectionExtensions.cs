@@ -4,9 +4,11 @@ using XLines.Core.Contracts;
 using XLines.Ingestion.Adapters;
 using XLines.Ingestion.Configuration;
 using XLines.Ingestion.Services;
+using XLines.Ingestion.Services.Jobs;
 using XLines.Reliability;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -26,6 +28,9 @@ public static class IngestionServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.Configure<IngestionOptions>(configuration.GetSection(IngestionOptions.SectionName));
+
+        // One clock for every ingestion service and job, so a test can pin the instant a rule is decided at.
+        services.TryAddSingleton(TimeProvider.System);
 
         // Every list-shaped option defaults to empty and resolves its fallback in code, because
         // the configuration binder *appends* to a non-empty default rather than replacing it —
@@ -58,7 +63,7 @@ public static class IngestionServiceCollectionExtensions
 
         // Singleton: it creates a scope per job, so it has no scoped state and both the
         // scheduler and the desk's pull menu can hold it directly.
-        services.AddSingleton<IngestionJobs>();
+        services.AddIngestionJobs();
         services.AddScoped<SourceRegistry>();
         // Singleton: it creates a scope per day rather than holding one, so it has no scoped
         // state of its own and the History panel can inject it directly.
@@ -352,6 +357,54 @@ public static class IngestionServiceCollectionExtensions
 
         foreach (var source in new[] { options.OddsApiIo, options.TheOddsApi, options.BallDontLie, options.Espn, options.SportsGameOdds })
             source.Bookmakers = Unique(source.Bookmakers);
+    }
+
+    /// <summary>
+    /// The job catalogue (<see cref="IngestionJobs"/>) and its handlers, one per job or family of
+    /// keys. Singletons: each creates a scope per run, and the slate's sync times and the results
+    /// sweep's back-off are state that must outlive a press. Registered as handlers in the order the
+    /// pull menu lists them, which is the order <see cref="IngestionJobs.DescribeAsync"/> reads them.
+    /// </summary>
+    internal static IServiceCollection AddIngestionJobs(this IServiceCollection services)
+    {
+        services.TryAddSingleton(TimeProvider.System);
+
+        services.AddSingleton<EspnSlateJob>();
+        services.AddSingleton<EspnLiveJob>();
+        services.AddSingleton<EspnResultsJob>();
+        services.AddSingleton<EspnClosingLinesJob>();
+        services.AddSingleton<EspnGamecastBackportJob>();
+        services.AddSingleton<EspnFightersJob>();
+        services.AddSingleton<OddsFixturesJob>();
+        services.AddSingleton<OddsScoresJob>();
+        services.AddSingleton<OddsLinesJob>();
+        services.AddSingleton<SgoLinesJob>();
+        services.AddSingleton<SettleJob>();
+        services.AddSingleton<CommandLineJobs>();
+
+        // Menu order: ESPN's pulls or the default source's (never both), the lines, the second
+        // source's lines, housekeeping; the command-line jobs list nothing.
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<EspnSlateJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<EspnLiveJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<EspnResultsJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<EspnClosingLinesJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<EspnGamecastBackportJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<EspnFightersJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<OddsFixturesJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<OddsScoresJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<OddsLinesJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<SgoLinesJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<SettleJob>());
+        services.AddSingleton<IIngestionJob>(sp => sp.GetRequiredService<CommandLineJobs>());
+
+        services.AddSingleton(sp => new IngestionJobs(
+            sp.GetServices<IIngestionJob>(),
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IOptions<IngestionOptions>>(),
+            sp.GetRequiredService<ILogger<IngestionJobs>>(),
+            sp.GetRequiredService<TimeProvider>()));
+
+        return services;
     }
 
     /// <summary>Resolves the effective ingestion options without needing a scope.</summary>

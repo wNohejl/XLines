@@ -113,7 +113,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
 
         GamecastWriteResult result;
         await using (var db = Context())
-            result = await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
+            result = await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
 
         Assert.Equal(new GamecastWriteResult(PlaysInserted: 3, PlaysUpdated: 0, DrivesInserted: 2, DrivesUpdated: 0), result);
 
@@ -147,12 +147,12 @@ public class GamecastWriterTests(PostgresFixture fixture)
         var seeded = await SeedAsync();
 
         await using (var db = Context())
-            await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
+            await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
 
         var counter = new RowCounter();
         GamecastWriteResult again;
         await using (var db = Context(counter))
-            again = await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
+            again = await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
 
         Assert.Equal(new GamecastWriteResult(0, 0, 0, 0), again);
         Assert.False(again.Changed);
@@ -179,7 +179,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
         var gamecast = new CanonicalGamecast("401873032", "in", [drive], [play]);
 
         await using (var db = Context())
-            await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
+            await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
 
         await using (var read = fixture.CreateContext())
         {
@@ -197,7 +197,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
         // And the cut value is what the next poll compares against, so it reads as unchanged.
         await using (var db = Context())
         {
-            var again = await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
+            var again = await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
             Assert.False(again.Changed);
         }
     }
@@ -208,7 +208,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
         var seeded = await SeedAsync();
 
         await using (var db = Context())
-            await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
+            await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
 
         long id;
         await using (var read = fixture.CreateContext())
@@ -228,7 +228,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
         var counter = new RowCounter();
         GamecastWriteResult result;
         await using (var db = Context(counter))
-            result = await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, reviewed, CancellationToken.None);
+            result = await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, reviewed, CancellationToken.None);
 
         Assert.Equal(new GamecastWriteResult(0, 1, 0, 0), result);
         Assert.Equal(1, counter.Saves);
@@ -249,7 +249,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
         var seeded = await SeedAsync();
 
         await using (var db = Context())
-            await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
+            await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
 
         // The next poll: one more play, and a payload that has dropped an earlier one.
         var next = Gamecast(Play("4018730321004", 1004, "40187303202", "14", "Pass deep left")) is var g
@@ -258,7 +258,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
 
         GamecastWriteResult result;
         await using (var db = Context())
-            result = await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, next, CancellationToken.None);
+            result = await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, next, CancellationToken.None);
 
         Assert.Equal(new GamecastWriteResult(1, 0, 0, 0), result);
 
@@ -273,7 +273,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
         var gamecast = Gamecast(Play("4018730321009", 1009, "no-such-drive", "14"));
 
         await using (var db = Context())
-            await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
+            await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
 
         await using var read = fixture.CreateContext();
         var drives = await read.GameDrives.Where(d => d.GameId == seeded.GameId).ToDictionaryAsync(d => d.Sequence);
@@ -299,7 +299,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
             teamsBefore = await read.Teams.CountAsync();
 
         await using (var db = Context())
-            await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
+            await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, gamecast, CancellationToken.None);
 
         await using var after = fixture.CreateContext();
         Assert.Null((await after.GamePlays.SingleAsync(p => p.GameId == seeded.GameId && p.SourcePlayId == "4018730321005")).TeamId);
@@ -320,7 +320,7 @@ public class GamecastWriterTests(PostgresFixture fixture)
             await listen.ExecuteNonQueryAsync();
 
         await using (var db = Context(new ChangeNotifier(NullLogger<ChangeNotifier>.Instance)))
-            await new GamecastWriter(db).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
+            await new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, seeded.SourceKey, Gamecast(), CancellationToken.None);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
         try
@@ -343,6 +343,6 @@ public class GamecastWriterTests(PostgresFixture fixture)
 
         await using var db = Context();
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => new GamecastWriter(db).WriteAsync(seeded.GameId, "no-such-source", Gamecast(), CancellationToken.None));
+            () => new GamecastWriter(db, TimeProvider.System).WriteAsync(seeded.GameId, "no-such-source", Gamecast(), CancellationToken.None));
     }
 }

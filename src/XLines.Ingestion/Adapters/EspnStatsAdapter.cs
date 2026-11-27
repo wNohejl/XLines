@@ -15,7 +15,7 @@ namespace XLines.Ingestion.Adapters;
 /// nothing critical depends solely on ESPN, and when it does break it produces a genuine
 /// incident to triage rather than a hypothetical one.
 /// </summary>
-public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter> logger) : IStatsSource, IClosingLineSource, IFighterSource, IGameDaySource
+public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter> logger, TimeProvider clock) : IStatsSource, IClosingLineSource, IFighterSource, IGameDaySource
 {
     public const string SourceKey = "espn";
 
@@ -64,7 +64,7 @@ public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter>
         var url = $"{path}/scoreboard?dates={date:yyyyMMdd}";
 
         using var doc = await GetJsonAsync(url, ct);
-        var games = ParseScoreboard(doc.RootElement, sportKey).ToList();
+        var games = ParseScoreboard(doc.RootElement, sportKey, clock.GetUtcNow()).ToList();
 
         logger.LogInformation("{Source}: {Sport} {Date} -> {Count} games",
             SourceKey, sportKey, date, games.Count);
@@ -672,13 +672,13 @@ public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter>
         // response has already paid the gap and does not pay it twice.
         if (RequestDelay > TimeSpan.Zero)
         {
-            var since = DateTimeOffset.UtcNow - _lastRequestAt;
+            var since = clock.GetUtcNow() - _lastRequestAt;
 
             if (since < RequestDelay)
                 await Task.Delay(RequestDelay - since, ct);
         }
 
-        _lastRequestAt = DateTimeOffset.UtcNow;
+        _lastRequestAt = clock.GetUtcNow();
 
         // Headers first, then the body straight into the parser. A game summary is close to half a
         // megabyte of JSON and the gamecast feed reads one per followed game every poll; buffering
@@ -689,7 +689,7 @@ public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter>
         return await JsonDocument.ParseAsync(stream, cancellationToken: ct);
     }
 
-    internal static IEnumerable<CanonicalGame> ParseScoreboard(JsonElement root, string sportKey)
+    internal static IEnumerable<CanonicalGame> ParseScoreboard(JsonElement root, string sportKey, DateTimeOffset now)
     {
         if (!root.TryGetProperty("events", out var events) || events.ValueKind != JsonValueKind.Array)
             yield break;
@@ -757,7 +757,7 @@ public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter>
                                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
                                out var parsedDate)
                 ? parsedDate
-                : DateTimeOffset.UtcNow;
+                : now;
 
             yield return new CanonicalGame(
                 SourceGameId: id,

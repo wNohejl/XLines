@@ -23,7 +23,8 @@ namespace XLines.Ingestion.Services;
 public class FighterProfileService(
     XLinesDbContext db,
     IEnumerable<IFighterSource> sources,
-    ILogger<FighterProfileService> logger)
+    ILogger<FighterProfileService> logger,
+    TimeProvider clock)
 {
     /// <summary>How long after a fight ESPN is given to write it into the fighter's history.</summary>
     public static readonly TimeSpan WriteUpDelay = TimeSpan.FromHours(12);
@@ -43,7 +44,7 @@ public class FighterProfileService(
         if (!FightSports.IsFight(sportKey))
             return [];
 
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
 
         var bouts = await db.Games.AsNoTracking()
             .Where(g => g.Sport!.Key == sportKey && g.Status != GameStatus.Postponed)
@@ -116,7 +117,7 @@ public class FighterProfileService(
         {
             SourceId = sourceRow.Id,
             JobKey = jobKey,
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = clock.GetUtcNow(),
             Status = RunStatus.Running
         };
 
@@ -157,7 +158,7 @@ public class FighterProfileService(
 
         run.RequestsMade = requests;
         run.RowsIngested = written;
-        run.FinishedAt = DateTimeOffset.UtcNow;
+        run.FinishedAt = clock.GetUtcNow();
         run.Status = failures == 0 ? RunStatus.Success : written > 0 ? RunStatus.Partial : RunStatus.Failed;
         run.Error = failures == 0 ? null : $"{failures} of {owed.Count} fighters failed; last: {lastError}";
         await db.SaveChangesAsync(ct);
@@ -193,7 +194,7 @@ public class FighterProfileService(
         profile.Record = ColumnText.Fit(fighter.Record, 24);
         profile.Career = FighterPayload.Write(fighter.Career);
         profile.History = FighterPayload.Write(fighter.History);
-        profile.RefreshedAt = DateTimeOffset.UtcNow;
+        profile.RefreshedAt = clock.GetUtcNow();
 
         await db.SaveChangesAsync(ct);
     }

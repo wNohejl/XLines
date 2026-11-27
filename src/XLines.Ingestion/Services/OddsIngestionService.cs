@@ -31,7 +31,8 @@ public class OddsIngestionService(
     XLinesDbContext db,
     EntityResolver resolver,
     CreditBudgetGuard budget,
-    ILogger<OddsIngestionService> logger)
+    ILogger<OddsIngestionService> logger,
+    TimeProvider clock)
 {
     public async Task<IngestionOutcome> IngestAsync(
         IOddsSource source,
@@ -48,7 +49,7 @@ public class OddsIngestionService(
         {
             SourceId = sourceRow.Id,
             JobKey = jobKey,
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = clock.GetUtcNow(),
             Status = RunStatus.Running,
             ClosingScanDay = closingScanDay
         };
@@ -71,7 +72,7 @@ public class OddsIngestionService(
             {
                 run.Status = RunStatus.Partial;
                 run.Error = RunRecord.BudgetRefused;
-                run.FinishedAt = DateTimeOffset.UtcNow;
+                run.FinishedAt = clock.GetUtcNow();
 
                 // Refused before any call, so it bought nothing and does not use up a closing scan.
                 run.ClosingScanDay = null;
@@ -93,7 +94,7 @@ public class OddsIngestionService(
             var rows = await PersistAsync(sourceRow, result, sportKey, run.Id, source is IBookSidesByEvent, ct);
 
             run.RowsIngested = rows;
-            run.FinishedAt = DateTimeOffset.UtcNow;
+            run.FinishedAt = clock.GetUtcNow();
 
             // Different zeroes, and conflating them would be a real operational bug (ADR 0003):
             //   - games were listed but no prices at all   -> Partial, the signature of a
@@ -126,7 +127,7 @@ public class OddsIngestionService(
         {
             run.Status = RunStatus.Failed;
             run.Error = RunRecord.Describe(ex);
-            run.FinishedAt = DateTimeOffset.UtcNow;
+            run.FinishedAt = clock.GetUtcNow();
 
             // A call that was answered and billed but could not be used still spent the month.
             // The failed run records it as a successful one would, so the budget guard, the

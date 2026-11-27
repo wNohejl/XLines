@@ -58,7 +58,8 @@ namespace XLines.Ingestion.Services;
 public class IngestionScheduler(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
-    ILogger<IngestionScheduler> logger) : BackgroundService
+    ILogger<IngestionScheduler> logger,
+    TimeProvider clock) : BackgroundService
 {
     private readonly IngestionOptions _options = options.Value;
 
@@ -105,7 +106,7 @@ public class IngestionScheduler(
         {
             try
             {
-                await Task.Delay(await NextDelayAsync(DateTimeOffset.UtcNow, stoppingToken), stoppingToken);
+                await Task.Delay(await NextDelayAsync(clock.GetUtcNow(), stoppingToken), stoppingToken);
                 await TickAsync(stoppingToken);
             }
             catch (OperationCanceledException)
@@ -175,7 +176,7 @@ public class IngestionScheduler(
 
     private async Task TickAsync(CancellationToken ct)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
 
         // Retention first: what makes a game promotable is its start time passing, which
         // happens whether or not anything was polled. Tying this to a poll would leave a

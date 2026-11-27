@@ -25,7 +25,7 @@ public class EntityResolverIntegrationTests(PostgresFixture fixture)
     public async Task ATeamFirstSeenWithoutAnIdIsUpgradedWhenOneArrives()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         // First sighting: a source that gives only a name. The abbreviation gets derived.
@@ -46,7 +46,7 @@ public class EntityResolverIntegrationTests(PostgresFixture fixture)
     public async Task AKnownGameStillRefreshesItsTeamIdentity()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var startsAt = DateTimeOffset.UtcNow.AddHours(-3);
@@ -82,7 +82,7 @@ public class EntityResolverIntegrationTests(PostgresFixture fixture)
     public async Task ANameOnlyLookupDoesNotOverwriteAStoredProviderId()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         await resolver.ResolveTeamAsync(
@@ -103,7 +103,7 @@ public class EntityResolverIntegrationTests(PostgresFixture fixture)
     public async Task TheProvidersIdWinsOverAChangedName()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         await resolver.ResolveTeamAsync(

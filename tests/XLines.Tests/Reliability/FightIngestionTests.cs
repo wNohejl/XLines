@@ -92,7 +92,7 @@ public class FightIngestionTests(PostgresFixture fixture)
         => new(new BudgetCalculator(db), NullLogger<CreditBudgetGuard>.Instance);
 
     private static Task IngestCard(XLinesDbContext db, string source, StatsFetchResult card)
-        => new StatsIngestionService(db, new EntityResolver(db), Budget(db), NullLogger<StatsIngestionService>.Instance)
+        => new StatsIngestionService(db, new EntityResolver(db, TimeProvider.System), Budget(db), NullLogger<StatsIngestionService>.Instance, TimeProvider.System)
             .IngestAsync(new StubStats(card, source), "ufc", "test", new DateOnly(2024, 4, 13), CancellationToken.None);
 
     private static string Tag() => Guid.NewGuid().ToString("N")[..8];
@@ -174,7 +174,7 @@ public class FightIngestionTests(PostgresFixture fixture)
 
         var games = await db.Games.CountAsync(g => g.SportId == sport.Id);
 
-        await new OddsIngestionService(db, new EntityResolver(db), Budget(db), NullLogger<OddsIngestionService>.Instance)
+        await new OddsIngestionService(db, new EntityResolver(db, TimeProvider.System), Budget(db), NullLogger<OddsIngestionService>.Instance, TimeProvider.System)
             .IngestAsync(new StubOdds(slate, odds), "ufc", "test", CancellationToken.None);
 
         Assert.Equal(games, await db.Games.CountAsync(g => g.SportId == sport.Id));
@@ -222,7 +222,7 @@ public class FightIngestionTests(PostgresFixture fixture)
         var fighterIds = new[] { main.HomeTeamId, main.AwayTeamId };
 
         var stub = new StubFighters(source);
-        var profiles = new FighterProfileService(db, [stub], NullLogger<FighterProfileService>.Instance);
+        var profiles = new FighterProfileService(db, [stub], NullLogger<FighterProfileService>.Instance, TimeProvider.System);
 
         // Owed: every fighter on the card has no profile. Taken once; a second pass owes nothing
         // for these two, since neither has fought since.
@@ -252,7 +252,7 @@ public class FightIngestionTests(PostgresFixture fixture)
         await using var db = fixture.CreateContext();
         var tag = Tag();
         var (sport, source, _) = await SeedAsync(db, tag);
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
 
         var middleweight = await resolver.ResolveTeamAsync(sport, source,
             new CanonicalTeamRef($"Bruno {tag}Silva", "4333158", "Silva") { Qualifier = "Middleweight" }, CancellationToken.None);
@@ -307,7 +307,7 @@ public class FightIngestionTests(PostgresFixture fixture)
         noContest.AwayScore = null;
         await db.SaveChangesAsync();
 
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
 
         Assert.Equal(EntryResult.Win, pereira.Result);
         Assert.Equal(EntryResult.Win, under.Result);

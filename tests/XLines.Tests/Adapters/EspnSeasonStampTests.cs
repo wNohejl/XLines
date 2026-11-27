@@ -40,7 +40,7 @@ public class EspnSeasonStampTests
     {
         using var doc = ScoreboardWithSeason(2025, 3);
 
-        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "nfl").ToList();
+        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "nfl", DateTimeOffset.UtcNow).ToList();
 
         Assert.NotEmpty(games);
         Assert.All(games, g =>
@@ -58,7 +58,7 @@ public class EspnSeasonStampTests
         // ESPN calls the season opening October 2026 "2027"; the desk calls it 2026, labelled 2026–27.
         using var doc = ScoreboardWithSeason(2027, 2);
 
-        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, sport).ToList();
+        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, sport, DateTimeOffset.UtcNow).ToList();
 
         Assert.NotEmpty(games);
         Assert.All(games, g => Assert.Equal(2026, g.SeasonYear));
@@ -69,7 +69,7 @@ public class EspnSeasonStampTests
     {
         using var doc = ScoreboardWithSeason(2026, 2);
 
-        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb").ToList();
+        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb", DateTimeOffset.UtcNow).ToList();
 
         Assert.NotEmpty(games);
         Assert.All(games, g => Assert.Equal(SeasonType.Regular, g.SeasonType));
@@ -80,7 +80,7 @@ public class EspnSeasonStampTests
     {
         using var doc = ScoreboardWithSeason(2026, 1);
 
-        Assert.Empty(EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb"));
+        Assert.Empty(EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb", DateTimeOffset.UtcNow));
     }
 
     [Fact]
@@ -88,7 +88,7 @@ public class EspnSeasonStampTests
     {
         using var doc = ScoreboardWithSeason(null, null);
 
-        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb").ToList();
+        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb", DateTimeOffset.UtcNow).ToList();
 
         Assert.NotEmpty(games);
         Assert.All(games, g =>
@@ -103,7 +103,7 @@ public class EspnSeasonStampTests
     {
         using var doc = ScoreboardWithSeason(2026, 4);
 
-        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb").ToList();
+        var games = EspnStatsAdapter.ParseScoreboard(doc.RootElement, "mlb", DateTimeOffset.UtcNow).ToList();
 
         Assert.NotEmpty(games);
         Assert.All(games, g =>

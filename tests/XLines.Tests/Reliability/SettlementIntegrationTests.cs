@@ -70,7 +70,7 @@ public class SettlementIntegrationTests(PostgresFixture fixture)
         };
 
     private SettlementService CreateService(XLinesDbContext db)
-        => new(db, NullLogger<SettlementService>.Instance);
+        => new(db, NullLogger<SettlementService>.Instance, TimeProvider.System);
 
     /// <summary>
     /// Settlement reads <c>ClosingLines</c>, which retention writes when a game starts. Tests
@@ -80,7 +80,7 @@ public class SettlementIntegrationTests(PostgresFixture fixture)
         => new(
             db,
             Options.Create(new IngestionOptions()),
-            NullLogger<OddsRetentionService>.Instance);
+            NullLogger<OddsRetentionService>.Instance, TimeProvider.System);
 
     [Fact]
     public async Task AWinningEntryIsGradedAndPaidOut()

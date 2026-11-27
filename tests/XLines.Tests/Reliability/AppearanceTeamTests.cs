@@ -72,9 +72,9 @@ public class AppearanceTeamTests(PostgresFixture fixture)
     private static StatsIngestionService Service(XLinesDbContext db)
         => new(
             db,
-            new EntityResolver(db),
+            new EntityResolver(db, TimeProvider.System),
             new CreditBudgetGuard(new BudgetCalculator(db), NullLogger<CreditBudgetGuard>.Instance),
-            NullLogger<StatsIngestionService>.Instance);
+            NullLogger<StatsIngestionService>.Instance, TimeProvider.System);
 
     private static Task Ingest(XLinesDbContext db, Scaffold s, StatsFetchResult day)
         => Service(db).IngestAsync(

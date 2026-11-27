@@ -24,6 +24,7 @@ public class TheOddsApiAdapter(
     HttpClient http,
     IOptions<IngestionOptions> options,
     ILogger<TheOddsApiAdapter> logger,
+    TimeProvider clock,
     Services.RuntimeOddsKey? runtimeKey = null) : IOddsSource
 {
     public const string SourceKey = "the-odds-api";
@@ -91,7 +92,7 @@ public class TheOddsApiAdapter(
         // ahead, and a window would take that away. And when nothing is left to list — a league
         // whose every game is under way — the provider does not bill the call ("If no events are
         // returned, the request will not count against the usage quota"), so a quiet league is free.
-        var capturedAt = DateTimeOffset.UtcNow;
+        var capturedAt = clock.GetUtcNow();
 
         var url = TheOddsApiWire.OddsUrl(sportKey, apiKey, named, providerMarkets, capturedAt);
 

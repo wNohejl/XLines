@@ -22,7 +22,7 @@ public class LinePollPlannerTests(PostgresFixture fixture)
         => new(
             db,
             Options.Create(options ?? new IngestionOptions { Sports = ["mlb"] }),
-            NullLogger<LinePollPlanner>.Instance);
+            NullLogger<LinePollPlanner>.Instance, TimeProvider.System);
 
     private static async Task<Source> SeedSourceAsync(
         XLinesDbContext db, int? perDay = null, int? perHour = null, int? monthlyCredits = null)
@@ -518,7 +518,7 @@ public class LinePollPlannerTests(PostgresFixture fixture)
         var registry = new SourceRegistry([new PricedSource(source.Key, new() { [mlb] = 2, [nfl] = 3 })], []);
         var options = new IngestionOptions { Sports = [mlb, nfl] };
 
-        var planner = new LinePollPlanner(db, Options.Create(options), NullLogger<LinePollPlanner>.Instance, registry);
+        var planner = new LinePollPlanner(db, Options.Create(options), NullLogger<LinePollPlanner>.Instance, TimeProvider.System, registry);
         var plan = await planner.PlanAsync([source.Key]);
 
         Assert.Equal(5, plan!.CreditsPerScan);

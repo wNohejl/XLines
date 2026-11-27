@@ -1,6 +1,7 @@
 using XLines.Core.Contracts;
 using XLines.Core.Entities;
 using XLines.Data;
+using XLines.Ingestion;
 using XLines.Ingestion.Adapters;
 using XLines.Ingestion.Configuration;
 using XLines.Ingestion.Services;
@@ -166,6 +167,7 @@ public class GamecastBackportTests(PostgresFixture fixture)
     private ServiceProvider Services(FakeGamecasts source, List<int>? perScope = null)
     {
         var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(fixture.ConnectionString));
         services.AddLogging();
         services.AddScoped<GamecastWriter>();
@@ -201,7 +203,7 @@ public class GamecastBackportTests(PostgresFixture fixture)
         options.Backfill.Seasons[s.Other.Key] = SeasonStart;
 
         return new(Services(source, perScope).GetRequiredService<IServiceScopeFactory>(),
-            Options.Create(options), NullLogger<GamecastBackport>.Instance);
+            Options.Create(options), NullLogger<GamecastBackport>.Instance, TimeProvider.System);
     }
 
     private async Task<int> PlaysAsync(int gameId)
@@ -539,6 +541,7 @@ public class GamecastBackportTests(PostgresFixture fixture)
         options.Backfill.Seasons[s.Sport.Key] = SeasonStart;
 
         var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(fixture.ConnectionString));
         services.AddLogging();
         services.AddScoped<GamecastWriter>();
@@ -546,7 +549,7 @@ public class GamecastBackportTests(PostgresFixture fixture)
         services.AddSingleton<IGamecastSource>(source);
         services.AddSingleton<IOptions<IngestionOptions>>(Options.Create(options));
         services.AddSingleton<GamecastBackport>();
-        services.AddSingleton<IngestionJobs>();
+        services.AddIngestionJobs();
         var jobs = services.BuildServiceProvider().GetRequiredService<IngestionJobs>();
 
         var entry = (await jobs.DescribeAsync()).Single(j => j.Key == IngestionJobs.EspnGamecastBackport);

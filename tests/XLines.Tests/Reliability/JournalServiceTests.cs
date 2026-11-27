@@ -15,7 +15,7 @@ namespace XLines.Tests.Reliability;
 public class JournalServiceTests(PostgresFixture fixture)
 {
     private static JournalService Service(XLinesDbContext db)
-        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance));
+        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System));
 
     private static async Task<(Game Game, Team Home, Team Away)> FinalGameAsync(
         XLinesDbContext db, int home, int away, string? homeName = null, string? awayName = null)
@@ -55,7 +55,7 @@ public class JournalServiceTests(PostgresFixture fixture)
 
         var entry = await journal.SaveEntryAsync(new EntryDraft(
             game.Id, Markets.Spread, null, home.Name, -1.5m, -110, 100m, "draftkings", null));
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
         Assert.Equal(EntryResult.Win, (await db.JournalEntries.AsNoTracking().FirstAsync(e => e.Id == entry.Id)).Result);
 
         // Won by four: at -5.5 it did not cover. Leaving "Win" standing would be a lie.
@@ -77,7 +77,7 @@ public class JournalServiceTests(PostgresFixture fixture)
 
         var entry = await journal.SaveEntryAsync(new EntryDraft(
             game.Id, Markets.Moneyline, null, home.Name, null, 120, 50m, "fanduel", null));
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
         var settledAt = (await db.JournalEntries.AsNoTracking().FirstAsync(e => e.Id == entry.Id)).SettledAt;
 
         await journal.SaveEntryAsync(new EntryDraft(
@@ -116,7 +116,7 @@ public class JournalServiceTests(PostgresFixture fixture)
 
         var entry = await journal.SaveEntryAsync(new EntryDraft(
             game.Id, Markets.Moneyline, null, home.Name, null, 104.35m, 500m, "fanatics", null, ManualPrice: true));
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
 
         var stored = await db.JournalEntries.AsNoTracking().FirstAsync(e => e.Id == entry.Id);
         Assert.Equal(104.35m, stored.PriceTaken);
@@ -135,7 +135,7 @@ public class JournalServiceTests(PostgresFixture fixture)
 
         var entry = await journal.SaveEntryAsync(new EntryDraft(
             game.Id, Markets.Moneyline, null, home.Name, null, 104.348m, 500m, "fanatics", null, ManualPrice: true));
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
 
         var stored = await db.JournalEntries.AsNoTracking().FirstAsync(e => e.Id == entry.Id);
         Assert.Equal(104.348m, stored.PriceTaken);
@@ -154,7 +154,7 @@ public class JournalServiceTests(PostgresFixture fixture)
             new EntryDraft(first.Id, Markets.Moneyline, null, firstHome.Name, null, -110.5m, 0m, "", null),
             new EntryDraft(second.Id, Markets.Moneyline, null, secondAway.Name, null, -110, 0m, "", null)
         ]));
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
 
         var settled = await db.Parlays.AsNoTracking().Include(p => p.Legs).FirstAsync(p => p.Id == parlay.Id);
         Assert.Equal(264.35m, settled.PriceQuoted);
@@ -175,7 +175,7 @@ public class JournalServiceTests(PostgresFixture fixture)
             new EntryDraft(second.Id, Markets.Moneyline, null, secondAway.Name, null, -110, 0m, "", null)
         ]));
 
-        var summary = await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        var summary = await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
 
         var settled = await db.Parlays.AsNoTracking().Include(p => p.Legs).FirstAsync(p => p.Id == parlay.Id);
         Assert.True(summary.ParlaysSettled >= 1);
@@ -216,7 +216,7 @@ public class JournalServiceTests(PostgresFixture fixture)
             new EntryDraft(second.Id, Markets.Moneyline, null, secondAway.Name, null, -110, 0m, "", null)
         ]));
 
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
         return parlay;
     }
 
@@ -314,7 +314,7 @@ public class JournalServiceTests(PostgresFixture fixture)
             new EntryDraft(game.Id, Markets.Moneyline, null, home.Name, null, -150, 0m, "", null),
             new EntryDraft(null, "other", "Player X 2+ hits", "—", null, 180, 0m, "", null)
         ]));
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
         await journal.SetParlayResultAsync(parlay.Id, EntryResult.Win, OddsMath.PayoutOnWin(200, 5m));
         var settledAt = (await ReadParlayAsync(db, parlay.Id)).SettledAt;
 

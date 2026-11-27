@@ -14,14 +14,14 @@ namespace XLines.Ingestion.Services;
 /// responses, so this is this database's count alone; a second machine on the same key is not seen,
 /// which is what <see cref="SportsGameOddsOptions.ObjectReserve"/> is wide enough to absorb.
 /// </summary>
-public sealed class SportsGameOddsBudget(XLinesDbContext db, IOptions<IngestionOptions> options)
+public sealed class SportsGameOddsBudget(XLinesDbContext db, IOptions<IngestionOptions> options, TimeProvider clock)
 {
     private readonly SportsGameOddsOptions _config = options.Value.SportsGameOdds;
 
     /// <summary>The allowance now: objects spent in the trailing window, the budget and the reserve.</summary>
     public async Task<ObjectAllowance> ReadAsync(CancellationToken ct = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var since = now - _config.BudgetWindow;
 
         var spent = await db.IngestionRuns

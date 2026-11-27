@@ -43,6 +43,7 @@ public class LinePollPlanner(
     XLinesDbContext db,
     IOptions<IngestionOptions> options,
     ILogger<LinePollPlanner> logger,
+    TimeProvider clock,
     SourceRegistry? registry = null)
 {
     private readonly IngestionOptions _options = options.Value;
@@ -100,7 +101,7 @@ public class LinePollPlanner(
             return null;
 
         var settings = _options.LinePolling;
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
 
         var nextStarts = await NextStartsAsync(now, ct);
         var watchable = Priced.Where(nextStarts.ContainsKey).ToArray();
@@ -409,7 +410,7 @@ public class LinePollPlanner(
     /// here — ESPN on, or no key — so a desk on ESPN plans exactly as it did.
     /// </summary>
     public Task<ScoresPlan?> ScoresPlanAsync(CancellationToken ct = default)
-        => ScoresPlanAsync(DateTimeOffset.UtcNow, ct);
+        => ScoresPlanAsync(clock.GetUtcNow(), ct);
 
     /// <summary>The scores plan as of <paramref name="now"/>, so a lines plan that sets it aside reads one instant.</summary>
     public async Task<ScoresPlan?> ScoresPlanAsync(DateTimeOffset now, CancellationToken ct = default)
@@ -450,7 +451,7 @@ public class LinePollPlanner(
     /// to ask of every game in the database, so a league nobody prices kept the scans going.
     /// </summary>
     public async Task<bool> HasWatchableGamesAsync(CancellationToken ct = default)
-        => (await NextStartsAsync(DateTimeOffset.UtcNow, ct)).Count > 0;
+        => (await NextStartsAsync(clock.GetUtcNow(), ct)).Count > 0;
 }
 
 /// <summary>The chosen cadence, and enough context to explain it on screen.</summary>

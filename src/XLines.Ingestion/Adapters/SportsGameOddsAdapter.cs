@@ -52,7 +52,8 @@ namespace XLines.Ingestion.Adapters;
 public class SportsGameOddsAdapter(
     HttpClient http,
     IOptions<IngestionOptions> options,
-    ILogger<SportsGameOddsAdapter> logger) : IOddsSource, Services.IBookSidesByEvent
+    ILogger<SportsGameOddsAdapter> logger,
+    TimeProvider clock) : IOddsSource, Services.IBookSidesByEvent
 {
     public const string SourceKey = SourceAccounts.SportsGameOdds;
 
@@ -155,7 +156,7 @@ public class SportsGameOddsAdapter(
         if (ceiling == 0 || oddIds.Count == 0 || books.Length == 0)
             return new OddsFetchResult(games, odds, new FetchCost(Requests: 0));
 
-        var capturedAt = DateTimeOffset.UtcNow;
+        var capturedAt = clock.GetUtcNow();
         var startsBefore = capturedAt + _config.LookAhead;
 
         var requests = 0;

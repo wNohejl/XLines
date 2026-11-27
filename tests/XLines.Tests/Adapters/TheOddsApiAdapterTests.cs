@@ -30,7 +30,7 @@ public class TheOddsApiAdapterTests
         options.TheOddsApi.Markets = markets ?? ["moneyline", "spread", "total"];
 
         var http = handler.Client("https://api.the-odds-api.com/v4/");
-        return (new TheOddsApiAdapter(http, Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance), handler);
+        return (new TheOddsApiAdapter(http, Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance, TimeProvider.System), handler);
     }
 
     private static Task<OddsFetchResult> FetchAsync(TheOddsApiAdapter adapter, params string[] markets)
@@ -423,7 +423,7 @@ public class TheOddsApiAdapterTests
         var handler = new StubHttp("[]") { RequestsLast = 0, RequestsRemaining = 431 };
         var adapter = new TheOddsApiAdapter(
             handler.Client("https://api.the-odds-api.com/v4/"),
-            Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance);
+            Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance, TimeProvider.System);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => FetchAsync(adapter));
         Assert.Null(handler.Last);

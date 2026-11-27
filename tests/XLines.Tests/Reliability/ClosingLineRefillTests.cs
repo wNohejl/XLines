@@ -115,9 +115,9 @@ public class ClosingLineRefillTests(PostgresFixture fixture)
     private static StatsIngestionService CreateService(XLinesDbContext db)
         => new(
             db,
-            new EntityResolver(db),
+            new EntityResolver(db, TimeProvider.System),
             new CreditBudgetGuard(new BudgetCalculator(db), NullLogger<CreditBudgetGuard>.Instance),
-            NullLogger<StatsIngestionService>.Instance);
+            NullLogger<StatsIngestionService>.Instance, TimeProvider.System);
 
     private static string Key() => $"closer-{Guid.NewGuid():N}"[..20];
 

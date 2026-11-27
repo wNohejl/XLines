@@ -24,7 +24,7 @@ public class OddsRetentionIntegrationTests(PostgresFixture fixture)
         => new(
             db,
             Options.Create(new IngestionOptions { OddsRetention = settings ?? new OddsRetentionOptions() }),
-            NullLogger<OddsRetentionService>.Instance);
+            NullLogger<OddsRetentionService>.Instance, TimeProvider.System);
 
     private async Task<(Game Game, Source Source)> SeedGameAsync(
         XLinesDbContext db, DateTimeOffset startsAt)

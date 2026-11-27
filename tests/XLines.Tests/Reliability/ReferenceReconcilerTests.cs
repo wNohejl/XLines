@@ -42,7 +42,7 @@ public class ReferenceReconcilerTests(PostgresFixture fixture)
         return new ReferenceReconciler(
             services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>(),
             Options.Create(options),
-            NullLogger<ReferenceReconciler>.Instance);
+            NullLogger<ReferenceReconciler>.Instance, TimeProvider.System);
     }
 
     [Fact]

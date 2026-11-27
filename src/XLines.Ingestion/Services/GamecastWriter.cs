@@ -50,7 +50,7 @@ public sealed record GamecastWriteResult(int PlaysInserted, int PlaysUpdated, in
 /// every save for the game, and an uncut value would never compare equal to its stored cut.
 /// </para>
 /// </summary>
-public class GamecastWriter(XLinesDbContext db)
+public class GamecastWriter(XLinesDbContext db, TimeProvider clock)
 {
     /// <summary>The places <c>numeric(6,4)</c> keeps.</summary>
     private const int ProbabilityPlaces = 4;
@@ -79,7 +79,7 @@ public class GamecastWriter(XLinesDbContext db)
         var sides = await SidesAsync(game.HomeTeamId, game.AwayTeamId, sourceKey, ct);
         int? Side(string? sourceTeamId) => sourceTeamId is not null && sides.TryGetValue(sourceTeamId, out var id) ? id : null;
 
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var columns = Columns.Of(db.Model);
         var (drivesInserted, drivesUpdated) = await WriteDrivesAsync(gameId, source.Id, gamecast.Drives, Side, columns, now, ct);
 

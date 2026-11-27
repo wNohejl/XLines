@@ -55,7 +55,7 @@ public class OddsApiIoRequestTests
             }
         });
 
-        return (new OddsApiIoAdapter(http, options, NullLogger<OddsApiIoAdapter>.Instance), handler);
+        return (new OddsApiIoAdapter(http, options, NullLogger<OddsApiIoAdapter>.Instance, TimeProvider.System), handler);
     }
 
     [Fact]
@@ -124,7 +124,7 @@ public class OddsApiIoRequestTests
         var adapter = new OddsApiIoAdapter(
             http,
             Options.Create(new IngestionOptions { OddsApiIo = new SourceOptions { Enabled = true } }),
-            NullLogger<OddsApiIoAdapter>.Instance);
+            NullLogger<OddsApiIoAdapter>.Instance, TimeProvider.System);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => adapter.FetchSlateAsync("mlb", Markets.V1, CancellationToken.None));

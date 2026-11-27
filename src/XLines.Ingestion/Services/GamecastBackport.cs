@@ -72,7 +72,8 @@ public record GamecastBackportOutcome(
 public class GamecastBackport(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
-    ILogger<GamecastBackport> logger)
+    ILogger<GamecastBackport> logger,
+    TimeProvider clock)
 {
     /// <summary>
     /// Failed requests in a row before a run stops. ESPN refusing three games running is ESPN
@@ -212,7 +213,7 @@ public class GamecastBackport(
         {
             SourceId = sourceRow.Id,
             JobKey = IngestionJobs.EspnGamecastBackport,
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = clock.GetUtcNow(),
             Status = RunStatus.Running
         };
 
@@ -278,7 +279,7 @@ public class GamecastBackport(
         // A game with no play-by-play is history ESPN never kept, not a failure; a request that threw is.
         run.RequestsMade = requests;
         run.RowsIngested = rows;
-        run.FinishedAt = DateTimeOffset.UtcNow;
+        run.FinishedAt = clock.GetUtcNow();
         run.Status = failures == 0 ? (misses == 0 ? RunStatus.Success : RunStatus.Partial)
             : games > 0 ? RunStatus.Partial : RunStatus.Failed;
         run.Error = misses == 0 ? null
@@ -331,7 +332,7 @@ public class GamecastBackport(
         foreach (var drive in await db.GameDrives.Where(d => d.GameId == game.GameId && d.IsCurrent).ToListAsync(ct))
         {
             drive.IsCurrent = false;
-            drive.UpdatedAt = DateTimeOffset.UtcNow;
+            drive.UpdatedAt = clock.GetUtcNow();
         }
 
         var row = await db.Games.FirstAsync(g => g.Id == game.GameId, ct);

@@ -90,7 +90,8 @@ public class GamecastFeed(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
     GamecastLanes lanes,
-    ILogger<GamecastFeed> logger) : BackgroundService
+    ILogger<GamecastFeed> logger,
+    TimeProvider clock) : BackgroundService
 {
     /// <summary>The run row the final box score is recorded under, beside the results sweep's.</summary>
     public const string JobKey = "espn:gamecast";
@@ -189,7 +190,7 @@ public class GamecastFeed(
         {
             try
             {
-                await PollAsync(DateTimeOffset.UtcNow, stoppingToken);
+                await PollAsync(clock.GetUtcNow(), stoppingToken);
                 await Task.Delay(Poll, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
@@ -610,7 +611,7 @@ public class GamecastFeed(
                     foreach (var drive in current)
                     {
                         drive.IsCurrent = false;
-                        drive.UpdatedAt = DateTimeOffset.UtcNow;
+                        drive.UpdatedAt = clock.GetUtcNow();
                     }
 
                     // Through SaveChanges, not a bulk update, so the window hears plays:{id} and drops the marker.

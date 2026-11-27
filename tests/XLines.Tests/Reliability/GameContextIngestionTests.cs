@@ -54,9 +54,9 @@ public class GameContextIngestionTests(PostgresFixture fixture)
     }
 
     private static StatsIngestionService Service(XLinesDbContext db)
-        => new(db, new EntityResolver(db),
+        => new(db, new EntityResolver(db, TimeProvider.System),
             new CreditBudgetGuard(new BudgetCalculator(db), NullLogger<CreditBudgetGuard>.Instance),
-            NullLogger<StatsIngestionService>.Instance);
+            NullLogger<StatsIngestionService>.Instance, TimeProvider.System);
 
     private static async Task<IngestionOutcome> IngestAsync(XLinesDbContext db, Seeded s, StatsFetchResult result)
     {
@@ -374,7 +374,7 @@ public class GameContextIngestionTests(PostgresFixture fixture)
 
         var spine = new MlbSpineService(db,
             new MlbStatsApiAdapter(new HttpClient(), Options.Create(new IngestionOptions()), NullLogger<MlbStatsApiAdapter>.Instance),
-            NullLogger<MlbSpineService>.Instance);
+            NullLogger<MlbSpineService>.Instance, TimeProvider.System);
 
         var outcome = await spine.ApplyAsync(day, [scheduled]);
 

@@ -24,7 +24,7 @@ public class EspnInjuriesTests
     {
         var handler = new StubHttp(Fixtures.Text("espn.nfl.injuries.json"));
         var http = handler.Client("https://site.api.espn.com/apis/site/v2/sports/");
-        return (new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance), handler);
+        return (new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance, TimeProvider.System), handler);
     }
 
     [Fact]

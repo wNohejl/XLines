@@ -135,7 +135,7 @@ public class UnattendedLineReserveTests(PostgresFixture fixture)
     private static Task TickAsync(IServiceProvider host)
     {
         var scheduler = new IngestionScheduler(host.GetRequiredService<IServiceScopeFactory>(),
-            host.GetRequiredService<Microsoft.Extensions.Options.IOptions<IngestionOptions>>(), NullLogger<IngestionScheduler>.Instance);
+            host.GetRequiredService<Microsoft.Extensions.Options.IOptions<IngestionOptions>>(), NullLogger<IngestionScheduler>.Instance, TimeProvider.System);
 
         return (Task)typeof(IngestionScheduler).GetMethod("TickAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(scheduler, [CancellationToken.None])!;

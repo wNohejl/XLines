@@ -26,7 +26,7 @@ public record SettlementSummary(int Graded, int ClvResolved, int LeftPending, in
 /// recomputed later.
 /// </para>
 /// </summary>
-public class SettlementService(XLinesDbContext db, ILogger<SettlementService> logger)
+public class SettlementService(XLinesDbContext db, ILogger<SettlementService> logger, TimeProvider clock)
 {
     /// <summary>
     /// How long a postponed game may go unplayed before bets on it are void. Books differ — some
@@ -50,7 +50,7 @@ public class SettlementService(XLinesDbContext db, ILogger<SettlementService> lo
         var clvResolved = 0;
         var pending = 0;
         var voided = 0;
-        var voidBefore = DateTimeOffset.UtcNow - VoidPostponedAfter;
+        var voidBefore = clock.GetUtcNow() - VoidPostponedAfter;
 
         var candidates = await db.JournalEntries
             .Include(e => e.Game).ThenInclude(g => g!.HomeTeam)
@@ -198,7 +198,7 @@ public class SettlementService(XLinesDbContext db, ILogger<SettlementService> lo
     /// </summary>
     private async Task<int> BackfillMissingClvAsync(CancellationToken ct)
     {
-        var since = DateTimeOffset.UtcNow - ClvSearchWindow;
+        var since = clock.GetUtcNow() - ClvSearchWindow;
 
         var stragglers = await db.JournalEntries
             .Include(e => e.Game)

@@ -29,7 +29,7 @@ public sealed record SpineOutcome(DateOnly Date, int Scheduled, int Matched, int
 /// one pair of teams; MLB numbers them, and the numbers are taken in start order.
 /// </para>
 /// </summary>
-public class MlbSpineService(XLinesDbContext db, MlbStatsApiAdapter adapter, ILogger<MlbSpineService> logger)
+public class MlbSpineService(XLinesDbContext db, MlbStatsApiAdapter adapter, ILogger<MlbSpineService> logger, TimeProvider clock)
 {
     public const string Key = MlbStatsApiAdapter.SourceKey;
 
@@ -65,7 +65,7 @@ public class MlbSpineService(XLinesDbContext db, MlbStatsApiAdapter adapter, ILo
         // the first time there is something to write: MLB is no stats source in the registry, so
         // nothing seeds it, and the reconciler keeps it disabled — it is never health-checked.
         Source? source = null;
-        var writer = new GameContextWriter(db);
+        var writer = new GameContextWriter(db, clock);
 
         // Game 1 before game 2, so a doubleheader's numbers are taken in the order they are played.
         foreach (var scheduled in slate.OrderBy(g => g.GameNumber).ThenBy(g => g.StartsAt))

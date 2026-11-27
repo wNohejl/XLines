@@ -1,6 +1,7 @@
 using XLines.Core.Analytics;
 using XLines.Core.Entities;
 using XLines.Data;
+using XLines.Ingestion;
 using XLines.Ingestion.Configuration;
 using XLines.Ingestion.Services;
 using Microsoft.EntityFrameworkCore;
@@ -27,12 +28,11 @@ public class ResultsOwedTests(PostgresFixture fixture)
     {
         var services = new ServiceCollection();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(fixture.ConnectionString));
-        var provider = services.BuildServiceProvider();
+        services.AddSingleton(Options.Create(options ?? new IngestionOptions()));
+        services.AddSingleton(typeof(Microsoft.Extensions.Logging.ILogger<>), typeof(NullLogger<>));
+        services.AddIngestionJobs();
 
-        return new IngestionJobs(
-            provider.GetRequiredService<IServiceScopeFactory>(),
-            Options.Create(options ?? new IngestionOptions()),
-            NullLogger<IngestionJobs>.Instance);
+        return services.BuildServiceProvider().GetRequiredService<IngestionJobs>();
     }
 
     private static Task<DateOnly> SeedGameAsync(XLinesDbContext db, int daysAgo, GameStatus status)

@@ -2,6 +2,7 @@ using XLines.Core.Contracts;
 using XLines.Core.Entities;
 using XLines.Data;
 using XLines.Data.Changes;
+using XLines.Ingestion;
 using XLines.Ingestion.Configuration;
 using XLines.Ingestion.Services;
 using XLines.Reliability;
@@ -100,6 +101,8 @@ public class LivePassTests(PostgresFixture fixture)
         services.AddScoped<CreditBudgetGuard>();
         services.AddScoped<StatsIngestionService>();
         services.AddScoped(_ => new SourceRegistry([], [source]));
+        services.AddSingleton(OptionsFor(s));
+        services.AddIngestionJobs();
         return services.BuildServiceProvider();
     }
 
@@ -107,7 +110,7 @@ public class LivePassTests(PostgresFixture fixture)
         => Options.Create(new IngestionOptions { Sports = [s.Sport.Key] });
 
     private IngestionJobs Jobs(Scaffold s, StubSource source)
-        => new(Services(s, source).GetRequiredService<IServiceScopeFactory>(), OptionsFor(s), NullLogger<IngestionJobs>.Instance);
+        => Services(s, source).GetRequiredService<IngestionJobs>();
 
     [Fact]
     public async Task The_live_pass_resolves_the_game_in_play_and_the_one_just_finished_and_nothing_else()
@@ -306,7 +309,7 @@ public class LivePassTests(PostgresFixture fixture)
         });
 
         var scheduler = new IngestionScheduler(
-            services.GetRequiredService<IServiceScopeFactory>(), options, NullLogger<IngestionScheduler>.Instance);
+            services.GetRequiredService<IServiceScopeFactory>(), options, NullLogger<IngestionScheduler>.Instance, TimeProvider.System);
 
         var game = await GameAsync(db, s, "e-later", DateTimeOffset.UtcNow.AddHours(2), GameStatus.Scheduled);
         Assert.Equal(new IngestionOptions().TickInterval, await scheduler.NextDelayAsync(DateTimeOffset.UtcNow, CancellationToken.None));
@@ -361,7 +364,7 @@ public class LivePassTests(PostgresFixture fixture)
         var options = OptionsFor(s);
 
         var scheduler = new IngestionScheduler(
-            services.GetRequiredService<IServiceScopeFactory>(), options, NullLogger<IngestionScheduler>.Instance);
+            services.GetRequiredService<IServiceScopeFactory>(), options, NullLogger<IngestionScheduler>.Instance, TimeProvider.System);
 
         var game = await GameAsync(db, s, "e-later", DateTimeOffset.UtcNow.AddHours(2), GameStatus.Scheduled);
         Assert.Equal(options.Value.TickInterval, await scheduler.NextDelayAsync(DateTimeOffset.UtcNow, CancellationToken.None));

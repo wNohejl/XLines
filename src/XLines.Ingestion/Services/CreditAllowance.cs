@@ -13,7 +13,7 @@ namespace XLines.Ingestion.Services;
 /// whether it can run, runs as asked, or asks first (ADR 0026). One answer for the menu, the
 /// scheduler and Ops, so a key never offers what the guard would refuse.
 /// </summary>
-public sealed class CreditAllowance(XLinesDbContext db, IOptions<IngestionOptions> options)
+public sealed class CreditAllowance(XLinesDbContext db, IOptions<IngestionOptions> options, TimeProvider clock)
 {
     /// <summary>
     /// A pull at or under this asks nothing beyond its stated price, unless it would dip into the
@@ -30,7 +30,7 @@ public sealed class CreditAllowance(XLinesDbContext db, IOptions<IngestionOption
         if (source?.MonthlyCreditBudget is not { } budget)
             return null;
 
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var state = await MonthlyCredits.StateAsync(db, source, now, ct);
         var nextMonth = DateOnly.FromDateTime(MonthlyCredits.NextReset(now).UtcDateTime);
 

@@ -58,7 +58,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task Consecutive_games_in_a_series_stay_separate()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var later = new DateTimeOffset(2026, 8, 19, 16, 35, 0, TimeSpan.Zero);
@@ -102,7 +102,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task A_doubleheader_is_two_games()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var opener = new DateTimeOffset(2026, 8, 18, 17, 5, 0, TimeSpan.Zero);
@@ -124,7 +124,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task A_second_provider_still_unifies_onto_the_same_game()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var startsAt = new DateTimeOffset(2026, 8, 18, 22, 40, 0, TimeSpan.Zero);
@@ -153,7 +153,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task A_provider_can_correct_the_start_time_of_its_own_game()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var announced = new DateTimeOffset(2026, 8, 18, 22, 40, 0, TimeSpan.Zero);
@@ -197,7 +197,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task A_book_naming_tomorrows_game_lands_on_tomorrows_game_not_todays_final()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var played = new DateTimeOffset(2026, 9, 8, 2, 5, 0, TimeSpan.Zero);
@@ -233,7 +233,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task A_finished_game_is_never_the_fixture_announced_for_the_next_day()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var played = new DateTimeOffset(2026, 9, 8, 2, 5, 0, TimeSpan.Zero);
@@ -266,7 +266,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task A_stuck_neighbour_is_never_the_fixture_announced_for_the_next_day(string status)
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         var yesterday = new DateTimeOffset(2026, 9, 8, 2, 5, 0, TimeSpan.Zero);
@@ -296,7 +296,7 @@ public class GameSeriesResolutionTests(PostgresFixture fixture)
     public async Task A_book_prices_a_game_but_does_not_move_it()
     {
         await using var db = fixture.CreateContext();
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
         var sport = await SeedSportAsync(db);
 
         // Source keys are unique across the shared database, so each run names its own.

@@ -18,7 +18,7 @@ namespace XLines.Ingestion.Services;
 /// already read leaves every row's <see cref="GameContext.UpdatedAt"/> where it was.
 /// </para>
 /// </summary>
-public sealed class GameContextWriter(XLinesDbContext db)
+public sealed class GameContextWriter(XLinesDbContext db, TimeProvider clock)
 {
     /// <summary>
     /// One game's context from one source. Saves nothing itself: the caller's save carries it,
@@ -29,7 +29,7 @@ public sealed class GameContextWriter(XLinesDbContext db)
     public async Task<int> UpsertAsync(Game game, Source source, CanonicalGameContext canonical, CancellationToken ct)
     {
         var rows = 0;
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
 
         if (canonical.StatesRowFields)
         {

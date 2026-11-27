@@ -22,7 +22,7 @@ public class MlbSpineTests(PostgresFixture fixture)
     private static MlbSpineService Spine(XLinesDbContext db)
         => new(db,
             new MlbStatsApiAdapter(new HttpClient(), Options.Create(new IngestionOptions()), NullLogger<MlbStatsApiAdapter>.Instance),
-            NullLogger<MlbSpineService>.Instance);
+            NullLogger<MlbSpineService>.Instance, TimeProvider.System);
 
     /// <summary>
     /// A private MLB for the test: the spine only reads the sport keyed "mlb", so this test owns
@@ -186,7 +186,7 @@ public class MlbSpineTests(PostgresFixture fixture)
         options.TheOddsApi.Markets = ["moneyline", "spread"];
         options.TheOddsApi.MarketsBySport["nfl"] = ["moneyline", "spread", "totals"];
 
-        var adapter = new TheOddsApiAdapter(new HttpClient(), Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance);
+        var adapter = new TheOddsApiAdapter(new HttpClient(), Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance, TimeProvider.System);
 
         Assert.Equal(3, ((IOddsSource)adapter).CreditsPerScan("nfl"));
         Assert.Equal(2, ((IOddsSource)adapter).CreditsPerScan("mlb"));

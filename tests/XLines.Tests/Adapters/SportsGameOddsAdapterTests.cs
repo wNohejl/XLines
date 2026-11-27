@@ -34,7 +34,7 @@ public class SportsGameOddsAdapterTests
         configure?.Invoke(options.SportsGameOdds);
 
         var adapter = new SportsGameOddsAdapter(handler.Client(SportsGameOddsAdapter.BaseUrl), Options.Create(options),
-            NullLogger<SportsGameOddsAdapter>.Instance);
+            NullLogger<SportsGameOddsAdapter>.Instance, TimeProvider.System);
         return (adapter, handler);
     }
 

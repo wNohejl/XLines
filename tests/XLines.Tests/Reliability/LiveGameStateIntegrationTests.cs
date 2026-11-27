@@ -68,7 +68,7 @@ public class LiveGameStateIntegrationTests(PostgresFixture fixture)
         var sport = await SeedSportAsync(db);
         var startsAt = Hour(-1);
 
-        var game = await new EntityResolver(db).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
+        var game = await new EntityResolver(db, TimeProvider.System).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
 
         await using var read = fixture.CreateContext();
         var row = await read.Games.Include(g => g.AwayTeam).SingleAsync(g => g.Id == game.Id);
@@ -104,13 +104,13 @@ public class LiveGameStateIntegrationTests(PostgresFixture fixture)
         await using (var first = fixture.CreateContext())
         {
             sport = await SeedSportAsync(first);
-            await new EntityResolver(first).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
+            await new EntityResolver(first, TimeProvider.System).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
         }
 
         var counter = new RowCounter();
         await using var second = Context(counter);
 
-        await new EntityResolver(second).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
+        await new EntityResolver(second, TimeProvider.System).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
 
         // jsonb comes back from Postgres re-spaced and re-ordered, so a string comparison alone
         // would call the linescore changed on every poll.
@@ -127,13 +127,13 @@ public class LiveGameStateIntegrationTests(PostgresFixture fixture)
         await using (var first = fixture.CreateContext())
         {
             sport = await SeedSportAsync(first);
-            await new EntityResolver(first).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
+            await new EntityResolver(first, TimeProvider.System).ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
         }
 
         var counter = new RowCounter();
         await using var second = Context(counter);
 
-        var game = await new EntityResolver(second).ResolveGameAsync(
+        var game = await new EntityResolver(second, TimeProvider.System).ResolveGameAsync(
             sport, "espn", LiveGame(sport.Key, startsAt, "7:51", 471), CancellationToken.None);
 
         Assert.Equal(1, counter.Rows);
@@ -147,7 +147,7 @@ public class LiveGameStateIntegrationTests(PostgresFixture fixture)
         await using var db = fixture.CreateContext();
         var sport = await SeedSportAsync(db);
         var startsAt = Hour(-3);
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
 
         await resolver.ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
 
@@ -180,7 +180,7 @@ public class LiveGameStateIntegrationTests(PostgresFixture fixture)
         await using var db = fixture.CreateContext();
         var sport = await SeedSportAsync(db);
         var startsAt = Hour(-1);
-        var resolver = new EntityResolver(db);
+        var resolver = new EntityResolver(db, TimeProvider.System);
 
         await resolver.ResolveGameAsync(sport, "espn", LiveGame(sport.Key, startsAt), CancellationToken.None);
 
@@ -202,7 +202,7 @@ public class LiveGameStateIntegrationTests(PostgresFixture fixture)
         var canonical = LiveGame(sport.Key, startsAt);
         canonical = canonical with { Live = canonical.Live! with { PossessionSourceTeamId = "999" } };
 
-        var game = await new EntityResolver(db).ResolveGameAsync(sport, "espn", canonical, CancellationToken.None);
+        var game = await new EntityResolver(db, TimeProvider.System).ResolveGameAsync(sport, "espn", canonical, CancellationToken.None);
 
         Assert.Null(game.PossessionTeamId);
         Assert.Equal(2, await db.Teams.CountAsync(t => t.SportId == sport.Id));

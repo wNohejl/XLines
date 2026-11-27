@@ -186,6 +186,7 @@ public class GamecastFeedTests(PostgresFixture fixture)
     private ServiceProvider Services(FakeGamecasts source, List<(int Instance, string Request)>? perScope = null)
     {
         var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(fixture.ConnectionString));
         services.AddLogging();
         services.AddScoped<EntityResolver>();
@@ -218,7 +219,7 @@ public class GamecastFeedTests(PostgresFixture fixture)
         return new(Services(source, perScope).GetRequiredService<IServiceScopeFactory>(),
             Options.Create(new IngestionOptions { Gamecast = gamecast }),
             lanes ?? new GamecastLanes(),
-            NullLogger<GamecastFeed>.Instance);
+            NullLogger<GamecastFeed>.Instance, TimeProvider.System);
     }
 
     /// <summary>The fast lane alone, as the feed read before it had a slow one.</summary>

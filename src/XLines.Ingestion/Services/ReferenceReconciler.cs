@@ -33,7 +33,8 @@ namespace XLines.Ingestion.Services;
 public sealed class ReferenceReconciler(
     IServiceScopeFactory scopeFactory,
     IOptions<IngestionOptions> options,
-    ILogger<ReferenceReconciler> logger) : IHostedService
+    ILogger<ReferenceReconciler> logger,
+    TimeProvider clock) : IHostedService
 {
     public Task StartAsync(CancellationToken ct) => ReconcileAsync(ct);
 
@@ -99,7 +100,7 @@ public sealed class ReferenceReconciler(
         // Alerts of a source that is no longer configured are answered by that fact, not by an
         // operator — and while they stayed open they were the desk's only critical alerts.
         var disabledIds = await db.Sources.Where(s => !s.Enabled).Select(s => s.Id).ToListAsync(ct);
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
 
         var open = await db.Alerts
             .Where(a => a.ResolvedAt == null && a.SourceId != null && disabledIds.Contains(a.SourceId.Value))

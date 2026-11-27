@@ -163,7 +163,7 @@ public class RuntimeOddsKeyTests
         var adapter = new TheOddsApiAdapter(
             handler.Client("https://api.the-odds-api.com/v4/"),
             Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance,
-            new RuntimeOddsKey { TheOddsApi = "typed-in-the-desk" });
+            TimeProvider.System, new RuntimeOddsKey { TheOddsApi = "typed-in-the-desk" });
 
         await adapter.FetchSlateAsync("mlb", ["moneyline"], CancellationToken.None);
 

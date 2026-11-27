@@ -46,7 +46,7 @@ public class OddsIngestionStatusTests(PostgresFixture fixture)
 
         var budget = new CreditBudgetGuard(new BudgetCalculator(db), NullLogger<CreditBudgetGuard>.Instance);
 
-        var outcome = await new OddsIngestionService(db, new EntityResolver(db), budget, NullLogger<OddsIngestionService>.Instance)
+        var outcome = await new OddsIngestionService(db, new EntityResolver(db, TimeProvider.System), budget, NullLogger<OddsIngestionService>.Instance, TimeProvider.System)
             .IngestAsync(source(key), "mlb", "test", CancellationToken.None);
 
         var run = await db.IngestionRuns.AsNoTracking().SingleAsync(r => r.Id == outcome.RunId);

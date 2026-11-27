@@ -18,7 +18,8 @@ namespace XLines.Ingestion.Adapters;
 public class OddsApiIoAdapter(
     HttpClient http,
     IOptions<IngestionOptions> options,
-    ILogger<OddsApiIoAdapter> logger) : IOddsSource
+    ILogger<OddsApiIoAdapter> logger,
+    TimeProvider clock) : IOddsSource
 {
     public const string SourceKey = "odds-api-io";
 
@@ -58,7 +59,7 @@ public class OddsApiIoAdapter(
         using var oddsDoc = await GetJsonAsync(oddsUrl, ct);
         requests++;
 
-        var capturedAt = DateTimeOffset.UtcNow;
+        var capturedAt = clock.GetUtcNow();
         var odds = ParseOdds(oddsDoc.RootElement, markets, capturedAt).ToList();
 
         logger.LogInformation(

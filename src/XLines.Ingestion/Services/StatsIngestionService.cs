@@ -21,7 +21,8 @@ public class StatsIngestionService(
     XLinesDbContext db,
     EntityResolver resolver,
     CreditBudgetGuard budget,
-    ILogger<StatsIngestionService> logger)
+    ILogger<StatsIngestionService> logger,
+    TimeProvider clock)
 {
     /// <summary>Schedules, scores and box scores for a day.</summary>
     public Task<IngestionOutcome> IngestAsync(
@@ -240,7 +241,7 @@ public class StatsIngestionService(
         {
             SourceId = sourceRow.Id,
             JobKey = jobKey,
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = clock.GetUtcNow(),
             Status = RunStatus.Running
         };
 
@@ -268,7 +269,7 @@ public class StatsIngestionService(
             {
                 run.Status = RunStatus.Partial;
                 run.Error = RunRecord.BudgetRefused;
-                run.FinishedAt = DateTimeOffset.UtcNow;
+                run.FinishedAt = clock.GetUtcNow();
                 await RecordAsync(run, ct);
                 return new IngestionOutcome(run.Id, run.Status, 0, run.Error);
             }
@@ -316,7 +317,7 @@ public class StatsIngestionService(
             }
 
             run.RowsIngested = rows;
-            run.FinishedAt = DateTimeOffset.UtcNow;
+            run.FinishedAt = clock.GetUtcNow();
             run.Status = RunStatus.Success;
 
             await RecordAsync(run, ct);
@@ -344,7 +345,7 @@ public class StatsIngestionService(
             {
                 failed.Status = RunStatus.Failed;
                 failed.Error = error;
-                failed.FinishedAt = DateTimeOffset.UtcNow;
+                failed.FinishedAt = clock.GetUtcNow();
 
                 // A call that was answered and billed still spent the month though nothing came of
                 // it, as the odds pass records: the cost the provider's exception carries, or the
@@ -435,7 +436,7 @@ public class StatsIngestionService(
         IClosingLineSource source, string sportKey, string jobKey, int limit, CancellationToken ct,
         DateTimeOffset? from = null, DateTimeOffset? to = null, DateTimeOffset? now = null)
     {
-        var at = now ?? DateTimeOffset.UtcNow;
+        var at = now ?? clock.GetUtcNow();
 
         var sourceRow = await RunRecord.SourceRowAsync(db, source.Key, ct);
 
@@ -443,7 +444,7 @@ public class StatsIngestionService(
         {
             SourceId = sourceRow.Id,
             JobKey = jobKey,
-            StartedAt = DateTimeOffset.UtcNow,
+            StartedAt = clock.GetUtcNow(),
             Status = RunStatus.Running
         };
 
@@ -540,7 +541,7 @@ public class StatsIngestionService(
 
         run.RequestsMade = requests;
         run.RowsIngested = written;
-        run.FinishedAt = DateTimeOffset.UtcNow;
+        run.FinishedAt = clock.GetUtcNow();
         run.Detail = owed.Count == 0
             ? await NothingToAskAsync(sportKey, sourceRow.Id, at, from, to, ct)
             : RefillDetail(sportKey, requests, answered, setAside);
@@ -817,7 +818,7 @@ public class StatsIngestionService(
                 if (pending.StatLine != stat.StatLineJson)
                 {
                     pending.StatLine = stat.StatLineJson;
-                    pending.CapturedAt = DateTimeOffset.UtcNow;
+                    pending.CapturedAt = clock.GetUtcNow();
                     pending.IngestionRunId = await runId(ct);
                 }
 
@@ -839,7 +840,7 @@ public class StatsIngestionService(
                     SourceId = sourceRow.Id,
                     TeamId = side,
                     StatLine = stat.StatLineJson,
-                    CapturedAt = DateTimeOffset.UtcNow,
+                    CapturedAt = clock.GetUtcNow(),
                     IngestionRunId = await runId(ct)
                 };
 
@@ -854,7 +855,7 @@ public class StatsIngestionService(
                 // a line whose numbers have not moved is still refreshed when its side has.
                 existing.StatLine = stat.StatLineJson;
                 existing.TeamId = side ?? existing.TeamId;
-                existing.CapturedAt = DateTimeOffset.UtcNow;
+                existing.CapturedAt = clock.GetUtcNow();
                 existing.IngestionRunId = await runId(ct);
                 rows++;
             }
@@ -879,7 +880,7 @@ public class StatsIngestionService(
         // game. A context for a game we hold neither way has nowhere to go and is dropped.
         if (result.Contexts.Count > 0)
         {
-            var writer = new GameContextWriter(db);
+            var writer = new GameContextWriter(db, clock);
 
             foreach (var context in result.Contexts)
             {

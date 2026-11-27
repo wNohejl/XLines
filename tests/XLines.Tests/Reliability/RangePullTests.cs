@@ -154,9 +154,10 @@ public class RangePullTests(PostgresFixture fixture)
         }
 
         var http = new HttpClient(espn) { BaseAddress = new Uri("https://site.api.espn.com/apis/site/v2/sports/") };
-        var source = new TaggedEspn(new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance), sourceKey);
+        var source = new TaggedEspn(new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance, TimeProvider.System), sourceKey);
 
         var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(fixture.ConnectionString));
         services.AddLogging();
         services.AddScoped<EntityResolver>();

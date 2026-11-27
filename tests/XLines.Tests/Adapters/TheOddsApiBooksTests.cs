@@ -99,7 +99,7 @@ public class TheOddsApiBooksTests
             s => s.Key == SportsGameOddsAdapter.SourceKey);
 
         options.SportsGameOdds.ApiKey = "k";
-        var sgo = new SportsGameOddsAdapter(new HttpClient(), Options.Create(options), NullLogger<SportsGameOddsAdapter>.Instance);
+        var sgo = new SportsGameOddsAdapter(new HttpClient(), Options.Create(options), NullLogger<SportsGameOddsAdapter>.Instance, TimeProvider.System);
         var feed = Assert.Single(new OddsFeedStatus(Options.Create(options), new SourceRegistry([], [], sgo)).Describe());
 
         Assert.Equal(SportsGameOddsAdapter.SourceKey, feed.Key);
@@ -115,7 +115,7 @@ public class TheOddsApiBooksTests
         options.TheOddsApi.Enabled = true;
         options.TheOddsApi.Bookmakers = books;
         options.TheOddsApi.Markets = ["moneyline", "spread", "total"];
-        return new TheOddsApiAdapter(new HttpClient(), Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance);
+        return new TheOddsApiAdapter(new HttpClient(), Options.Create(options), NullLogger<TheOddsApiAdapter>.Instance, TimeProvider.System);
     }
 
     private static string[] Configured(string host)

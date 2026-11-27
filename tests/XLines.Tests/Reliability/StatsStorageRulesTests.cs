@@ -58,9 +58,9 @@ public class StatsStorageRulesTests(PostgresFixture fixture)
     private StatsIngestionService CreateService(XLinesDbContext db)
         => new(
             db,
-            new EntityResolver(db),
+            new EntityResolver(db, TimeProvider.System),
             new CreditBudgetGuard(new BudgetCalculator(db), NullLogger<CreditBudgetGuard>.Instance),
-            NullLogger<StatsIngestionService>.Instance);
+            NullLogger<StatsIngestionService>.Instance, TimeProvider.System);
 
     private static string Line(params (string Key, string Value)[] pairs)
         => JsonSerializer.Serialize(pairs.ToDictionary(p => p.Key, p => p.Value));

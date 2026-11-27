@@ -193,7 +193,7 @@ public class EspnGamecastTests
         var handler = new StubHttp(url => url.Contains("/probabilities") ? probs : summary);
         var http = handler.Client("https://site.api.espn.com/apis/site/v2/sports/");
 
-        return (new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance), handler);
+        return (new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance, TimeProvider.System), handler);
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class EspnGamecastTests
         var summary = Fixtures.Text("espn.summary.json");
         var handler = new StubHttp(url => url.Contains("/scoreboard") ? board : summary);
         var http = handler.Client("https://site.api.espn.com/apis/site/v2/sports/");
-        IGamecastSource source = new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance);
+        IGamecastSource source = new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance, TimeProvider.System);
 
         var final = await source.FetchBoxScoreAsync("mlb", new DateOnly(2026, 9, 20), "401816200", CancellationToken.None);
 

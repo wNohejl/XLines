@@ -36,7 +36,8 @@ namespace XLines.Ingestion.Services;
 public class OddsRetentionService(
     XLinesDbContext db,
     IOptions<IngestionOptions> options,
-    ILogger<OddsRetentionService> logger)
+    ILogger<OddsRetentionService> logger,
+    TimeProvider clock)
 {
     private readonly OddsRetentionOptions _settings = options.Value.OddsRetention;
 
@@ -61,7 +62,7 @@ public class OddsRetentionService(
     /// </summary>
     public async Task<int> PromoteAsync(CancellationToken ct = default)
     {
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
 
         // A game qualifies once it has started. The grace period covers a book that is still
         // being scanned as the game begins — promoting the instant the clock ticks over would

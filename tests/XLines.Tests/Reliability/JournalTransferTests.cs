@@ -41,7 +41,7 @@ public class JournalTransferTests(PostgresFixture fixture)
         => new(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(cs).Options);
 
     private static JournalService Journal(XLinesDbContext db)
-        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance));
+        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System));
 
     /// <summary>
     /// The NFL, its two sides and the one game, with <paramref name="fillers"/> other games added
@@ -400,7 +400,7 @@ public class JournalTransferTests(PostgresFixture fixture)
 
         await journal.SaveEntryAsync(Bet(gameId, "a note"), entry.Id);
         // Settlement grades it (the game is final): a write too, through the same interceptor.
-        await new SettlementService(db, NullLogger<SettlementService>.Instance).SettleAsync();
+        await new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System).SettleAsync();
         await journal.DeleteEntryAsync(entry.Id);
 
         var audit = await db.JournalAudit.AsNoTracking().Where(a => a.EntrySyncId == entry.SyncId).OrderBy(a => a.Id).ToListAsync();

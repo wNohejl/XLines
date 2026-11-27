@@ -25,7 +25,7 @@ public class EspnLiveStateTests
     [Fact]
     public void ALiveNflEventCarriesItsClockSituationAndLinescore()
     {
-        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.nfl.scoreboard.live.json"), "nfl")
+        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.nfl.scoreboard.live.json"), "nfl", DateTimeOffset.UtcNow)
             .Single(g => g.SourceGameId == "401873032");
 
         var live = game.Live;
@@ -55,7 +55,7 @@ public class EspnLiveStateTests
     [Fact]
     public void AFinalCarriesItsPeriodClockAndLinescoreButNoSituation()
     {
-        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.nfl.scoreboard.live.json"), "nfl")
+        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.nfl.scoreboard.live.json"), "nfl", DateTimeOffset.UtcNow)
             .Single(g => g.SourceGameId == "401873031");
 
         var live = game.Live;
@@ -82,7 +82,7 @@ public class EspnLiveStateTests
     [Fact]
     public void AScheduledEventHasNoSituation()
     {
-        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.nfl.scoreboard.live.json"), "nfl")
+        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.nfl.scoreboard.live.json"), "nfl", DateTimeOffset.UtcNow)
             .Single(g => g.SourceGameId == "401873035");
 
         var live = game.Live;
@@ -103,7 +103,7 @@ public class EspnLiveStateTests
     [Fact]
     public void ALiveMlbEventKeepsItsCountRunnersAndMatchupInTheSituationBag()
     {
-        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.mlb.scoreboard.live.json"), "mlb").Single();
+        var game = EspnStatsAdapter.ParseScoreboard(Fixtures.Json("espn.mlb.scoreboard.live.json"), "mlb", DateTimeOffset.UtcNow).Single();
 
         var live = game.Live;
         Assert.NotNull(live);
@@ -131,7 +131,7 @@ public class EspnLiveStateTests
     {
         var root = Edited("espn.nfl.scoreboard.live.json", "401873032", c => c.Remove("situation"));
 
-        var game = EspnStatsAdapter.ParseScoreboard(root, "nfl").Single(g => g.SourceGameId == "401873032");
+        var game = EspnStatsAdapter.ParseScoreboard(root, "nfl", DateTimeOffset.UtcNow).Single(g => g.SourceGameId == "401873032");
 
         Assert.Equal("live", game.Status);
         Assert.Equal(2, game.Live!.Period);
@@ -154,7 +154,7 @@ public class EspnLiveStateTests
                 c["status"]!["period"] = "second";
             });
 
-        var game = EspnStatsAdapter.ParseScoreboard(root, "nfl").Single(g => g.SourceGameId == "401873032");
+        var game = EspnStatsAdapter.ParseScoreboard(root, "nfl", DateTimeOffset.UtcNow).Single(g => g.SourceGameId == "401873032");
 
         Assert.NotNull(game.Live);
         Assert.Null(game.Live.Period);
@@ -180,7 +180,7 @@ public class EspnLiveStateTests
                 c["situation"]!["possessionText"] = new string('p', 200);
             });
 
-        var live = EspnStatsAdapter.ParseScoreboard(root, "nfl").Single(g => g.SourceGameId == "401873032").Live!;
+        var live = EspnStatsAdapter.ParseScoreboard(root, "nfl", DateTimeOffset.UtcNow).Single(g => g.SourceGameId == "401873032").Live!;
 
         Assert.Equal(new string('d', Game.StatusDetailLength), live.StatusDetail);
         Assert.Equal(new string('c', Game.DisplayClockLength), live.DisplayClock);

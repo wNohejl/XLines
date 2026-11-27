@@ -58,7 +58,7 @@ public class InjuryReportTests(PostgresFixture fixture)
         => new(id, name, "QB", "16", "Minnesota Vikings", status, note);
 
     private static InjuryReportService Service(XLinesDbContext db, StubReport source)
-        => new(db, [source], NullLogger<InjuryReportService>.Instance);
+        => new(db, [source], NullLogger<InjuryReportService>.Instance, TimeProvider.System);
 
     [Fact]
     public async Task The_report_is_written_onto_the_players_it_names()

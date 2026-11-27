@@ -14,7 +14,7 @@ namespace XLines.Ingestion.Services;
 /// on the source's own id first (cheap and exact), then fall back to normalised team names
 /// plus start date, and record the discovered id so the next run takes the fast path.
 /// </summary>
-public class EntityResolver(XLinesDbContext db)
+public class EntityResolver(XLinesDbContext db, TimeProvider clock)
 {
     /// <summary>
     /// How far two providers' start times for the <i>same</i> fixture may differ.
@@ -470,7 +470,7 @@ public class EntityResolver(XLinesDbContext db)
 
         if (canonical.Live is { } live && await ApplyLiveAsync(game, sourceKey, live, ct))
         {
-            game.LiveUpdatedAt = DateTimeOffset.UtcNow;
+            game.LiveUpdatedAt = clock.GetUtcNow();
             changed = true;
         }
 

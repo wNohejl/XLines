@@ -15,7 +15,7 @@ namespace XLines.Tests.Reliability;
 public class JournalBooksCacheTests(PostgresFixture fixture)
 {
     private static JournalService Service(XLinesDbContext db)
-        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance));
+        => new(db, new SettlementService(db, NullLogger<SettlementService>.Instance, TimeProvider.System));
 
     private static EntryDraft Untracked(string book)
         => new(null, Markets.Moneyline, "a described bet", "Someone", null, -110, 10m, book, null);

@@ -275,7 +275,7 @@ public class EspnGameContextTests
         var handler = new StubHttp(url => url.Contains("/scoreboard") ? board : summary);
         var http = handler.Client("https://site.api.espn.com/apis/site/v2/sports/");
 
-        return (new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance), handler);
+        return (new EspnStatsAdapter(http, NullLogger<EspnStatsAdapter>.Instance, TimeProvider.System), handler);
     }
 
     /// <summary>

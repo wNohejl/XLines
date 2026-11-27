@@ -36,9 +36,9 @@ public class StatsFailedRunCostTests(PostgresFixture fixture)
     }
 
     private static StatsIngestionService Service(XLinesDbContext db)
-        => new(db, new EntityResolver(db),
+        => new(db, new EntityResolver(db, TimeProvider.System),
             new CreditBudgetGuard(new BudgetCalculator(db), NullLogger<CreditBudgetGuard>.Instance),
-            NullLogger<StatsIngestionService>.Instance);
+            NullLogger<StatsIngestionService>.Instance, TimeProvider.System);
 
     /// <summary>
     /// Removes the stub source and its runs. A source whose only runs failed reads as stale, and the
