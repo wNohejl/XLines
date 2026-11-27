@@ -71,3 +71,24 @@
     text-align: right;
     font-variant-numeric: tabular-nums;
 }
+
+/* The play that has just landed. With motion on, the field's latest arc drawing itself in is
+   what says a play arrived; under reduced motion that is off, so the row itself is washed in the
+   raised fill a hovered row takes (the accent is kept for what can be pressed) and fades back:
+   a change of colour, not of place. The class stays on the row until the next play takes it, so
+   the wash runs once, when the row is drawn. */
+@media (prefers-reduced-motion: reduce) {
+    .gc__play--new {
+        animation: gc-play-new calc(var(--dur-slow) * 4) var(--ease-standard) both;
+    }
+}
+
+@keyframes gc-play-new {
+    from {
+        background-color: var(--surface-3);
+    }
+
+    to {
+        background-color: transparent;
+    }
+}

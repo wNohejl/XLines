@@ -287,6 +287,30 @@
     color: var(--text-secondary);
 }
 
+/* A narrow card. The words on the turf are sized in the viewBox's units, so in a ~340px card a
+   unit is about 2.6px and the 2.6-unit yard numbers drew at 7px. Under 480px of card (its group,
+   .wgroup, is the container) the numbers and the end zones' names grow to read at 11px or more;
+   the bottom row of numbers goes, since the top row says the same and the arcs want the room; and
+   a replay's result word goes, because the line under the field (.gc__fielddrive) already names
+   the drive and its result, as the image's accessible name does. */
+@container (max-width: 480px) {
+    .fieldgraphic__num {
+        font-size: 4.4px;
+    }
+
+    .fieldgraphic__num--bottom {
+        display: none;
+    }
+
+    .fieldgraphic__mark {
+        font-size: 4.8px;
+    }
+
+    .fieldgraphic__results {
+        display: none;
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .fieldgraphic__mover {
         transition: none;

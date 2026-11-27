@@ -92,6 +92,17 @@ public sealed class FakeGamecastData : IGamecastData
         return Task.FromResult(Box);
     }
 
+    /// <summary>What <see cref="BackportMissAsync"/> answers: by default the backport has missed nothing.</summary>
+    public GamecastMiss? Miss { get; set; }
+
+    public int MissReads { get; private set; }
+
+    public Task<GamecastMiss?> BackportMissAsync(int gameId, CancellationToken ct = default)
+    {
+        MissReads++;
+        return Task.FromResult(Miss);
+    }
+
     /// <summary>What <see cref="Feed"/> answers: by default the feed does not run in this process.</summary>
     public GamecastFeedReading Reading { get; set; } = GamecastFeedReading.NotHere(TimeSpan.FromSeconds(15), 1);
 

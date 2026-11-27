@@ -22,7 +22,7 @@ namespace XLines.Web.Tests;
 /// result lines, draws the field from the home goal line, and is reached from a live NFL game's
 /// window and the catalogue.
 /// </summary>
-public class GamecastPanelTests : DeskTestContext
+public partial class GamecastPanelTests : DeskTestContext
 {
     /// <summary>
     /// The window with no settle to wait out, and a clock the test can set: a notice is heard at
@@ -136,7 +136,7 @@ public class GamecastPanelTests : DeskTestContext
     {
         var source = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Snippets", "PlayLog.razor"));
 
-        Assert.Contains("<li class=\"gc__play @(play.IsScoring ? \"gc__play--score\" : null)\" @key=\"play.Id\"", source);
+        Assert.Contains("<li class=\"gc__play @(play.IsScoring ? \"gc__play--score\" : null) @(play.Id == Fresh ? \"gc__play--new\" : null)\" @key=\"play.Id\"", source);
     }
 
     [Fact]

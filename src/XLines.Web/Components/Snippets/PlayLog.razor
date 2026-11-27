@@ -49,11 +49,18 @@
     /// <summary>Past this many rows the list is virtualised.</summary>
     [Parameter] public int VirtualizeAt { get; set; } = 150;
 
+    /// <summary>
+    /// The id of the play that has just landed, null when none has since the window opened: its row
+    /// is marked (gc__play--new), and under reduced motion — where the field's arc does not draw
+    /// itself in — briefly washed, so the eye still finds what changed.
+    /// </summary>
+    [Parameter] public long? Fresh { get; set; }
+
     /// <summary>Whether the plays are football's, the only league whose plays are headed.</summary>
     private bool Football => Sport is "nfl" or "ncaaf";
 
     private RenderFragment Row(GamecastPlay play) => @<text>
-        <li class="gc__play @(play.IsScoring ? "gc__play--score" : null)" @key="play.Id" data-seq="@play.Sequence" data-play="@play.Id">
+        <li class="gc__play @(play.IsScoring ? "gc__play--score" : null) @(play.Id == Fresh ? "gc__play--new" : null)" @key="play.Id" data-seq="@play.Sequence" data-play="@play.Id">
             <span class="gc__when">@When(Sport, play)</span>
             <span class="gc__body">
                 @if (Football && PlayHeadline.For(play) is { } headline)

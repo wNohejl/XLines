@@ -230,6 +230,25 @@ public class GamecastService(IDbContextFactory<XLinesDbContext> contexts, XLines
     }
 
     /// <summary>
+    /// Why a finished game holds no plays, when the backport knows (<see cref="GamecastBackportMiss"/>):
+    /// how often it asked, when it asks again and what the last ask came to. Null when it has not
+    /// missed the game, or when the reader may not see the source it asked (ADR 0024). Asked only
+    /// for a final with no plays held, so it is one primary-key read, once per window.
+    /// </summary>
+    public async Task<GamecastMiss?> BackportMissAsync(int gameId, CancellationToken ct = default)
+    {
+        await using var db = await contexts.CreateDbContextAsync(ct);
+
+        var visible = await db.VisibleSourceIdsAsync(Tier, ct);
+
+        return await db.GamecastBackportMisses
+            .AsNoTracking()
+            .Where(m => m.GameId == gameId && (visible == null || visible.Contains(m.SourceId)))
+            .Select(m => new GamecastMiss(m.Attempts, m.LastTriedAt, m.RetryAt, m.Reason))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
     /// The plays this reader may see (ADR 0024): every play on a local desk or for the operator,
     /// whose answer is the table as it was; for a visitor only a displayable source's, which today
     /// is none, so the window shows the empty state it shows before a game's first play.
@@ -410,6 +429,12 @@ public sealed record GamecastDrive(
     int PlayCount,
     long? FirstSequence,
     long? LastSequence);
+
+/// <summary>
+/// A finished game the backport asked ESPN for and came away without plays: how many times, when
+/// last, when it is due again, and why the last ask came away empty ("no plays", or the error).
+/// </summary>
+public sealed record GamecastMiss(int Attempts, DateTimeOffset LastTriedAt, DateTimeOffset RetryAt, string? Reason);
 
 /// <summary>One point on the probability line, at a play. Fractions of one; null where the provider gave none.</summary>
 public sealed record GamecastProbability(

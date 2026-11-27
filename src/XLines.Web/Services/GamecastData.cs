@@ -35,6 +35,9 @@ public interface IGamecastData
     /// <summary>The box score, the Game window's own read; null until the game has one.</summary>
     Task<GameBoxScore?> BoxScoreAsync(int gameId, CancellationToken ct = default);
 
+    /// <summary>Why a finished game holds no plays, when the backport knows; null when it has not missed it.</summary>
+    Task<GamecastMiss?> BackportMissAsync(int gameId, CancellationToken ct = default);
+
     /// <summary>
     /// A window is open on this game: the feed in this process reads it first
     /// (<see cref="GamecastLanes.Watch"/>). Called once per window; renewed with <see cref="Renew"/>
@@ -138,6 +141,9 @@ public sealed class GamecastData(
 
     public Task<IReadOnlyList<GamecastDrive>> DrivesAsync(int gameId, CancellationToken ct = default)
         => gamecast.DrivesAsync(gameId, ct);
+
+    public Task<GamecastMiss?> BackportMissAsync(int gameId, CancellationToken ct = default)
+        => gamecast.BackportMissAsync(gameId, ct);
 
     public async Task<GameBoxScore?> BoxScoreAsync(int gameId, CancellationToken ct = default)
     {
