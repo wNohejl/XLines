@@ -15,15 +15,17 @@ namespace XLines.Ingestion.Adapters;
 /// nothing critical depends solely on ESPN, and when it does break it produces a genuine
 /// incident to triage rather than a hypothetical one.
 /// </summary>
-public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter> logger) : IStatsSource, IClosingLineSource, IFighterSource, IGameDaySource
+public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter> logger, EspnPacer? pacer = null)
+    : IStatsSource, IClosingLineSource, IFighterSource, IGameDaySource
 {
     public const string SourceKey = "espn";
 
     public string Key => SourceKey;
 
     /// <summary>
-    /// Pause between calls, applied to every request this adapter makes rather than only to
-    /// the box-score loop.
+    /// Pause between calls, for an adapter made without the host's <see cref="EspnPacer"/> — a
+    /// test's, or a tool's. The host registers one pacer for the process, at
+    /// <c>Ingestion:Espn:RequestDelay</c>, and every adapter it makes waits there instead.
     ///
     /// ESPN publishes no rate limit, which is a reason for more care rather than less: there
     /// is no documented ceiling to stay under, so the only safe assumption is to stay quiet.
@@ -32,7 +34,10 @@ public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter>
     /// </summary>
     public TimeSpan RequestDelay { get; set; } = TimeSpan.Zero;
 
-    private DateTimeOffset _lastRequestAt = DateTimeOffset.MinValue;
+    /// <summary>This adapter's own gate, made at <see cref="RequestDelay"/> on first use, when no host pacer was given.</summary>
+    private EspnPacer? _ownPacer;
+
+    private EspnPacer Pacer => pacer ?? (_ownPacer ??= new EspnPacer(RequestDelay));
 
     /// <summary>Nothing fetched, nothing spent — for a league this port does not serve.</summary>
     private static StatsFetchResult Empty => new([], [], [], new FetchCost(0));
@@ -668,22 +673,46 @@ public partial class EspnStatsAdapter(HttpClient http, ILogger<EspnStatsAdapter>
 
     private async Task<JsonDocument> GetJsonAsync(string relativeUrl, CancellationToken ct)
     {
-        // Spacing is measured from the last call rather than slept unconditionally, so a slow
+        var read = GamecastRequest.Current;
+
+        // One gate for every ESPN request in the process, a watched game's first (EspnPacer).
+        // Spacing is measured from turn to turn rather than slept unconditionally, so a slow
         // response has already paid the gap and does not pay it twice.
-        if (RequestDelay > TimeSpan.Zero)
+        await Pacer.WaitTurnAsync(read?.Watched == true, ct);
+
+        if (read is null)
+            return await SendAsync(relativeUrl, retry: true, ct);
+
+        // A gamecast read: asked once, and given up on after its timeout, headers and body alike.
+        // A linked token here and a flag the resilience handler reads, rather than a second named
+        // client without the handler: the port keeps one HttpClient, its User-Agent and its
+        // pacing, and the circuit breaker still sees the feed's failures with everyone else's. The
+        // per-attempt timeout stays the handler's; this one is shorter, so it is the one that bites.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(read.Timeout);
+
+        try
         {
-            var since = DateTimeOffset.UtcNow - _lastRequestAt;
-
-            if (since < RequestDelay)
-                await Task.Delay(RequestDelay - since, ct);
+            return await SendAsync(relativeUrl, retry: false, timeout.Token);
         }
+        catch (OperationCanceledException ex) when (!ct.IsCancellationRequested && timeout.IsCancellationRequested)
+        {
+            throw new TimeoutException(
+                $"{SourceKey}: {relativeUrl} took longer than {read.Timeout.TotalSeconds:0.#} s; the next poll asks again", ex);
+        }
+    }
 
-        _lastRequestAt = DateTimeOffset.UtcNow;
+    private async Task<JsonDocument> SendAsync(string relativeUrl, bool retry, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
+
+        if (!retry)
+            request.Options.Set(GamecastRequest.NoRetry, true);
 
         // Headers first, then the body straight into the parser. A game summary is close to half a
         // megabyte of JSON and the gamecast feed reads one per followed game every poll; buffering
         // each whole before parsing it held the document in memory twice.
-        using var response = await http.GetAsync(relativeUrl, HttpCompletionOption.ResponseHeadersRead, ct);
+        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         return await JsonDocument.ParseAsync(stream, cancellationToken: ct);
