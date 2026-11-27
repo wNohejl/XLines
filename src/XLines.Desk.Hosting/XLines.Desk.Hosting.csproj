@@ -9,24 +9,17 @@
   -->
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>XLines.Desk.Hosting</RootNamespace>
   </PropertyGroup>
 
   <!--
-    The package. As with the Desk, the XML documentation ships with it and CS1591 is off: the
-    documentation is written where a seam needs explaining, not on every public member.
+    The package. As with the Desk, IsPackable, the README and the XML documentation (with CS1591
+    off) come from Directory.Build.props.
   -->
   <PropertyGroup>
-    <IsPackable>true</IsPackable>
     <PackageId>XLines.Desk.Hosting</PackageId>
     <Version>0.1.1</Version>
     <Description>The access gate and edge headers for a Desk on ASP.NET Core.</Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>

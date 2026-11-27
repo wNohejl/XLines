@@ -11,16 +11,15 @@
     feed the Desk packages workflow publishes to.
   -->
 
+  <!-- The framework, IsPackable and the README come from Directory.Build.props, which turns
+       Nullable and implicit usings on for every project but this one. -->
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
     <PackageType>Template</PackageType>
     <PackageId>XLines.Desk.Templates</PackageId>
     <Version>0.3.0</Version>
     <Title>Desk application templates</Title>
     <Description>dotnet new deskapp: a Blazor Server application on XLines.Desk and XLines.Desk.Hosting, with one example window, the error and not-found pages, and the HIG skills for its agent.</Description>
     <PackageTags>dotnet-new;templates;blazor;desk</PackageTags>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <IsPackable>true</IsPackable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IncludeSymbols>false</IncludeSymbols>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>

@@ -1,0 +1,43 @@
+<Project>
+  <!--
+    What every project in this repository shares, said once. MSBuild imports the nearest
+    Directory.Build.props above a project before the project's own body, so a csproj still
+    overrides anything here. tests/Directory.Build.props imports this one and adds what the test
+    projects share. Both Dockerfiles copy this file before restore: without it an image builds
+    with Nullable off and no implicit usings, silently.
+
+    Warnings stay warnings (no TreatWarningsAsErrors) until the ADR 0034 work lands.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- XLines.Desk.Templates compiles nothing: it packs the deskapp template's files as content. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' != 'XLines.Desk.Templates'">
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- The Desk's packages, published by the Desk packages workflow: each carries its README. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'XLines.Desk'
+                         Or '$(MSBuildProjectName)' == 'XLines.Desk.Hosting'
+                         Or '$(MSBuildProjectName)' == 'XLines.Desk.Testing'
+                         Or '$(MSBuildProjectName)' == 'XLines.Desk.Templates'">
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <!--
+    The three library packages ship their XML documentation. CS1591 is off because the
+    documentation is written where a seam needs explaining, not on every public member.
+    The SDK sets its own NoWarn default (1701;1702) only when NoWarn is still empty, which it is
+    when this file is read; the first line keeps that default, as a csproj appending would.
+  -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'XLines.Desk'
+                         Or '$(MSBuildProjectName)' == 'XLines.Desk.Hosting'
+                         Or '$(MSBuildProjectName)' == 'XLines.Desk.Testing'">
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn Condition="'$(NoWarn)' == ''">1701;1702</NoWarn>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>

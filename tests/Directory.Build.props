@@ -1,0 +1,31 @@
+<Project>
+  <!-- What the four test projects share, on top of the repository's own Directory.Build.props. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Versions are in Directory.Packages.props. A project adds what only it needs (bunit,
+       Testcontainers). -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- bUnit 1.x brings AngleSharp 1.2.0, under an mXSS advisory fixed in 1.5.0. The fix is not
+       reachable: AngleSharp 1.5 changed IHtmlCollection's indexer and bUnit 1.40, the last 1.x,
+       fails at runtime against it; bUnit 2 renames the API every test here uses. The parser only
+       ever reads markup these tests rendered themselves, in a test process, so the advisory has
+       nothing to act on; a test project without bUnit has no AngleSharp for it to name.
+       Revisit with the move to bUnit 2. src/XLines.Desk.Testing carries the same suppression. -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-pgww-w46g-26qg" />
+  </ItemGroup>
+</Project>

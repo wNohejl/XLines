@@ -5,7 +5,10 @@ WORKDIR /src
 
 # Copy manifests first so `restore` is cached independently of source changes —
 # editing a .razor file then rebuilds without re-downloading every package.
-COPY Directory.Packages.props ./
+# The build skeleton: SDK pin, shared properties (TargetFramework, Nullable, implicit usings)
+# and central package versions. Without Directory.Build.props the projects restore with no
+# TargetFramework, or build with Nullable off. tests/ is not built here, so its props is not needed.
+COPY global.json Directory.Build.props Directory.Packages.props ./
 COPY src/XLines.Core/XLines.Core.csproj               src/XLines.Core/
 COPY src/XLines.Desk/XLines.Desk.csproj               src/XLines.Desk/
 COPY src/XLines.Desk.Hosting/XLines.Desk.Hosting.csproj src/XLines.Desk.Hosting/

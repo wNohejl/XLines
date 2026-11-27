@@ -3,7 +3,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY Directory.Packages.props ./
+# The build skeleton: SDK pin, shared properties (TargetFramework, Nullable, implicit usings)
+# and central package versions. Without Directory.Build.props the projects restore with no
+# TargetFramework, or build with Nullable off. tests/ is not built here, so its props is not needed.
+COPY global.json Directory.Build.props Directory.Packages.props ./
 COPY src/XLines.Core/XLines.Core.csproj               src/XLines.Core/
 COPY src/XLines.Data/XLines.Data.csproj               src/XLines.Data/
 COPY src/XLines.Reliability/XLines.Reliability.csproj src/XLines.Reliability/

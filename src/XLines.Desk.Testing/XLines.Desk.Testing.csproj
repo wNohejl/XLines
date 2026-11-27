@@ -8,24 +8,17 @@
   -->
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>XLines.Desk.Testing</RootNamespace>
   </PropertyGroup>
 
   <!--
-    The package. As with the Desk, the XML documentation ships with it and CS1591 is off: the
-    documentation is written where a seam needs explaining, not on every public member.
+    The package. As with the Desk, IsPackable, the README and the XML documentation (with CS1591
+    off) come from Directory.Build.props.
   -->
   <PropertyGroup>
-    <IsPackable>true</IsPackable>
     <PackageId>XLines.Desk.Testing</PackageId>
     <Version>0.2.0</Version>
     <Description>Test fixtures and convention checks for an application built on XLines.Desk: a bUnit bench, fakes for the Desk's seams, and the Desk's source conventions as calls from your own facts.</Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <!-- bUnit 1.x brings AngleSharp 1.2.0, under an mXSS advisory fixed in 1.5.0. The fix is not

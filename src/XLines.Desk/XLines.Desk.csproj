@@ -8,26 +8,19 @@
   -->
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>XLines.Desk</RootNamespace>
   </PropertyGroup>
 
   <!--
     The package. The assembly, the namespace and the _content/XLines.Desk path keep their
     names, so a consumer's links and imports are the same whether it references the project or
-    the package. The XML documentation ships with it; CS1591 is off because the documentation
-    is written where a seam needs explaining, not on every public member.
+    the package. IsPackable, the README and the XML documentation (with CS1591 off) come from
+    Directory.Build.props, as for the other Desk packages.
   -->
   <PropertyGroup>
-    <IsPackable>true</IsPackable>
     <PackageId>XLines.Desk</PackageId>
     <Version>0.5.0</Version>
     <Description>An Apple-HIG desk for Blazor Server on MudBlazor: windows, primitives, themes and a chosen accent, a window base class, a job menu over the host's named runs, and error and not-found pages.</Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
