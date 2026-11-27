@@ -32,8 +32,21 @@ public class JournalPanelTests : WagerTestContext
     private static AngleSharp.Dom.IElement Save(IRenderedFragment cut)
         => cut.FindAll("button").First(b => b.TextContent.Trim() == "Save changes");
 
-    private static string Source()
-        => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "JournalPanel.razor"));
+    /// <summary>
+    /// The Journal's source: its markup first, then its code-behind partials, the parlays ledger
+    /// and the row wording it reads (JournalPanel*.cs, JournalParlays.razor, JournalDisplay.cs).
+    /// </summary>
+    internal static string Source()
+    {
+        var panels = Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels");
+
+        var files = new List<string> { Path.Combine(panels, "JournalPanel.razor") };
+        files.AddRange(Directory.EnumerateFiles(panels, "JournalPanel*.cs").Order(StringComparer.Ordinal));
+        files.Add(Path.Combine(panels, "JournalParlays.razor"));
+        files.Add(Path.Combine(panels, "JournalDisplay.cs"));
+
+        return string.Join("\n", files.Select(File.ReadAllText));
+    }
 
     /// <summary>A straight bet on the Chiefs, $50 at -110 with DraftKings, still pending.</summary>
     private static JournalEntry Pending()

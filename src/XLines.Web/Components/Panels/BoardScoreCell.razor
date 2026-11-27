@@ -1,0 +1,68 @@
+@using XLines.Data.CrossReference
+@using static XLines.Web.Components.Panels.BoardCells
+
+@*
+    The Board's Score cell (BoardPanel): the game's state in a word and, once there is one, its
+    score — or, for a fight, who won and how. A function of the row alone.
+    Indented as it stood inside the panel, so the text it renders is the panel's byte for byte.
+*@
+                @if (Row.Game.Status == GameStatus.Scheduled)
+                {
+                    @* Nothing has happened yet, and the Starts column already says when it
+                       will. A tag reading Scheduled here would only repeat it. *@
+                    <span class="dim">—</span>
+                }
+                else
+                {
+                    <div class="scoreline">
+                        <Tag State="@StatusState(Row.Game.Status)"
+                             Live="@(Row.Game.Status == GameStatus.Live)">
+                            @TagStates.StatusWord(Row.Game.Status)
+                        </Tag>
+
+                        @if (Row.Bout is { Outcome: not null } fought)
+                        {
+                            @* A fight's result is who won and how, not a score (ADR 0021): the
+                               winner's line reads W, the loser's L, beside the method and where it ended. *@
+                            var leader = FinalLeader(Row.Game);
+                            var result = FightSports.ResultLine(Row.Game, fought) ?? "";
+                            @* No title: the marks and the method are on the cell, and the sentence is
+                               read aloud from the sr-only line — a title would reach a pointer only. *@
+                            <span class="board__scores">
+                                <span class="board__score@(leader == ScoreLeader.Away ? " board__score--loser" : "")" aria-hidden="true">@FightMark(fought, leader, home: true)</span>
+                                <span class="board__score@(leader == ScoreLeader.Home ? " board__score--loser" : "")" aria-hidden="true">@FightMark(fought, leader, home: false)</span>
+                                <span class="sr-only">@result</span>
+                            </span>
+                            <span class="dim">@FightSports.MethodShort(fought) @FightSports.Ended(fought)</span>
+                        }
+                        else                         @if (Row.HasScore)
+                        {
+                            @* Two lines beside the matchup's two, away over home, so each score
+                               sits level with its team. A final's winner reads heavier than its
+                               loser, as in the Game window's scoreboard; a live or tied game keeps
+                               both at full weight, since nobody has lost. Read aloud as the
+                               sentence the lines stand for. *@
+                            var leader = FinalLeader(Row.Game);
+                            <span class="board__scores">
+                                <span class="board__score@(leader == ScoreLeader.Home ? " board__score--loser" : "")"
+                                      aria-hidden="true">@(Row.Game.AwayScore ?? 0)</span>
+                                <span class="board__score@(leader == ScoreLeader.Away ? " board__score--loser" : "")"
+                                      aria-hidden="true">@(Row.Game.HomeScore ?? 0)</span>
+                                <span class="sr-only">@ScoreTitle(Row.Game)</span>
+                            </span>
+                        }
+                        else
+                        {
+                            @* ESPN carries the result. Missing means the results pass has not
+                               reached this game, which is a pull rather than a blank. *@
+                            <span class="score--pending">
+                                @MissingScoreHint(Row.Game.Status)
+                            </span>
+                        }
+                    </div>
+                }
+
+@code {
+    /// <summary>The Board row the cell is for.</summary>
+    [Parameter, EditorRequired] public BoardRow Row { get; set; } = default!;
+}

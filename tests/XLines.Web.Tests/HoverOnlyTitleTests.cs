@@ -205,8 +205,25 @@ public class HoverOnlyTitleTests : WagerTestContext
         });
     }
 
+    // A panel's markup may sit in child components beside it (BoardScoreCell beside BoardPanel,
+    // JournalParlays beside JournalPanel): a rule about a window's markup reads them all, or a
+    // moved element would pass by not being looked at.
     private static string Source(string folder, string file)
-        => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", folder, file));
+    {
+        var directory = Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", folder);
+        var stem = Path.GetFileNameWithoutExtension(file);
+
+        if (!stem.EndsWith("Panel", StringComparison.Ordinal))
+            return File.ReadAllText(Path.Combine(directory, file));
+
+        var family = stem[..^"Panel".Length];
+
+        return string.Join("\n", Directory.EnumerateFiles(directory, family + "*.razor")
+            .Where(path => path.EndsWith(file, StringComparison.Ordinal)
+                           || !Path.GetFileNameWithoutExtension(path).EndsWith("Panel", StringComparison.Ordinal))
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .Select(File.ReadAllText));
+    }
 
     private static string Lf(string text) => text.Replace("\r\n", "\n");
 }

@@ -491,7 +491,7 @@ public class JournalParlayTests : WagerTestContext
     [Fact]
     public void The_form_marks_the_window_unsaved_through_the_entries_funnel()
     {
-        var source = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "JournalPanel.razor"));
+        var source = JournalPanelTests.Source();
 
         Assert.Contains("MarkUnsaved(ParlayIsDirty(_parlay.ToEdit(), _parlayOpened), \"this parlay\")", source);
         Assert.Contains("<PanelForm Title=\"Edit parlay\" Class=\"pform--grouped\">", source);

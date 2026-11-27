@@ -19,8 +19,12 @@ public class BoardFitTests
     private static readonly string Css =
         DeskConventions.WithoutComments(Support.Sheets.App);
 
-    private static readonly string Razor =
-        File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "BoardPanel.razor"));
+    // The markup and its code-behind: the row's classes (RowClass) are in BoardPanel.Text.cs.
+    private static readonly string Razor = string.Concat(
+        Directory.EnumerateFiles(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels"), "BoardPanel*")
+            .Where(f => f.EndsWith(".razor", StringComparison.Ordinal) || f.EndsWith(".cs", StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal)
+            .Select(File.ReadAllText));
 
     private static string Block(string query)
     {

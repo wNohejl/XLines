@@ -1,0 +1,32 @@
+@using XLines.Data.CrossReference
+@using static XLines.Web.Components.Panels.BoardCells
+
+@*
+    The Board's Value cell (BoardPanel): the row's best bet against the fair price, or a dash
+    where there is none. A function of the row alone.
+    Indented as it stood inside the panel, so the text it renders is the panel's byte for byte.
+*@
+                @if (Row.BestPick is { } pick)
+                {
+                    @* A tooltip, not a title: the sentence names the side, the book and what the
+                       edge is measured against, and a title never reaches the keyboard (HIG 12). It wraps
+                       the whole cell, because MudTooltip's root is inline and would set the two
+                       lines of the cell side by side if it sat inside the column. *@
+                    <DeskTooltip Title="Most value on this game" Caption="@ValueCaption(pick)" Text="@ValueTitle(Row, pick)">
+                        <div class="value">
+                            <span class="value__ev @(pick.Book.Ev > 0 ? "up" : "dim")">
+                                @PriceCell.EvLabel(pick.Book.Ev!.Value).Replace(" EV", "")
+                            </span>
+                            <span class="value__bet">@PickLabel(Row, pick)</span>
+                        </div>
+                    </DeskTooltip>
+                }
+                else
+                {
+                    <span class="dim">—</span>
+                }
+
+@code {
+    /// <summary>The Board row the cell is for.</summary>
+    [Parameter, EditorRequired] public BoardRow Row { get; set; } = default!;
+}

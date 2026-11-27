@@ -1,0 +1,150 @@
+@using XLines.Data
+@using XLines.Ingestion.Services
+@using static XLines.Web.Components.Panels.JournalDisplay
+
+@*
+    The Journal's parlays ledger: one section card holding the table (the Desk's grouping
+    contract). It holds no state of its own: the Journal hands it the parlays and the two cell
+    templates it shares with the straight bets, and every key on a row is handed back to the
+    Journal, which writes and reloads.
+*@
+<FormGroup Title="Parlays" Span="DeskCardSpan.Row" GroupClass="journal-list">
+<ChildContent>
+<DeskGrid T="Parlay" Items="Parlays" EmptyText="No parlays.">
+    @* A parlay is ordered by its last leg's game: it is open until that one is. *@
+    <DeskTemplateColumn T="Parlay" Title="Closes" Sortable="true" SortBy="@(p => JournalService.LastLegStart(p))"
+                    InitialDirection="SortDirection.Descending" HeaderClass="ops-col--fit" CellClass="ops-col--fit">
+        <CellTemplate>
+            <div class="journal-when">
+                @Starts(JournalService.LastLegStart(context.Item))
+                <div class="dim">placed @Starts(context.Item.PlacedAt)</div>
+            </div>
+        </CellTemplate>
+    </DeskTemplateColumn>
+
+    <DeskTemplateColumn T="Parlay" Title="Legs" Sortable="false" HeaderClass="ops-col--grow" CellClass="ops-col--grow">
+        <CellTemplate>
+            @foreach (var leg in context.Item.Legs.OrderBy(l => l.Id))
+            {
+                @* One line per leg: wrapped, the tag, the team and the price each took a line
+                   of their own and the legs could not be told apart. *@
+                <DeskRow NoWrap Class="legline">
+                    <Tag State="@ResultState(leg.Result)">@leg.Result</Tag>
+                    @Selection(leg)
+                    @if (leg.PriceTaken != 0)
+                    {
+                        <span class="dim num">@Price(leg.PriceTaken)</span>
+                    }
+                    @ClvCell(leg)
+                </DeskRow>
+            }
+            @if (context.Item.Note is { } note)
+            {
+                <div class="meta">@note</div>
+            }
+            @if (context.Item.Result == EntryResult.Pending && Stuck(context.Item) is { } reason)
+            {
+                <div class="meta">@reason</div>
+            }
+        </CellTemplate>
+    </DeskTemplateColumn>
+
+    <DeskColumn T="Parlay" TProperty="string" Property="p => p.Book" Title="Book"
+                    HeaderClass="col--wider ops-col--fit" CellClass="col--wider ops-col--fit">
+        <CellTemplate><span class="dim">@BookNames.Display(context.Item.Book)</span></CellTemplate>
+    </DeskColumn>
+
+    <DeskTemplateColumn T="Parlay" Title="Price" Align="Align.Right" Sortable="false"
+                    HeaderClass="ops-col--fit" CellClass="ops-col--fit">
+        <CellTemplate>@(context.Item.PriceQuoted is { } q ? Price(q) : "—")</CellTemplate>
+    </DeskTemplateColumn>
+
+    <DeskColumn T="Parlay" TProperty="decimal" Property="p => p.Stake" Title="Stake" Align="Align.Right"
+                    HeaderClass="ops-col--fit" CellClass="ops-col--fit">
+        <CellTemplate>@OddsMath.Money(context.Item.Stake)</CellTemplate>
+    </DeskColumn>
+
+    <DeskColumn T="Parlay" TProperty="EntryResult" Property="p => p.Result" Title="Result"
+                    HeaderClass="ops-col--fit" CellClass="ops-col--fit">
+        <CellTemplate><Tag State="@ResultState(context.Item.Result)">@context.Item.Result</Tag></CellTemplate>
+    </DeskColumn>
+
+    <DeskColumn T="Parlay" TProperty="decimal" Property="p => p.NetReturn" Title="Net" Align="Align.Right"
+                    HeaderClass="ops-col--fit" CellClass="ops-col--fit">
+        <CellTemplate>
+            <span class="@(context.Item.NetReturn > 0 ? "up" : context.Item.NetReturn < 0 ? "down" : null)">
+                @* Performance's signed money, so a loss reads "−$20" in both windows: "C0"
+                   follows the machine's region, and on this one printed "($20)". *@
+                @(context.Item.IsSettled ? PerformancePanel.SignedToTheCent(context.Item.NetReturn) : "—")
+            </span>
+        </CellTemplate>
+    </DeskColumn>
+
+    <DeskTemplateColumn T="Parlay" Title="" Sortable="false" Align="Align.Right"
+                    HeaderClass="ops-col--fit" CellClass="ops-col--fit">
+        <CellTemplate>
+            <DeskRow Justify="DeskJustify.End" Gap="DeskSpace.Space1">
+                @* Legs grade themselves and the parlay follows. This is for the parlay a
+                   missing price left pending, or a book that ruled otherwise. A win is only
+                   offered where there is a price to pay it at. *@
+                @if (!context.Item.IsGraded)
+                {
+                    <DeskPullDown Label="Settle" Emphasis="DeskEmphasis.Plain" Size="DeskKeySize.Small" Align="DeskPopoverAlign.End">
+                        @if (context.Item.PriceQuoted is not null)
+                        {
+                            <DeskMenuItem Label="Win" OnClick="@(() => SetParlayResultAsync(context.Item, EntryResult.Win))" />
+                        }
+                        <DeskMenuItem Label="Loss" OnClick="@(() => SetParlayResultAsync(context.Item, EntryResult.Loss))" />
+                        <DeskMenuItem Label="Void" OnClick="@(() => SetParlayResultAsync(context.Item, EntryResult.Void))" />
+                    </DeskPullDown>
+                }
+                @* The menu an entry's row carries, in its order. Duplicate puts the legs back
+                   on the slip as a parlay at the prices taken, to log again — the slip is where
+                   a parlay is logged, as the wager window is where an entry is. *@
+                <DeskPullDown Label="Actions" Icon="@DeskIcons.MoreHoriz" Emphasis="DeskEmphasis.Plain"
+                              Size="DeskKeySize.Small" Align="DeskPopoverAlign.End">
+                    <DeskMenuItem Label="Edit" OnClick="() => EditParlay(context.Item)" />
+                    <DeskMenuItem Label="Duplicate" Description="On the slip, as a parlay to log again"
+                                  OnClick="() => DuplicateParlayAsync(context.Item)" />
+                    <DeskMenuItem Label="Delete…" Description="The parlay and its legs" Destructive="true"
+                                  OnClick="() => DeleteParlayAsync(context.Item)" />
+                </DeskPullDown>
+            </DeskRow>
+        </CellTemplate>
+    </DeskTemplateColumn>
+</DeskGrid>
+</ChildContent>
+<Notice>
+    <p class="wgroup__foot journal-folded">The book is hidden at this width. Widen the window to see it.</p>
+</Notice>
+</FormGroup>
+
+@code {
+    /// <summary>A result picked on a parlay's Settle menu.</summary>
+    public readonly record struct Settlement(Parlay Parlay, EntryResult Result);
+
+    [Parameter, EditorRequired] public List<Parlay> Parlays { get; set; } = [];
+
+    /// <summary>The Journal's selection cell: a leg reads as a straight bet's selection does.</summary>
+    [Parameter, EditorRequired] public Func<JournalEntry, RenderFragment> Selection { get; set; } = default!;
+
+    /// <summary>The Journal's CLV cell, for each leg.</summary>
+    [Parameter, EditorRequired] public Func<JournalEntry, RenderFragment> ClvCell { get; set; } = default!;
+
+    [Parameter] public EventCallback<Settlement> OnSettle { get; set; }
+    [Parameter] public EventCallback<Parlay> OnEdit { get; set; }
+    [Parameter] public EventCallback<Parlay> OnDuplicate { get; set; }
+    [Parameter] public EventCallback<Parlay> OnDelete { get; set; }
+
+    private Task SetParlayResultAsync(Parlay parlay, EntryResult result) => OnSettle.InvokeAsync(new Settlement(parlay, result));
+
+    private Task EditParlay(Parlay parlay) => OnEdit.InvokeAsync(parlay);
+
+    private Task DuplicateParlayAsync(Parlay parlay) => OnDuplicate.InvokeAsync(parlay);
+
+    private Task DeleteParlayAsync(Parlay parlay) => OnDelete.InvokeAsync(parlay);
+
+    private static string Starts(DateTimeOffset at) => DisplayTime.Stamp(at);
+
+    private static string Price(decimal american) => OddsText.Price(american);
+}

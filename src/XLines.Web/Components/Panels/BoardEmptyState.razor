@@ -1,0 +1,79 @@
+@using XLines.Ingestion.Services
+@using XLines.Data.CrossReference
+@inject WindowManager Manager
+
+@*
+    The Board's empty state (BoardPanel), when the window holds no games at all: why, for the
+    stats source the desk has, and the one pull or key that fixes it. The pull runs on the
+    Board's own menu (OnPull), so an offer here and the menu entry are the same press.
+    Indented as it stood inside the panel, so the text it renders is the panel's byte for byte.
+*@
+    @* An honest empty state offers the fix rather than naming a control on another window.
+       The pull is the first step, so it is the one action this state carries. *@
+    @* With ESPN off (EspnOptIn) there is nothing for the pull to fetch from, so the state says
+       why and where the switch is explained, and offers no key that would only be refused. *@
+    @* Three states (ADR 0026). ESPN on: Today's games, as always. The Odds API on a key: Fixtures,
+       which is free, and the key says so; prices and scores are metered pulls in Pull data, where
+       their prices are stated. Neither: the key is the fix, and it is entered in Ops. *@
+    <EmptyState Kind="EmptyStateKind.New">
+        <ChildContent>
+            @switch (Port)
+            {
+                case StatsPort.Espn:
+                    <text>Nothing on the board in this window. <strong>Today's games</strong> fetches the
+                    schedule and the live scores from ESPN, which needs no key; a lines pull prices
+                    what it finds, and prices need an odds provider key — see Ops.</text>
+                    break;
+
+                case StatsPort.TheOddsApi:
+                    <text>Nothing on the board in this window. <strong>Fixtures</strong> fetches the next
+                    eight days from The Odds API and is free; <strong>Pull lines</strong> prices them and
+                    <strong>Pull scores</strong> finishes them, each for the credits Pull data states.
+                    Box scores and UFC need ESPN — see Ops.</text>
+                    break;
+
+                default:
+                    <text>Nothing on the board in this window. No fixtures are pulled until a stats source
+                    is set up: enter your free Odds API key in Ops → Odds feeds, or turn on ESPN, which is
+                    opt-in — Ops says how.</text>
+                    break;
+            }
+        </ChildContent>
+        <Action>
+            @if (Manager.Access.CanOperate && Port == StatsPort.Espn)
+            {
+                <DeskButton Size="DeskKeySize.Small"
+                            Icon="@DeskIcons.CalendarMonth"
+                            OnClick="() => PullAsync(IngestionJobs.EspnSlate)">
+                    Today's games
+                </DeskButton>
+            }
+            else if (Manager.Access.CanOperate && Port == StatsPort.TheOddsApi)
+            {
+                <DeskButton Size="DeskKeySize.Small"
+                            Icon="@DeskIcons.CalendarMonth"
+                            Title="Calls The Odds API's events list, which does not count against your credits"
+                            OnClick="() => PullAsync(IngestionJobs.OddsFixtures)">
+                    Fixtures · free
+                </DeskButton>
+            }
+            else if (Manager.Access.CanOperate)
+            {
+                <DeskButton Size="DeskKeySize.Small"
+                            Icon="@DeskIcons.Key"
+                            OnClick="Manager.OpenOps">
+                    Open Ops
+                </DeskButton>
+            }
+        </Action>
+    </EmptyState>
+
+@code {
+    /// <summary>What fills the board: ESPN, The Odds API on a key, or nothing yet (ADR 0026).</summary>
+    [Parameter, EditorRequired] public StatsPort Port { get; set; }
+
+    /// <summary>A pull pressed here, by its job key: the Board runs it on its pull menu.</summary>
+    [Parameter] public EventCallback<string> OnPull { get; set; }
+
+    private Task PullAsync(string key) => OnPull.InvokeAsync(key);
+}
