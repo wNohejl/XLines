@@ -248,6 +248,9 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null)
         if (game is null)
             return null;
 
+        // ESPN's state of play and MLB's probables are columns, blanked for a visitor (ADR 0024).
+        game.ForTier(Tier);
+
         // A box score from a personal-use source is the operator's alone (ADR 0024); for anyone
         // else the game has no box score yet, which the caller already draws as a preview.
         var lines = await db.PlayerGameStats.FromVisible(await db.VisibleSourceIdsAsync(Tier, ct))
@@ -313,11 +316,8 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null)
         // They are never mixed. A reference is one book, and letting it into a consensus meant
         // to be drawn from several would move the number it is being averaged against — the
         // precise confusion ADR 0011 refuses.
-        var lines = all
-            .GroupBy(c => c.GameId)
-            .SelectMany(g => g.Any(c => c.Kind == SourceKind.Odds)
-                ? g.Where(c => c.Kind == SourceKind.Odds)
-                : g)
+        var lines = MarketFirstClose.PerGame(all, c => c.GameId, c => c.Kind)
+            .SelectMany(g => g.Value)
             .ToList();
 
         return lines
@@ -425,24 +425,7 @@ public class GameLogService(XLinesDbContext db, IDataTier? tier = null)
     /// meaningless coerced. Numeric parsing belongs to the aggregate side, which needs it.
     /// </summary>
     private static IReadOnlyDictionary<string, string> ReadStatLine(string statLineJson)
-    {
-        try
-        {
-            var parsed = System.Text.Json.JsonSerializer
-                .Deserialize<Dictionary<string, string>>(statLineJson);
-
-            if (parsed is null)
-                return new Dictionary<string, string>();
-
-            StatLineKeys.Canonical(parsed);
-            parsed.Remove("category");
-            return parsed;
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            return new Dictionary<string, string>();
-        }
-    }
+        => StatLineKeys.Read(statLineJson);
 
     /// <summary>The consensus closing numbers for one game.</summary>
     private sealed record GameClosingLines(

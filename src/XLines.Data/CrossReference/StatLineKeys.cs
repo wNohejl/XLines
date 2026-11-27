@@ -73,4 +73,27 @@ public static class StatLineKeys
 
         return line;
     }
+
+    /// <summary>
+    /// A stored stat line (jsonb) as its canonical keys and values as written, without the
+    /// <c>category</c> metadata the box-score parser adds. Empty for a line that is not a flat
+    /// object of strings: the game log shows nothing rather than half a line, and the form reader
+    /// counts nothing rather than a wrong number.
+    /// </summary>
+    public static Dictionary<string, string> Read(string statLineJson)
+    {
+        try
+        {
+            if (System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(statLineJson) is not { } parsed)
+                return new Dictionary<string, string>();
+
+            Canonical(parsed);
+            parsed.Remove("category");
+            return parsed;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new Dictionary<string, string>();
+        }
+    }
 }

@@ -130,7 +130,8 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
             game,
             byGame.GetValueOrDefault(game.Id),
             closesByGame.GetValueOrDefault(game.Id),
-            lastPull.TryGetValue(game.SportId, out var at) ? at : null) with
+            lastPull.TryGetValue(game.SportId, out var at) ? at : null,
+            now) with
             {
                 Bout = bouts.GetValueOrDefault(game.Id)
             })
@@ -283,22 +284,14 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
     private sealed record ClosedQuote(ClosingLine Line, SourceKind Kind);
 
     /// <summary>
-    /// The close per game, read from the book market where there is one.
-    ///
-    /// The stats provider records a single-book reference close for every final under its own
-    /// source. It is never mixed into a market: a game the odds feed covered is read from the
-    /// market alone, and only a game it never saw falls back to the reference — otherwise the
-    /// reference would count as one more book, could win "best", and would move the number it
-    /// was meant to be compared against (ADR 0011). Same rule as the game log's reader.
+    /// The close per game, read from the book market where there is one (<see cref="MarketFirstClose"/>):
+    /// otherwise the reference would count as one more book and could win "best".
     /// </summary>
     private static Dictionary<int, List<Quote>> MarketFirst(List<ClosedQuote> closed)
-        => closed
-            .GroupBy(c => c.Line.GameId)
+        => MarketFirstClose.PerGame(closed, c => c.Line.GameId, c => c.Kind)
             .ToDictionary(
                 g => g.Key,
-                g => (g.Any(c => c.Kind == SourceKind.Odds) ? g.Where(c => c.Kind == SourceKind.Odds) : g)
-                    .Select(c => Quote.From(c.Line))
-                    .ToList());
+                g => g.Value.Select(c => Quote.From(c.Line)).ToList());
 
     /// <summary>
     /// Three hours back by default, which is roughly a game.
@@ -320,7 +313,8 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
         Game game,
         List<Quote>? live,
         List<Quote>? closing,
-        DateTimeOffset? lastScanInLeague)
+        DateTimeOffset? lastScanInLeague,
+        DateTimeOffset now)
     {
         var isClosing = live is not { Count: > 0 } && closing is { Count: > 0 };
         var prices = live is { Count: > 0 } ? live : closing ?? [];
@@ -333,7 +327,7 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
             BookCount: prices.Select(p => p.Book).Distinct().Count(),
             PricedAt: prices.Count == 0 ? null : prices.Max(p => p.CapturedAt),
             PricesAreClosing: isClosing,
-            Unpriced: prices.Count > 0 ? null : ExplainGap(game, lastScanInLeague))
+            Unpriced: prices.Count > 0 ? null : ExplainGap(game, lastScanInLeague, now))
         {
             LastPulled = prices.Count > 0 ? null : lastScanInLeague
         };
@@ -353,10 +347,8 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
     /// only reaches this now when no close was ever captured for it.
     /// </para>
     /// </summary>
-    private static string ExplainGap(Game game, DateTimeOffset? lastScanInLeague)
+    private static string ExplainGap(Game game, DateTimeOffset? lastScanInLeague, DateTimeOffset now)
     {
-        var now = DateTimeOffset.UtcNow;
-
         if (game.StartsAt <= now)
             return "Under way — and no closing line was captured before it started.";
 
@@ -432,7 +424,7 @@ public class BoardService(XLinesDbContext db, IDataTier? tier = null)
             ? null
             : (await LastPullBySportAsync([game.Sport!], ct)).TryGetValue(game.SportId, out var at) ? at : null;
 
-        return Compose(game, live, closing, scanned) with
+        return Compose(game, live, closing, scanned, DateTimeOffset.UtcNow) with
         {
             Bout = (await db.Bouts.AsNoTracking().FirstOrDefaultAsync(b => b.GameId == gameId, ct)).ForTier(Tier)
         };

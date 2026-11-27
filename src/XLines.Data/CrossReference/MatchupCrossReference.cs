@@ -1,5 +1,4 @@
 using XLines.Core.Contracts;
-using System.Text.Json;
 using XLines.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -62,6 +61,9 @@ public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null)
         if (game is null)
             return null;
 
+        // ESPN's state of play and MLB's probables are columns, blanked for a visitor (ADR 0024).
+        game.ForTier(Tier);
+
         var since = game.StartsAt - window;
 
         // The games form is drawn from: strictly before this one, and either inside the
@@ -105,36 +107,10 @@ public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null)
             if (!byPlayer.TryGetValue(player.Id, out var appearances))
                 continue; // Did not play in the window. No row, same as storage.
 
-            var totals = new Dictionary<string, double>();
-            var counts = new Dictionary<string, int>();
-            var counting = new Dictionary<string, bool>();
-
-            foreach (var appearance in appearances)
-            {
-                foreach (var (key, value) in ParseNumeric(appearance.StatLine))
-                {
-                    totals[key] = totals.GetValueOrDefault(key) + value;
-                    counts[key] = counts.GetValueOrDefault(key) + 1;
-
-                    // Whole numbers every time means this counts things — hits, walks, pitches
-                    // — and adding them up is the right summary. A fractional value anywhere
-                    // means it is a rate, and summing a rate is nonsense: twenty games of a
-                    // .263 average must not read as 5.26.
-                    var isWhole = Math.Abs(value % 1) < 1e-9;
-                    counting[key] = counting.GetValueOrDefault(key, true) && isWhole;
-                }
-            }
-
-            rows.Add(new PlayerForm(
-                PlayerId: player.Id,
-                Name: player.FullName,
-                Position: player.Position,
-                IsHome: player.TeamId == game.HomeTeamId,
-                Appearances: appearances.Count,
-                LastPlayed: appearances.Max(a => a.StartsAt),
-                Totals: totals,
-                Counts: counts,
-                Counting: counting));
+            rows.Add(FormOf(
+                player.Id, player.FullName, player.Position,
+                isHome: player.TeamId == game.HomeTeamId,
+                appearances.Select(a => (a.StatLine, a.StartsAt)).ToList()));
         }
 
         var home = rows.Where(r => r.IsHome)
@@ -254,35 +230,56 @@ public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null)
             if (!byPlayer.TryGetValue(player.Id, out var appearances))
                 continue;
 
-            var totals = new Dictionary<string, double>();
-            var counts = new Dictionary<string, int>();
-            var counting = new Dictionary<string, bool>();
-
-            foreach (var appearance in appearances)
-            {
-                foreach (var (key, value) in ParseNumeric(appearance.StatLine))
-                {
-                    totals[key] = totals.GetValueOrDefault(key) + value;
-                    counts[key] = counts.GetValueOrDefault(key) + 1;
-
-                    var isWhole = Math.Abs(value % 1) < 1e-9;
-                    counting[key] = counting.GetValueOrDefault(key, true) && isWhole;
-                }
-            }
-
-            rows.Add(new PlayerForm(
-                PlayerId: player.Id,
-                Name: player.FullName,
-                Position: player.Position,
-                IsHome: true,
-                Appearances: appearances.Count,
-                LastPlayed: appearances.Max(a => a.StartsAt),
-                Totals: totals,
-                Counts: counts,
-                Counting: counting));
+            rows.Add(FormOf(
+                player.Id, player.FullName, player.Position,
+                isHome: true,
+                appearances.Select(a => (a.StatLine, a.StartsAt)).ToList()));
         }
 
         return rows.OrderByDescending(r => r.Appearances).ThenBy(r => r.Name).Take(max).ToList();
+    }
+
+    /// <summary>
+    /// One player's form from the lines he played: each numeric stat totalled and counted, and
+    /// marked as counting or as a rate. Both lookups above read form this way.
+    /// </summary>
+    private static PlayerForm FormOf(
+        int playerId,
+        string name,
+        string? position,
+        bool isHome,
+        IReadOnlyList<(string StatLine, DateTimeOffset StartsAt)> appearances)
+    {
+        var totals = new Dictionary<string, double>();
+        var counts = new Dictionary<string, int>();
+        var counting = new Dictionary<string, bool>();
+
+        foreach (var appearance in appearances)
+        {
+            foreach (var (key, value) in ParseNumeric(appearance.StatLine))
+            {
+                totals[key] = totals.GetValueOrDefault(key) + value;
+                counts[key] = counts.GetValueOrDefault(key) + 1;
+
+                // Whole numbers every time means this counts things — hits, walks, pitches
+                // — and adding them up is the right summary. A fractional value anywhere
+                // means it is a rate, and summing a rate is nonsense: twenty games of a
+                // .263 average must not read as 5.26.
+                var isWhole = Math.Abs(value % 1) < 1e-9;
+                counting[key] = counting.GetValueOrDefault(key, true) && isWhole;
+            }
+        }
+
+        return new PlayerForm(
+            PlayerId: playerId,
+            Name: name,
+            Position: position,
+            IsHome: isHome,
+            Appearances: appearances.Count,
+            LastPlayed: appearances.Max(a => a.StartsAt),
+            Totals: totals,
+            Counts: counts,
+            Counting: counting);
     }
 
     /// <summary>
@@ -294,27 +291,8 @@ public class MatchupCrossReference(XLinesDbContext db, IDataTier? tier = null)
     /// </summary>
     internal static IEnumerable<KeyValuePair<string, double>> ParseNumeric(string statLineJson)
     {
-        Dictionary<string, string>? line;
-
-        try
+        foreach (var (key, raw) in StatLineKeys.Read(statLineJson))
         {
-            line = JsonSerializer.Deserialize<Dictionary<string, string>>(statLineJson) is { } read
-                ? StatLineKeys.Canonical(read)
-                : null;
-        }
-        catch (JsonException)
-        {
-            yield break;
-        }
-
-        if (line is null)
-            yield break;
-
-        foreach (var (key, raw) in line)
-        {
-            if (key == "category")
-                continue;
-
             if (double.TryParse(raw, System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture, out var value))
                 yield return new KeyValuePair<string, double>(key, value);

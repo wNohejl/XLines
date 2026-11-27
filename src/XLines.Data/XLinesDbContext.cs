@@ -469,6 +469,8 @@ public class XLinesDbContext(DbContextOptions<XLinesDbContext> options) : DbCont
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16);
             e.Property(x => x.JobKey).HasMaxLength(64);
             e.HasIndex(x => new { x.SourceId, x.StartedAt });
+            // The board's last-pull lookup and the poll planner ask by job key alone.
+            e.HasIndex(x => new { x.JobKey, x.StartedAt });
             e.Ignore(x => x.Duration);
         });
 

@@ -947,6 +947,8 @@ namespace XLines.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("JobKey", "StartedAt");
+
                     b.HasIndex("SourceId", "StartedAt");
 
                     b.ToTable("IngestionRuns");

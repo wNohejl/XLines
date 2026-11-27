@@ -90,6 +90,10 @@ public class SearchService(XLinesDbContext db, IDataTier? tier = null)
         // memory rather than asked of the database as an interval expression.
         var found = await query.OrderByDescending(g => g.StartsAt).Take(200).ToListAsync(ct);
 
+        // ESPN's state of play and MLB's probables are columns, blanked for a visitor (ADR 0024).
+        foreach (var g in found)
+            g.ForTier(Tier);
+
         if (fromToday)
         {
             var today = LeagueClock.StartOf(LeagueClock.Today());
