@@ -368,7 +368,10 @@ palette and contrast test read the row. Literally:
    `-negative-hover`, `-warning`, the four inks (`--state-*-ink`, `--accent-ink`), `--chart-neutral`,
    `-dim`, the four `--material-*` tiers, `--shadow-1` … `-sheet`, `-inset`, `--sheen`, `-soft`,
    `--knob` and `--key-press`; plus, beside the fill each thins, any wash or key alpha that departs
-   from the default. The washes, the key's line and sheen and the blur are derived (above).
+   from the default. The washes, the key's line and sheen and the blur are derived (above), and so
+   is a two-sided chart's pair, `--chart-side-home` (the ink) and `--chart-side-away` (the neutral),
+   which only a Graphite accent block re-points, 3:1 apart and 3:1 off the panel, with its row's
+   `AccentPalette.SideHome` (and `SideAway` where the neutral is too light) beside it.
    `--on-accent` is the family's own and need not be white: Ayu, Midnight and Synthwave dark, Paper
    and Terra carry dark or parchment labels.
 

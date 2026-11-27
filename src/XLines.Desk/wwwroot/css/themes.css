@@ -3068,12 +3068,14 @@
     --accent-hover: #747479;
     --accent-press: #67676B;
     --accent-ink: #A1A1A6; /* 6.09:1 */
+    --chart-side-home: #F8F8F9; /* 14.77:1 on the panel, 3.07 off the neutral */
 }
 [data-theme="apple-light"][data-accent="graphite"] {
     --accent: #747479;
     --accent-hover: #6D6D71;
     --accent-press: #66666A;
     --accent-ink: #656569; /* 4.62:1 raised, more on the panel */
+    --chart-side-home: #424244; /* 10.03:1, 3.08 */
 }
 
 /* Paper's chosen accents: the other inks in the well.
@@ -3387,12 +3389,14 @@
     --accent-hover: #AAB4AC;
     --accent-press: #95A098;
     --accent-ink: #BCC5BF; /* 7.05:1, 4.57 on its wash */
+    --chart-side-home: #F8F9F8; /* 11.82:1, 3.08 */
 }
 [data-theme="everforest-light"][data-accent="graphite"] {
     --accent: #6A7969; /* grey2 (#829181) deepened */
     --accent-hover: #637162;
     --accent-press: #5C695B;
     --accent-ink: #576356; /* 5.86:1, 4.61 on its wash */
+    --chart-side-home: #3B433A; /* 9.50:1, 3.08 */
 }
 
 /* Kanagawa's chosen accents. Keys, built-in first:
@@ -3437,12 +3441,14 @@
     --accent-hover: #9E9D96;
     --accent-press: #898880;
     --accent-ink: #A6A69F; /* 6.67:1, 4.57 on its wash */
+    --chart-side-home: #CDCDC9; /* 10.25:1, 3.08 */
 }
 [data-theme="kanagawa-light"][data-accent="graphite"] {
     --accent: #716E61; /* lotusGray2 */
     --accent-hover: #69665A;
     --accent-press: #626054;
     --accent-ink: #5A584E; /* 5.95:1, 4.57 on its wash */
+    --chart-side-home: #3F3E37; /* 8.95:1, 3.05 */
 }
 
 /* One's chosen accents. Keys, built-in first:
@@ -3486,12 +3492,14 @@
     --accent-hover: #A2A9B5;
     --accent-press: #8D94A1;
     --accent-ink: #B1B7C1; /* 6.94:1, 4.58 on its wash */
+    --chart-side-home: #EEEFF1; /* 12.17:1, 3.06 */
 }
 [data-theme="one-light"][data-accent="graphite"] {
     --accent: #696C77; /* mono-2 */
     --accent-hover: #62646F;
     --accent-press: #5B5E68;
     --accent-ink: #5C5F69; /* 6.10:1, 4.60 on its wash */
+    --chart-side-home: #4E5159; /* 7.61:1, 3.08 */
 }
 
 /* Monokai's chosen accents. Keys, built-in first:
@@ -3536,12 +3544,14 @@
     --accent-hover: #A8A498;
     --accent-press: #938F83;
     --accent-ink: #B3B0A6; /* 6.85:1, 4.57 on its wash */
+    --chart-side-home: #CECCC5; /* 9.25:1, 3.05 */
 }
 [data-theme="monokai-light"][data-accent="graphite"] {
     --accent: #75715E; /* comment */
     --accent-hover: #6D6957;
     --accent-press: #666252;
     --accent-ink: #646150; /* 5.85:1, 4.57 on its wash */
+    --chart-side-home: #282720; /* 14.06:1, 3.05 */
 }
 
 /* Ayu's chosen accents. Keys, built-in first:
@@ -3643,12 +3653,15 @@
     --accent-wash-alpha: .15;
     --accent-wash-strong-alpha: .24;
     --accent-ink: #9198A1; /* fgColor-muted */
+    --chart-side-home: #F0F6FC; /* fgColor-default: 17.39:1, 3.43 off the away side */
+    --chart-side-away: #7D8590; /* 5.07:1; fgColor-muted is too light for any tone to clear it */
 }
 [data-theme="primer-light"][data-accent="graphite"] {
     --accent: #59636E; /* fgColor-muted, Primer's neutral emphasis */
     --accent-hover: #4F5862;
     --accent-press: #454C54; /* neutral-10 */
     --accent-ink: #454C54; /* neutral-10 */
+    --chart-side-home: #393F46; /* 10.64:1, 3.08 */
 }
 
 /* Night Owl's chosen accents: the palette's keyword purple, its cyan and the
@@ -3817,12 +3830,15 @@
     --accent-wash-alpha: .15;
     --accent-wash-strong-alpha: .24;
     --accent-ink: #DCDCCC; /* fg */
+    --chart-side-home: #FFFFEF; /* fg+1: 10.43:1, 3.23 off the away side */
+    --chart-side-away: #8F8F87; /* 3.23:1; fg-05 is too light for any tone to clear it */
 }
 [data-theme="zenburn-light"][data-accent="graphite"] {
     --accent: #656555; /* fg-1 */
     --accent-hover: #5E5E4F;
     --accent-press: #575749;
     --accent-ink: #575749;
+    --chart-side-home: #4A4A3E; /* 8.89:1, 3.09 */
 }
 
 /* Nord: alternative accents. Each block redeclares the four accent tokens, and a wash alpha
@@ -4032,6 +4048,7 @@
     --accent-press: #998D82;
     /* The ink: lifted past #B2A79D until it reads on every surface and wash it is set on. */
     --accent-ink: #B7ACA3;
+    --chart-side-home: #EDEAE8; /* 12.31:1, 3.07 */
 }
 
 [data-theme="gruvbox-light"][data-accent="graphite"] {
@@ -4041,6 +4058,7 @@
     --accent-press: #695E54;
     /* The ink: deepened past #695E54 until it reads on every surface and wash it is set on. */
     --accent-ink: #665B51;
+    --chart-side-home: #403933; /* 10.00:1, 3.09 */
 }
 
 /* Tokyo Night: alternative accents. Each block redeclares the four accent tokens, and a wash alpha

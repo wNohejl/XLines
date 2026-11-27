@@ -9,8 +9,10 @@
     a loss dipping back under it, a penalty dashed, a play for nothing a dot at its spot, a punt or
     a field goal a faint dotted long ball, the play that scored and the one that gave the ball away
     marked in their state colours. The arcs are in the colour of the side with the ball, the
-    pair a chart spends on two series with no state (away the chart's neutral, home the accent's
-    ink); the latest play is drawn heavier, and draws itself in, from where the ball was.
+    desk's chart-side pair (--chart-side-home, --chart-side-away: the accent's ink and the chart
+    neutral, re-pointed on Graphite), and not by colour alone: an away drive is drawn hollow — its
+    solid arcs carry a core of the field's own fill, its dots and end are rings — and a home drive
+    solid. The latest play is drawn heavier, and draws itself in, from where the ball was.
 
     Two modes. Live (Replay false): the drive in progress, with the line of scrimmage, the line to
     gain and the ball, pointing the way it is going; no spot, or nobody on the ball, draws the field
@@ -109,6 +111,11 @@
                     {
                         <path class="@classes" data-kind="@Kind(arc.Kind)" d="@path"
                               pathLength="@(DrawsIn(arc) ? "1" : null)" />
+                        @if (Hollow(arc, side))
+                        {
+                            @* The away side's hollow: the field's own fill down the arc's middle, drawn in with it. *@
+                            <path class="@CoreClasses(arc)" d="@path" pathLength="@(DrawsIn(arc) ? "1" : null)" />
+                        }
                     }
                     else
                     {
@@ -246,12 +253,29 @@
     private static bool DrawsIn(DriveArc arc)
         => arc.Latest && arc.Kind is not (DriveArcKind.Penalty or DriveArcKind.Kick);
 
-    private static string ArcClasses(DriveArc arc, string? side)
+    /// <summary>
+    /// An away drive's solid arc — a pass, a run, a loss — is drawn hollow, so the sides part by
+    /// shape and not by tone alone; a penalty's dashes and a kick's dots already say what they are,
+    /// and a dot is ringed by its own rule.
+    /// </summary>
+    private static bool Hollow(DriveArc arc, bool? homeBall)
+        => homeBall == false && arc.Path is not null && arc.Kind is DriveArcKind.Pass or DriveArcKind.Run or DriveArcKind.Loss;
+
+    private static string CoreClasses(DriveArc arc)
+        => string.Join(' ', new[]
+        {
+            "fieldgraphic__core",
+            arc.Latest ? "fieldgraphic__core--latest" : null,
+            DrawsIn(arc) ? "fieldgraphic__core--draw" : null,
+        }.Where(c => c is not null));
+
+    private string ArcClasses(DriveArc arc, string? side)
         => string.Join(' ', new[]
         {
             "fieldgraphic__arc",
             $"fieldgraphic__arc--{Kind(arc.Kind)}",
             side,
+            Hollow(arc, HomeBall) ? "fieldgraphic__arc--hollow" : null,
             arc.Score ? "fieldgraphic__arc--score" : null,
             arc.Turnover ? "fieldgraphic__arc--turnover" : null,
             arc.Latest ? "fieldgraphic__arc--latest" : null,

@@ -72,6 +72,15 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* A swing in the win probability, after what the play was worth: quiet, a step smaller and in the
+   secondary ink, because it is about the game and not the play; no hue, since neither side's
+   gain is a state. */
+.gc__swing {
+    color: var(--text-secondary);
+    font-size: var(--text-footnote);
+    font-variant-numeric: tabular-nums;
+}
+
 /* The play that has just landed. With motion on, the field's latest arc drawing itself in is
    what says a play arrived; under reduced motion that is off, so the row itself is washed in the
    raised fill a hovered row takes (the accent is kept for what can be pressed) and fades back:
