@@ -24,7 +24,10 @@ public static class RepositoryGuard
             // private one there, where the file is tracked on purpose. A repository the one around
             // it ignores is not where the file would be published from, so the question passes
             // outward to the repository that could publish it.
-            while (RepositoryOf(root) is { } outer && Ignores(outer, root))
+            // A linked worktree is not such a repository: it commits to the repository it was cut
+            // from, wherever its folder sits, so one inside an ignored folder (.claude/worktrees/)
+            // publishes exactly as the main checkout does and answers for itself.
+            while (!IsLinkedWorktree(root) && RepositoryOf(root) is { } outer && Ignores(outer, root))
                 root = outer;
 
             return Ignores(root, full)
@@ -58,6 +61,30 @@ public static class RepositoryGuard
         git.WaitForExit(15_000);
 
         return git.HasExited && git.ExitCode == 0;
+    }
+
+    /// <summary>
+    /// Whether the checkout at <paramref name="root"/> is a linked worktree: its <c>.git</c> is a
+    /// file pointing into another repository's <c>worktrees/</c>. (A submodule's points into
+    /// <c>modules/</c>, and is a repository of its own.)
+    /// </summary>
+    internal static bool IsLinkedWorktree(string root)
+    {
+        var git = Path.Combine(root, ".git");
+
+        if (!File.Exists(git))
+            return false;
+
+        try
+        {
+            var pointer = File.ReadAllText(git).Replace('\\', '/');
+            return pointer.StartsWith("gitdir:", StringComparison.Ordinal)
+                   && pointer.Contains("/worktrees/", StringComparison.Ordinal);
+        }
+        catch (IOException)
+        {
+            return false;
+        }
     }
 
     /// <summary>The nearest directory above the path holding a <c>.git</c> (a directory, or a worktree's file).</summary>

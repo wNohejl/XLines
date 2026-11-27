@@ -462,6 +462,35 @@ public class JournalTransferTests(PostgresFixture fixture)
         }
     }
 
+    [Fact]
+    public void A_worktree_in_an_ignored_folder_is_no_shelter()
+    {
+        // An agent's worktree sits under a folder the repository ignores, and still commits to
+        // that repository: a journal written into it is one `git add` from published.
+        var outer = Path.Combine(Path.GetTempPath(), "xlines-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outer);
+
+        try
+        {
+            Git(outer, "init", "-q");
+            File.WriteAllText(Path.Combine(outer, ".gitignore"), "trees/\npersonal/\n");
+            Git(outer, "add", ".gitignore");
+            Git(outer, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", "commit", "-q", "-m", "ignore");
+            Git(outer, "worktree", "add", "-q", "--detach", Path.Combine("trees", "one"));
+
+            var tree = Path.Combine(outer, "trees", "one");
+
+            Assert.NotNull(RepositoryGuard.Refusal(Path.Combine(tree, "journal.json")));
+            Assert.Null(RepositoryGuard.Refusal(Path.Combine(tree, "personal", "journal.json")));
+        }
+        finally
+        {
+            foreach (var file in Directory.EnumerateFiles(outer, "*", SearchOption.AllDirectories))
+                File.SetAttributes(file, FileAttributes.Normal);
+            Directory.Delete(outer, recursive: true);
+        }
+    }
+
     private static void Git(string directory, params string[] args)
     {
         var start = new System.Diagnostics.ProcessStartInfo("git")
