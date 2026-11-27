@@ -4006,6 +4006,73 @@ body.dialog-dragging { user-select: none; }
    keeps that: a disabled key gives up its accent as well as its weight. */
 .desk-btn--native:disabled { color: var(--text-tertiary); }
 
+/* The chip without MudBlazor (ADR 0034, step 3): a <button> that is the capsule itself. With
+   MudBlazor the capsule is .mud-chip dressed by .desk-chip in mud-bridge.css; this block says the
+   same capsule whole, so nothing of it is left behind in that stylesheet's reset. The figures are
+   the ones that rule holds: .tag's 14px line in a 22px key, the pointer and the press deepening
+   the fill toward the ink, pressed in the primary ink and a semibold word, and the accent spent
+   on the focus ring alone. */
+.desk-chip--native {
+    appearance: none;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    max-width: 100%;
+    min-height: 22px;
+    margin: 0;
+    padding: 3px var(--space-3);
+    border: 0;
+    border-radius: 999px;
+    outline: 0;
+    background-color: var(--surface-3);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: var(--text-footnote);
+    font-weight: var(--weight-medium);
+    line-height: 14px;
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+/* The fold's chevron, at the small key's glyph size, leading the words. */
+.desk-chip--native svg { width: var(--glyph-sm); height: var(--glyph-sm); flex: 0 0 auto; margin-inline-start: -2px; }
+
+@media (hover: hover) and (pointer: fine) {
+    .desk-chip--native:hover:not(:disabled) {
+        background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 8%);
+        color: var(--text-primary);
+    }
+}
+
+.desk-chip--native:focus-visible { box-shadow: var(--focus-ring); }
+
+.desk-chip--native:active:not(:disabled),
+.desk-chip--native.desk-chip--pressed {
+    background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 14%);
+    color: var(--text-primary);
+}
+
+.desk-chip--native.desk-chip--pressed { font-weight: var(--weight-semibold); }
+
+@media (hover: hover) and (pointer: fine) {
+    .desk-chip--native.desk-chip--pressed:hover:not(:disabled) {
+        background-color: color-mix(in oklab, var(--surface-3), var(--text-primary) 20%);
+    }
+}
+
+/* Disabled: dimmed as MudBlazor dimmed it, and it takes the pointer so the cursor and the title
+   still say why, as the native key does. */
+.desk-chip--native:disabled { opacity: .5; cursor: not-allowed; }
+
+@media (prefers-reduced-motion: reduce) {
+    .desk-chip--native { transition: none; }
+}
+
 /* ------------------------------------------------------------------- fields ---
    A field is a place to put something, so it is cut into the surface rather than
    raised off it: a darker well, a hairline, and no fill of its own. ADR 0008 had
