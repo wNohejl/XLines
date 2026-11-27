@@ -226,3 +226,15 @@ call is the run's failure, with no retry; in Automatic, a scan held back at the 
 
 The panels' own line counts barely moved: the queries left, but the view-model shaping and the
 markup are still one file each. That, and `BoardService.cs`, are where the next round starts.
+
+### After the merge
+
+The branch met ten commits that landed on `LineX_Development` the same afternoon (the Gamecast
+work and the first Desk primitives off MudBlazor) and was merged with them as `cfba81f`. Four files
+were joined by hand: the ESPN adapter takes both the injected clock and the host's `EspnPacer`; a
+provider client is not retried when metered, and otherwise not when the request is a gamecast read;
+the gamecast feed keeps its optional `TimeProvider`; `Program.cs` registers both sides' services.
+On the merged tree: build 0 errors; XLines.Tests 1308, XLines.Web.Tests 1516, XLines.Desk.Tests
+2820, XLines.Desk.Hosting.Tests 26, 5670 passed and none failed; no pending model changes; CI's
+format step exits 0. The Worker start and the Docker images were run on the branch before the
+merge, not again after it.
