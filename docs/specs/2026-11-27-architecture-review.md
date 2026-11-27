@@ -159,9 +159,10 @@ another session has uncommitted (`DeskHost.cs`, the Desk primitives and css, `Pr
 
 ## Results
 
-Five commits on `arch-review`, `37a42de` to `28c4109`, on top of `022a1d1`. Not merged, not pushed.
+Fourteen commits on `arch-review`, on top of `022a1d1`. Two rounds: the defects and small wins
+first, then five of the ten moves above.
 
-### What changed
+### Round one: defects and small wins
 
 | Area | Change | Defect |
 |---|---|---|
@@ -170,40 +171,58 @@ Five commits on `arch-review`, `37a42de` to `28c4109`, on top of `022a1d1`. Not 
 | Ingestion | `RunUnattendedLinesAsync` gates the scheduler's paced and closing scans with `AffordsUnattended`, and the planner watches no league when no scan is left above the reserve; metered clients (The Odds API, odds-api.io, SportsGameOdds) keep the timeout and breaker and lose the retry; a Worker `--job` run cancels on Ctrl+C or SIGTERM | D2, D3 |
 | Desk | `EnsureFocused` for a pointerdown inside a window; the row of columns is kept and checked against what it was built from; `WindowBar.ShouldRender` on a signature of what it draws | |
 | Web | `CanOperate` at the top of ten write handlers in Ops and Incidents; `LatestRead` in Ops, Incidents, Runs and History; `OddsText` (Price, Line, Clv) is the one formatter | D5, D6 |
+| Journal | `RepositoryGuard` no longer treats a linked worktree in an ignored folder as a private repository: a journal written into `.claude/worktrees/<name>/` was allowed, and is now refused as in the main checkout. Found because its test failed when run from a worktree | new |
 
-Two things turned out differently from the review. The focus early-out is a new method, not a
-change to `Focus`: `Open` on a re-aimed singleton and the Line watch change a window's parameters
-and then focus it to have it redrawn. And the journal's `Describe` had the same "-3.00" defect as
-the snippet, so its text changes too.
+### Round two: the moves
 
-### Checklist (CLAUDE.md, "Verification before done")
+| Move | Done | Its check |
+|---|---|---|
+| 1. Every panel reads through a data service | Runs, History, Ops, Player, Team, Players, Market movement, Board and Journal each have a service; Odds resolves the registered `ILineMovementData`. Queries, ordering and tier handling moved as they were. One line in `Program.cs`: `AddXLinesPanelData()` | Razor files touching a DbContext **10 → 0**, and `PanelDataTests` fails if one returns. The services have no database-backed tests: the Web test project has no Postgres fixture |
+| 2. Jobs are classes | Twelve classes under `Services/Jobs` behind `IIngestionJob`; `IngestionJobs` stays the catalogue and keeps the run's bookkeeping; its public members are unchanged | `IngestionJobs.cs` **1638 → 461** lines (under 500, not the 300 hoped for: the public constants and records stay on the facade). `JobCatalogueTests`: every described key resolves to exactly one handler |
+| 3. The scheduler's loop | The tick polls live and scans lines before results and settlement; fighters then backport run on a task the tick does not await, never twice at once | `SchedulerLongPassTests`: a fighters pass that has not finished holds neither the live poll nor the closing scan, and is not started again |
+| 4. One clock | `TimeProvider` registered and injected through the ingestion and the Data readers | `DateTimeOffset.UtcNow` **71 → 0** in Ingestion and **8 → 0** in the readers. Two reads remain in Data outside the readers (`JournalAuditInterceptor`, `DatabaseInitializer`), and Reliability and Observability were not touched. `BoardServiceTests` pins the stale-pull line at a fixed instant; `ResultsBackOffClockTests` pins the sweep's back-off |
+| 5. `WindowManager` | `RowLayout` (pure), `DeskRow`, `ViewportFit`, `LayoutStore`, `DeskHistory`; the manager still raises every event in the order it did | `WindowManager.cs` **2185 → 1094** lines, every new file under 700 (not the 700 hoped for the manager: what is left is its public members and their comments). Its public declarations diff as identical and no existing test was edited. `RowLayout` is public, not internal: `InternalsVisibleTo` made `DeskLayout` ambiguous in a test |
+
+Not started: 6 (the grid's columns), 7 (pure analytics into Core), 8 (the build skeleton), 9 (tests
+by category), 10 (CSS in layers, which waits on the ADR 0034 work), and the smaller items.
+
+Behaviour that changed on purpose, beyond the defects: `BoardRow.Age` and `FighterCard.Age` are
+measured to the moment the row was read, not to the moment the property is asked; a failed metered
+call is the run's failure, with no retry; in Automatic, a scan held back at the reserve writes no run.
+
+### Checklist (CLAUDE.md, "Verification before done"), run on the final commit
 
 | Check | Result |
 |---|---|
-| `dotnet build XLines.slnx` | 0 errors, 72 warnings; `022a1d1` built the same way has 72 |
-| `dotnet test XLines.slnx` | Desk 2751, Web 1449, Desk.Hosting 26, all passed. XLines.Tests 1252 passed, 1 failed in the worktree: `JournalTransferTests.A_journal_file_git_would_commit_is_refused`, because the worktree sits under `.claude/`, which the repository around it ignores, so `RepositoryGuard` rightly sees the path as ignored. In a copy of the branch outside any repository, all 11 `JournalTransferTests` pass |
-| The Worker host starts | Against a throwaway Postgres: all 22 migrations applied, the scheduler ran until stopped at 30 s. `--job espn:range` with ESPN off refuses in one line and exits 5. `appsettings.json` comment keys unique |
+| `dotnet build XLines.slnx` | 0 errors, 72 warnings; `022a1d1` has 72 |
+| `dotnet test XLines.slnx`, in the worktree | XLines.Tests 1277, XLines.Web.Tests 1465, XLines.Desk.Tests 2759, XLines.Desk.Hosting.Tests 26: 5527 passed, 0 failed, 0 skipped |
+| `dotnet format --verify-no-changes --no-restore` (CI's step, Linux SDK container, LF files) | Exit 0. It exited 2 at `022a1d1`: whitespace in twelve files and two analyzer warnings, all since fixed |
+| The Worker host starts | Against a throwaway Postgres: all 22 migrations applied, "Ingestion scheduler started", still running when stopped at 40 s. `--job settle` succeeds; `--job espn:range` with ESPN off refuses in one line and exits 5. `appsettings.json` comment keys unique |
+| Docker images | Web and Worker both build from the committed tree; the Worker image refuses an `espn:` job with exit 5 |
+| The hosted backup | `deploy/backup.sh` against a throwaway Postgres created as `lineops`: with the old role, "backup: FAILED"; with the fixed one, "backup: wrote" |
 | Data coverage queries | Not applicable: no ingested data or parser changed |
-| `dotnet format --verify-no-changes` (CI's step, in the Linux SDK container) | Fails on 37 files, and failed the same way at `022a1d1` (exit 2): the branch adds no file to the list. With CI now running on `LineX_Development`, the format step will be red on the first push until those 37 are formatted |
-| Not run | The desk in a browser; the Docker images; the hosted compose file (the backup fix is by reading, not by a backup taken) |
+| Not run | The desk in a browser. The scheduler against live providers: the new ordering and the reserve gate are proven by tests on fakes, not by a day of real polling |
 
 ### Metrics
 
 | Metric | Before | After |
 |---|---|---|
-| Tests in the solution | not run at the base | 5479 run (41 new test methods in 9 new files) |
-| `CancellationToken.None` in the Worker | 1 | 0 |
-| Token-less `ToListAsync()` in `.razor` | 6 | 1 |
-| Copies of the `+` price format in Web | 4 | 1 |
+| Razor files touching a DbContext | 10 | 0 |
+| Token-less `ToListAsync()` in `.razor` | 6 | 0 |
+| `IngestionJobs.cs` | 1638 lines | 461 |
+| `WindowManager.cs` | 2111 lines | 1094 |
+| `DateTimeOffset.UtcNow` in Ingestion | 71 | 0 |
+| `DateTimeOffset.UtcNow` in the Data readers | 8 | 0 |
 | Write handlers in Ops and Incidents with no operator check | 10 | 0 |
 | Readers returning an un-scrubbed `Game` | 3 | 0 |
-| `Kind == SourceKind.Odds` in the readers (the close rule, inline) | 3 | 0 (one helper) |
-| `MatchupCrossReference.cs` | 406 lines | 384 |
+| Copies of the `+` price format in Web | 4 | 1 |
+| `CancellationToken.None` in the Worker | 1 | 0 |
 | Indexes serving a `JobKey` filter on `IngestionRuns` | 0 | 1 |
 | Projects whose references a test pins | 4 (Desk family) | 11 |
-| Razor files touching a DbContext | 10 | 10 (item 1 above, not started) |
-| `IngestionJobs.cs` | 1588 lines | 1638 (item 2, not started; the gate added lines) |
-| `WindowManager.cs` | 2111 lines | 2185 (item 5, not started; the cache added lines) |
+| CI format step | exit 2 | exit 0 |
+| New test methods | | 60 |
+| `BoardPanel.razor` / `JournalPanel.razor` / `OpsPanel.razor` | 1808 / 1567 / 1282 | 1742 / 1494 / 1250 |
+| `BoardService.cs` | 716 lines | 718 (move 7, not started) |
 
-The last three rows are the honest ones: the large moves in "The architecture to move toward"
-are untouched, and two of the files they are about grew.
+The panels' own line counts barely moved: the queries left, but the view-model shaping and the
+markup are still one file each. That, and `BoardService.cs`, are where the next round starts.
