@@ -51,6 +51,9 @@ builder.Services.AddScoped<XLines.Web.Services.ILineMovementData, XLines.Web.Ser
 builder.Services.AddScoped<XLines.Web.Services.IMatchupData, XLines.Web.Services.MatchupData>();
 builder.Services.AddScoped<XLines.Web.Services.IGameWindowData, XLines.Web.Services.GameWindowData>();
 builder.Services.AddScoped<XLines.Web.Services.IGamecastData, XLines.Web.Services.GamecastData>();
+// One game's plays and drives, read once for every circuit's Gamecast on it and evicted by the
+// same change notices the windows hear (per game and tier; see GamecastSnapshots).
+builder.Services.AddSingleton<XLines.Web.Services.GamecastSnapshots>();
 
 // Persist Data Protection keys outside the container when a path is configured. Without this
 // a replaced container generates fresh keys, which silently invalidates every live Blazor

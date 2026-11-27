@@ -48,13 +48,15 @@
     in turn is one quiet line under the field; quiet is a warning note about the field card. The
     window tells the feed it is open (IGamecastData.Watch), so the game it shows is read first.
 
-    The window appends rather than reloads. It holds the plays it has drawn and, on its own
-    game's plays notice, asks for what came after the last of them; every row is keyed by the
-    play's id, so the diff is an insert at the top of the open drive rather than a rewrite of the
-    log. ESPN rewrites a play in place after a review, and may renumber it, so the same refresh
-    reads the current drive's plays again and every play is matched by its id: a correction
-    replaces its row, a play not held is inserted where its sequence puts it, and no play is ever
-    held twice. Loads and appends overlap — Try again during a refresh, a notice during a load —
+    The window appends rather than reloads. It opens on the game's shared snapshot (one read for
+    every window on the game, IGamecastData.SnapshotAsync) and, on its own game's plays notice,
+    asks for every play and drive written since the newest stamp it has read — the rows' own
+    UpdatedAt, never this host's clock — in whichever drive: a new play, and a play ESPN rewrote
+    after a review in a drive long closed, arrive the same way. Every row is keyed by the play's
+    id, so the diff is an insert at the top of the open drive rather than a rewrite of the log; a
+    correction replaces its row, a renumbered play moves, and no play is ever held twice. Each
+    drive's play count and sequence range are derived from the plays held, not asked of the
+    database. Loads and appends overlap — Try again during a refresh, a notice during a load —
     so each builds its lists aside and only the latest swaps them in. The probability
     line and the scoring summary are drawn from the plays the window already holds, so an append
     moves them with no query of their own.
@@ -101,7 +103,7 @@ else
             @if (clock is not null)
             {
                 @* The clock is counted down in the browser between the feed's readings
-                   (gameclock.js); each render here hands it a fresh one. The rail chip says
+                   (gameclock.js); each new reading is handed to it once. The rail chip says
                    the server's reading; this tag may run ahead of it by at most ClockRunsFor. *@
                 <Tag State="DeskState.Neutral"><span class="gc__clock" @ref="_clockEl">@clock</span></Tag>
             }
@@ -147,8 +149,10 @@ else
         var now = Now;
         var feed = Data.Feed(GameId);
         var state = StateOf(game.Status, feed, QuietFor(game, now), IsBreak(game));
-        var (drivePlays, driveStart) = FieldDrive();
-        var replay = ReplayDrive;
+        @* The field's drive, worked out once a render (Frame) rather than once per mention. *@
+        var frame = Frame;
+        var (drivePlays, driveStart) = (frame.FieldPlays, frame.FieldStart);
+        var replay = frame.Replay;
         var fieldShown = isLive || replay is not null;
         var hasLinescore = _header.AwayLinescore is { Count: > 0 } || _header.HomeLinescore is { Count: > 0 };
         var compared = (game.Status is GameStatus.Live or GameStatus.Final) && _comparison.Count > 0;
@@ -180,7 +184,7 @@ else
                             <FieldGraphic HomeAbbrev="@_header.Home.Abbrev" AwayAbbrev="@_header.Away.Abbrev"
                                           Replay="true" HomeBall="@SideOf(replay)" Label="@ReplayLabel(replay)"
                                           Sport="@_header.SportKey"
-                                          DrivePlays="@PlaysOf(replay)"
+                                          DrivePlays="@PlaysOf(replay.Sequence)"
                                           DriveStartYardLine="replay.StartYardLine" DriveEndYardLine="replay.EndYardLine"
                                           DriveResult="@replay.Result" />
                             <p class="gc__fielddrive">
@@ -212,7 +216,7 @@ else
                     <div class="gc__cardbody">
                         <DriveChart Drives="_drives" HomeTeamId="@_header.Home.Id"
                                     HomeAbbrev="@_header.Home.Abbrev" AwayAbbrev="@_header.Away.Abbrev"
-                                    Selected="@FieldSequence" OnSelect="SelectDrive" Sport="@_header.SportKey" />
+                                    Selected="@frame.FieldSequence" OnSelect="SelectDrive" Sport="@_header.SportKey" />
                     </div>
                 </FormGroup>
             }
@@ -457,14 +461,19 @@ else
 
                 List<GamecastPlay> plays = [];
                 IReadOnlyList<GamecastDrive> drives = [];
+                DateTimeOffset? watermark = null;
                 GameBoxScore? box = null;
                 DateTimeOffset? boxAt = null;
                 GamecastMiss? miss = null;
 
                 if (header is not null && header.SportKey == Nfl)
                 {
-                    plays = Merge([], await Data.PlaysAsync(GameId));
-                    drives = await Data.DrivesAsync(GameId);
+                    // The game's shared snapshot: a final's is held for hours, so a second window
+                    // on it reads no play or drive at all.
+                    var rows = await Data.SnapshotAsync(GameId, settled: header.Status == GameStatus.Final);
+                    plays = Merge([], rows.Plays);
+                    drives = GamecastDrives.WithSpans(rows.Drives, plays);
+                    watermark = rows.Watermark;
                     boxAt = Now;
                     box = await Data.BoxScoreAsync(GameId);
 
@@ -481,6 +490,8 @@ else
                 _freshPlay = null;
                 _plays = plays;
                 _drives = drives;
+                _watermark = watermark;
+                Reindex();
                 _box = box;
                 _boxReadAt = boxAt;
                 RebuildChart();
@@ -624,17 +635,18 @@ else
     }
 
     /// <summary>
-    /// The plays after the last one held; then the drives, for the results and which one is
-    /// current; then the drive in progress read again, so a play ESPN rewrote — a review, a spot
-    /// corrected, a probability that landed after its play, a play renumbered — replaces its row.
-    /// True when a play was added.
+    /// Every play and drive written since the newest stamp held (<see cref="_watermark"/>), in one
+    /// read: a new play, and a play ESPN rewrote — a review, a spot corrected, a probability that
+    /// landed after its play, a play renumbered — in any drive, however long closed. True when a
+    /// play was added.
     ///
     /// <para>
-    /// The re-read starts at the first play of the earliest of the drive that was current before
-    /// this refresh and the one current after it, so the scoring play that ended a drive is
-    /// corrected too. Everything read is merged by id (<see cref="Merge"/>), never by sequence:
-    /// GamecastWriter updates a stored play's sequence, and a play inserted late at or below the
-    /// last sequence held is added, not skipped.
+    /// Everything read is merged by id (<see cref="Merge"/>, <see cref="MergeDrives"/>), never by
+    /// sequence: GamecastWriter updates a stored play's sequence, and a play inserted late at or
+    /// below the last sequence held is added, not skipped. The read overlaps the last one a little
+    /// (GamecastService.ChangeOverlap), so a row stamped at the watermark is never missed and the
+    /// few read twice are drawn once. The drives' play counts and ranges are then derived from the
+    /// plays held (GamecastDrives.WithSpans), not grouped in the database.
     /// </para>
     ///
     /// <para>
@@ -653,29 +665,20 @@ else
         var generation = ++_appends;
         var loads = _loads;
         var held = _plays;
+        var heldDrives = _drives;
         var wasCurrent = CurrentDrive;
-        long? last = held.Count == 0 ? null : held[^1].Sequence;
 
-        var fresh = last is { } after
-            ? await Data.PlaysSinceAsync(GameId, after)
-            : await Data.PlaysAsync(GameId);
-
-        var drives = await Data.DrivesAsync(GameId);
-        var current = CurrentOf(drives);
-
-        var from = last is null ? null : new[] { wasCurrent?.FirstSequence, current?.FirstSequence }
-            .Where(s => s is not null && s <= last)
-            .Min();
-
-        IReadOnlyList<GamecastPlay> again = from is { } first
-            ? await Data.PlaysSinceAsync(GameId, first - 1)
-            : [];
+        var changes = await Data.ChangesSinceAsync(GameId, _watermark);
 
         if (generation != _appends || loads != _loads)
             return false;
 
-        _plays = Merge(held, fresh.Concat(again));
+        _plays = Merge(held, changes.Plays);
+        var drives = GamecastDrives.WithSpans(MergeDrives(heldDrives, changes.Drives), _plays);
+        var current = CurrentOf(drives);
         _drives = drives;
+        _watermark = Later(_watermark, changes.Watermark);
+        Reindex();
 
         // The operator left the drive in progress open; when the next one starts, follow it.
         if (_driveChosen && _openDrive == wasCurrent?.Sequence && current?.Sequence != wasCurrent?.Sequence)
@@ -746,6 +749,33 @@ else
 
         return byId.Values.OrderBy(p => p.Sequence).ThenBy(p => p.Id).ToList();
     }
+
+    /// <summary>
+    /// The drives held with those read merged in by their row's id (a drive built without one, by
+    /// its sequence): a drive the provider changed — its result, its flag, its number — replaces
+    /// its old self, and a new one is added. In sequence order, ties by id. The spans are left as
+    /// they come; <see cref="GamecastDrives.WithSpans(IReadOnlyList{GamecastDrive}, IEnumerable{GamecastPlay})"/> sets them.
+    /// </summary>
+    public static List<GamecastDrive> MergeDrives(IReadOnlyList<GamecastDrive> held, IEnumerable<GamecastDrive> read)
+    {
+        var byId = new Dictionary<long, GamecastDrive>(held.Count + 2);
+
+        foreach (var drive in held)
+            byId[DriveKey(drive)] = drive;
+        foreach (var drive in read)
+            byId[DriveKey(drive)] = drive;
+
+        return byId.Values.OrderBy(d => d.Sequence).ThenBy(d => d.Id).ToList();
+
+        static long DriveKey(GamecastDrive d) => d.Id != 0 ? d.Id : -1L - d.Sequence;
+    }
+
+    /// <summary>
+    /// The newest stamp read: the watermark the next change read starts from. The database's own
+    /// <c>UpdatedAt</c>, never this host's clock, so a host whose clock runs fast or slow neither
+    /// skips a correction nor reads the game again.
+    /// </summary>
+    private DateTimeOffset? _watermark;
     private void SetHeader(GamecastHeader? header)
     {
         _header = header;
@@ -1113,7 +1143,79 @@ else
         if (drive.TeamId is { } owner && _header?.PossessionTeamId is { } holder && owner != holder)
             return ([], null);
 
-        return (_plays.Where(p => DriveOf(p, _drives) == drive.Sequence).ToList(), drive.StartYardLine);
+        return (PlaysOf(drive.Sequence), drive.StartYardLine);
+    }
+
+    // ---- The indexes, built once a load or an append -------------------------------------
+
+    /// <summary>The drive each play held is drawn under (<see cref="DriveOf"/>), by play id.</summary>
+    private Dictionary<long, int> _driveOf = [];
+
+    /// <summary>Each drive's plays held, in sequence order, keyed as <see cref="_driveOf"/> answers (<see cref="OtherPlays"/> included).</summary>
+    private Dictionary<int, List<GamecastPlay>> _byDrive = [];
+
+    /// <summary>The drives held, by sequence; the first listed wins a number listed twice.</summary>
+    private Dictionary<int, GamecastDrive> _driveBySequence = [];
+
+    /// <summary>
+    /// Rebuilds the play→drive and drive→plays indexes from <see cref="_plays"/> and
+    /// <see cref="_drives"/>: once whenever either is swapped (a load, an append), so a render
+    /// looks a play's drive up rather than scanning the drives for it once per play.
+    /// </summary>
+    private void Reindex()
+    {
+        var bySequence = new Dictionary<int, GamecastDrive>(_drives.Count);
+        foreach (var drive in _drives)
+            bySequence.TryAdd(drive.Sequence, drive);
+
+        var driveOf = new Dictionary<long, int>(_plays.Count);
+        var byDrive = new Dictionary<int, List<GamecastPlay>>();
+
+        foreach (var play in _plays)
+        {
+            var drive = play.DriveSeq is { } seq && bySequence.ContainsKey(seq) ? seq : DriveOf(play, _drives);
+            driveOf[play.Id] = drive;
+
+            if (!byDrive.TryGetValue(drive, out var list))
+                byDrive[drive] = list = [];
+            list.Add(play);
+        }
+
+        (_driveBySequence, _driveOf, _byDrive) = (bySequence, driveOf, byDrive);
+    }
+
+    /// <summary>The drive a play held is drawn under, from the index.</summary>
+    private int DriveKeyOf(GamecastPlay play) => _driveOf.TryGetValue(play.Id, out var drive) ? drive : DriveOf(play, _drives);
+
+    /// <summary>
+    /// What the field shows, worked out once per change of what it depends on rather than once per
+    /// mention in a render: the drive replayed, the drive in progress's plays and start, and the
+    /// drive the chart marks. Every input is a reference swapped whole or a value, so comparing
+    /// them is the whole of the invalidation.
+    /// </summary>
+    private sealed record FieldFrame(
+        object Drives, object Index, Game? Game, GamecastHeader? Header, bool Chosen, int? Drive,
+        GamecastDrive? Replay, IReadOnlyList<GamecastPlay> FieldPlays, int? FieldStart, int? FieldSequence);
+
+    private FieldFrame? _frame;
+
+    private FieldFrame Frame
+    {
+        get
+        {
+            if (_frame is { } f
+                && ReferenceEquals(f.Drives, _drives) && ReferenceEquals(f.Index, _byDrive)
+                && ReferenceEquals(f.Game, _game) && ReferenceEquals(f.Header, _header)
+                && f.Chosen == _fieldChosen && f.Drive == _fieldDrive)
+                return f;
+
+            var replay = ComputeReplayDrive();
+            var (plays, start) = FieldDrive();
+            var sequence = replay?.Sequence ?? (_game?.Status == GameStatus.Live ? CurrentDrive?.Sequence : null);
+
+            return _frame = new FieldFrame(_drives, _byDrive, _game, _header, _fieldChosen, _fieldDrive,
+                replay, plays, start, sequence);
+        }
     }
 
     /// <summary>The comparison's rows, rebuilt only when the plays, the drives or the box score move.</summary>
@@ -1140,14 +1242,15 @@ else
 
     /// <summary>The drive chosen for the field, while it is still among the drives read.</summary>
     private GamecastDrive? ChosenDrive
-        => _fieldChosen && _fieldDrive is { } sequence ? _drives.FirstOrDefault(d => d.Sequence == sequence) : null;
+        => _fieldChosen && _fieldDrive is { } sequence ? _driveBySequence.GetValueOrDefault(sequence) : null;
 
     /// <summary>
     /// The drive the field replays, null while it follows the drive in progress: a live game's
     /// past drive the operator chose (choosing the drive in progress is following it), and for a
     /// final the chosen drive or else <see cref="FinalDrive"/>. A game not started replays nothing.
+    /// Read through <see cref="Frame"/>, which works it out once per change.
     /// </summary>
-    private GamecastDrive? ReplayDrive => _game?.Status switch
+    private GamecastDrive? ComputeReplayDrive() => _game?.Status switch
     {
         GameStatus.Live => ChosenDrive is { } chosen && chosen.Sequence != CurrentDrive?.Sequence ? chosen : null,
         GameStatus.Final => ChosenDrive ?? FinalDrive(),
@@ -1159,10 +1262,10 @@ else
     /// remembered by, else the last drive with a play held. None for a game with no drives.
     /// </summary>
     private GamecastDrive? FinalDrive()
-        => _drives.LastOrDefault(d => d.IsScore) ?? _drives.LastOrDefault(d => _plays.Any(p => DriveOf(p, _drives) == d.Sequence));
+        => _drives.LastOrDefault(d => d.IsScore) ?? _drives.LastOrDefault(d => _byDrive.ContainsKey(d.Sequence));
 
     /// <summary>The drive on the field, for the chart's selection: the replayed one, else the one in progress.</summary>
-    private int? FieldSequence => ReplayDrive?.Sequence ?? (_game?.Status == GameStatus.Live ? CurrentDrive?.Sequence : null);
+    private int? FieldSequence => Frame.FieldSequence;
 
     /// <summary>
     /// One drive chosen, from the chart or the log: it opens in the log and goes on the field.
@@ -1250,9 +1353,9 @@ else
             : id == _header.Away.Id ? false
             : null;
 
-    /// <summary>A drive's plays held, in sequence order.</summary>
-    private List<GamecastPlay> PlaysOf(GamecastDrive drive)
-        => _plays.Where(p => DriveOf(p, _drives) == drive.Sequence).ToList();
+    /// <summary>A drive's plays held, in sequence order, from the index; never changed in place.</summary>
+    private IReadOnlyList<GamecastPlay> PlaysOf(int drive)
+        => _byDrive.TryGetValue(drive, out var plays) ? plays : [];
 
     /// <summary>A replayed drive in words, as its log row says it: "Field: PHI drive, 7 plays, 62 yds, 3:48, TD".</summary>
     private string ReplayLabel(GamecastDrive drive)
@@ -1403,7 +1506,7 @@ else
         else
         {
             var open = OpenDrive;
-            var byDrive = _plays.GroupBy(p => DriveOf(p, _drives)).ToDictionary(g => g.Key, g => g.ToList());
+            var byDrive = _byDrive;
             var others = byDrive.GetValueOrDefault(OtherPlays);
             var headed = new HashSet<int>();
             <div class="wgroup gc__drives">
@@ -1546,7 +1649,7 @@ else
 
     /// <summary>Plays in the order given: the shared play log, virtualised past <see cref="VirtualizeAt"/>.</summary>
     private RenderFragment RenderPlays(List<GamecastPlay> plays)
-        => @<PlayLog Plays="plays" Sport="@_game?.Sport?.Key" VirtualizeAt="VirtualizeAt" Fresh="_freshPlay" />;
+        => @<PlayLog Plays="plays" Sport="@_game?.Sport?.Key" VirtualizeAt="VirtualizeAt" Fresh="_freshPlay" HomeAbbrev="@_header?.Home.Abbrev" AwayAbbrev="@_header?.Away.Abbrev" Game="_plays" />;
 
     /// <summary>
     /// A drive closed to one line: "7 plays, 62 yds, 3:48 · Touchdown". Plays are the provider's
@@ -1595,8 +1698,8 @@ else
             <div class="wgroup">
                 @foreach (var play in scoring)
                 {
-                    var driveSeq = DriveOf(play, _drives);
-                    var drive = driveSeq == OtherPlays ? null : _drives.FirstOrDefault(d => d.Sequence == driveSeq);
+                    var driveSeq = DriveKeyOf(play);
+                    var drive = driveSeq == OtherPlays ? null : _driveBySequence.GetValueOrDefault(driveSeq);
                     @if (drive is not null)
                     {
                         @* Pressing a score is choosing its drive, as the chart and the log choose
@@ -1805,7 +1908,8 @@ else
     private bool ClockShown => _game is not null && ClockParts(_game).Clock is not null;
 
     /// <summary>
-    /// Hands the browser the clock after every render (gameclock.js), and never in prerender —
+    /// Hands the browser the clock after a render that drew a new reading (gameclock.js, once per
+    /// <see cref="ClockKey"/>), and never in prerender —
     /// there is no browser to hand it to. Whether it runs, from where and for how long is
     /// <see cref="ClockRun"/>'s.
     ///
@@ -1833,6 +1937,15 @@ else
         var previous = _previousReading;
         var element = _clockEl;
 
+        // Handed once per reading: a render that changes nothing about the clock — a play
+        // appended, a drive opened — leaves the browser counting from the reading it has. The same
+        // reading drawn again draws the same text, which the renderer leaves alone, so the tick
+        // the browser wrote stays.
+        var reading = new ClockKey(game.Status, game.StatusDetail, game.Period, game.ClockSeconds, game.DisplayClock,
+            game.LiveUpdatedAt, previous?.At, element.Id);
+        if (reading == _clockHanded)
+            return;
+
         try
         {
             if (_import is null)
@@ -1849,6 +1962,7 @@ else
             var (seconds, running, limit) = ClockRun(game, previous, Now);
             await module.InvokeVoidAsync("startClock", element, seconds, running, limit);
             _clockStarted = true;
+            _clockHanded = reading;
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException
                                        or TaskCanceledException or ObjectDisposedException)
@@ -1860,6 +1974,14 @@ else
             Log.LogDebug(ex, "Gamecast {GameId}: the browser clock did not start; the tag shows the server's reading", GameId);
         }
     }
+
+    /// <summary>Everything the browser's clock is started from: a new value of any is a new reading to hand it.</summary>
+    private readonly record struct ClockKey(
+        GameStatus Status, string? Detail, int? Period, int? Seconds, string? Display,
+        DateTimeOffset? At, DateTimeOffset? PreviousAt, string? Element);
+
+    /// <summary>The reading last handed to the browser; null until one has been, and kept only when it took.</summary>
+    private ClockKey? _clockHanded;
 
     /// <summary>Imports of gameclock.js a window asks for before it gives the ticking clock up.</summary>
     private const int ClockImportAttempts = 2;
