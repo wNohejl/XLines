@@ -13,16 +13,22 @@ namespace XLines.Desk.Windowing;
 /// a column's bar past a neighbour) and resizing it (dragging a divider) are the only two
 /// gestures on the row, and they are deliberately distinct hit targets so neither is ever
 /// triggered by accident.
+///
+/// <para>
+/// The manager is the desk's surface: it decides when a change is a step Back can take, what
+/// the notice says, and when the desk has changed. The work behind it is in collaborators of its
+/// own: <see cref="DeskRow"/> (the windows, their columns and tabs, focus), <see cref="ViewportFit"/>
+/// (folding the row for a narrow browser), <see cref="RowLayout"/> (the arithmetic of the row),
+/// <see cref="LayoutStore"/> (the desk written down, and workspaces) and <see cref="DeskHistory"/>
+/// (Back and Forward, and each window's pages).
+/// </para>
 /// </summary>
 public class WindowManager
 {
-    /// <summary>Gap between columns and around the row, in CSS pixels.</summary>
-    private const double Gap = 8;
-
-    private readonly List<WindowInstance> _windows = [];
-    private long _sequence;
-    private long _recency;
-    private int _columnSequence;
+    private readonly DeskRow _row;
+    private readonly ViewportFit _fit;
+    private readonly LayoutStore _store;
+    private readonly DeskHistory _history = new();
 
     /// <summary>
     /// True once the operator has set the ceiling themselves, after which the first viewport
@@ -119,15 +125,23 @@ public class WindowManager
         Access = access;
         Catalog = new AccessCatalog(catalog, access);
         Settings.PrimaryWindowKey = Catalog.DefaultPrimary;
+
+        _row = new DeskRow(Settings);
+        _fit = new ViewportFit(_row, Settings);
+        _store = new LayoutStore(Catalog);
     }
 
     /// <summary>Every open window, in the order they were opened — showing or waiting as a tab.</summary>
-    public IReadOnlyList<WindowInstance> Windows => _windows;
+    public IReadOnlyList<WindowInstance> Windows => _row.Windows;
 
     public DeskSettings Settings { get; } = new();
 
     /// <summary>The window the operator is in. Always one that is showing, never a tab behind another.</summary>
-    public string? FocusedId { get; private set; }
+    public string? FocusedId
+    {
+        get => _row.FocusedId;
+        private set => _row.FocusedId = value;
+    }
 
     /// <summary>Measured browser desk area in CSS pixels. Set by the host on resize.</summary>
     public double ViewportWidth { get; private set; } = 1280;
@@ -154,13 +168,6 @@ public class WindowManager
         : ViewportHeight;
 
     /// <summary>
-    /// The narrowest a column may be before the window in it stops being readable. The widest
-    /// <c>MinWidth</c> in the catalogue, so the guidance holds for whatever is opened rather
-    /// than for the most forgiving thing that could be.
-    /// </summary>
-    private const double ReadableWidth = 420;
-
-    /// <summary>
     /// How many columns fit at a readable width. Guidance beside the operator's ceiling.
     ///
     /// <para>
@@ -174,40 +181,13 @@ public class WindowManager
     /// </para>
     /// </summary>
     public int RecommendedCapacity
-    {
-        get
-        {
-            var hasPrimary = Settings.PrimaryWindowKey is not null;
-            var share = Math.Clamp(Settings.PrimaryShare, 0.2, 0.8);
-
-            for (var n = 12; n > 1; n--)
-            {
-                var usable = DeskWidth - Gap * (n + 1);
-
-                if (usable <= 0)
-                    continue;
-
-                // Without a primary every column is the narrowest; with one, the narrowest is
-                // whatever is left after its share is taken.
-                var narrowest = hasPrimary
-                    ? usable * (1 - share) / (n - 1)
-                    : usable / n;
-
-                if (narrowest >= ReadableWidth)
-                    return n;
-            }
-
-            // One window is always allowed the whole desk, however narrow. The alternative is
-            // guidance that recommends showing nothing.
-            return 1;
-        }
-    }
+        => RowLayout.RecommendedCapacity(DeskWidth, Settings.PrimaryWindowKey is not null, Settings.PrimaryShare);
 
     /// <summary>Every window open, showing or behind a tab.</summary>
-    public int OpenCount => _windows.Count;
+    public int OpenCount => _row.Windows.Count;
 
     /// <summary>Columns in the row — never more than the limit.</summary>
-    public int ColumnCount => _windows.Select(w => w.ColumnId).Distinct().Count();
+    public int ColumnCount => _row.Windows.Select(w => w.ColumnId).Distinct().Count();
 
     /// <summary>Windows waiting behind another in a tab group.</summary>
     public int TabbedCount => OpenCount - ColumnCount;
@@ -260,9 +240,15 @@ public class WindowManager
         if (Notice is null)
             return;
 
-        Notice = null;
-        NoticeTitles = [];
+        SetNotice(null);
         Notify();
+    }
+
+    /// <summary>Sets the notice and the titles behind it; none when not given.</summary>
+    private void SetNotice(string? notice, IReadOnlyList<string>? titles = null)
+    {
+        Notice = notice;
+        NoticeTitles = titles ?? [];
     }
 
     public void UpdateSettings(Action<DeskSettings> mutate)
@@ -275,7 +261,7 @@ public class WindowManager
 
         // The limit may have dropped below the columns in the row: the extra ones fold into tabs.
         // Nothing closes, so nothing typed is at risk.
-        FoldToLimit();
+        _row.FoldToLimit();
         Relayout();
     }
 
@@ -297,206 +283,28 @@ public class WindowManager
             if (!_ceilingChosen)
             {
                 Settings.MaxConcurrentWindows = Math.Max(2, RecommendedCapacity);
-                FoldToLimit();
+                _row.FoldToLimit();
             }
 
-            FitToViewport();
+            _fit.Fit(DeskWidth);
             Relayout();
             return;
         }
 
         if (changed)
         {
-            FitToViewport();
+            _fit.Fit(DeskWidth);
             Relayout();
         }
-    }
-
-    // ------------------------------------------------------------ fit the browser ----
-
-    /// <summary>
-    /// The width under which desk.css stacks the columns into one scrolling list. Below it no
-    /// column is laid out side by side, so the row's minimums have nothing to fit.
-    /// </summary>
-    private const double StackedWidth = 720;
-
-    /// <summary>
-    /// Columns folded into tabs because the browser grew too narrow for their minimums: each the
-    /// windows one column held and the place it stood in the row, the latest fold last. Only these
-    /// come back out when the browser widens again — a tab the operator made stays a tab.
-    /// </summary>
-    private readonly List<(List<string> Ids, int Position)> _foldedForWidth = [];
-
-    /// <summary>
-    /// Keeps the row within the browser's width. A window dragged narrower used to keep every
-    /// column and give each a share under its own minimum — four columns at 900px were 214px
-    /// apiece, their panels scrolling sideways and their title bars cut off before the close key.
-    /// Now the rightmost column the operator is not in folds into another as a tab, one at a time,
-    /// until the minimums fit; nothing closes and the column limit (the operator's setting) is not
-    /// touched. Widened again, the latest fold comes back out first, to the place it had, while it
-    /// fits and the limit allows. A declared resolution is not the browser's, and a stacked desk
-    /// has no row to fit, so neither folds.
-    /// </summary>
-    private void FitToViewport()
-    {
-        if (Settings.ResolutionMode == ResolutionMode.Fixed || DeskWidth <= StackedWidth)
-            return;
-
-        var folded = false;
-
-        while (BuildColumns() is { Count: > 1 } columns && Required(columns.Select(c => c.Tabs)) > DeskWidth)
-        {
-            // Never the column the operator is in, nor one holding the row: what they are looking
-            // at stays where it is.
-            var extra = columns.LastOrDefault(c => c.Tabs.All(t => t.Id != FocusedId) && !c.Showing.Maximised);
-            if (extra is null)
-                break;
-
-            var target = Pick(columns.Where(c => c != extra).ToList(), avoid: null)!;
-            _foldedForWidth.Add((extra.Tabs.Select(t => t.Id).ToList(), extra.Position));
-
-            foreach (var tab in extra.Tabs)
-            {
-                Join(tab, target, inFront: false);
-                target = BuildColumns().First(c => c.Id == target.Id);
-            }
-
-            Renumber(BuildColumns().Select(c => c.Tabs));
-            folded = true;
-        }
-
-        if (!folded)
-            UnfoldForWidth();
-    }
-
-    private void UnfoldForWidth()
-    {
-        while (_foldedForWidth.Count > 0)
-        {
-            var (ids, position) = _foldedForWidth[^1];
-            var set = ids.Select(Find).OfType<WindowInstance>().ToHashSet();
-
-            // Only what still shares a column with a window it did not bring: one closed since is
-            // gone, and a column now holding nothing else is already a column of its own.
-            var moving = set.Where(w => _windows.Any(o => o.ColumnId == w.ColumnId && !set.Contains(o))).ToList();
-
-            if (moving.Count == 0)
-            {
-                _foldedForWidth.RemoveAt(_foldedForWidth.Count - 1);
-                continue;
-            }
-
-            var columns = BuildColumns();
-            if (columns.Count >= Settings.MaxConcurrentWindows)
-                return;
-
-            var remaining = columns
-                .Select(c => c.Tabs.Where(t => !moving.Contains(t)).ToList())
-                .Where(tabs => tabs.Count > 0)
-                .ToList();
-
-            if (Required(remaining.Append(moving)) > DeskWidth)
-                return;
-
-            _foldedForWidth.RemoveAt(_foldedForWidth.Count - 1);
-
-            var column = NewColumnId();
-            foreach (var window in moving)
-            {
-                window.ColumnId = column;
-                window.Weight = window.Definition.DefaultWeight;
-                window.Minimised = false;
-                window.Maximised = false;
-                window.Touch();
-            }
-
-            foreach (var tabs in remaining)
-                TouchAll(tabs);
-
-            remaining.Insert(Math.Clamp(position, 0, remaining.Count), moving.OrderByDescending(w => w.Recency).ToList());
-            Renumber(remaining);
-        }
-    }
-
-    /// <summary>Takes a window out of the folds it is remembered in: the operator has put it somewhere themselves.</summary>
-    private void ForgetFold(string id)
-    {
-        foreach (var (ids, _) in _foldedForWidth)
-            ids.Remove(id);
-    }
-
-    /// <summary>The width a row of these columns needs with each at its minimum: a collapsed one its stub, the gaps around them all.</summary>
-    private static double Required(IEnumerable<IReadOnlyList<WindowInstance>> columns)
-    {
-        var list = columns.ToList();
-
-        return list.Sum(tabs => tabs[0].Minimised ? DeskSettings.CollapsedWidth : tabs.Max(t => t.Definition.MinWidth))
-               + Gap * (list.Count + 1);
     }
 
     // ------------------------------------------------------------------ columns ----
 
     /// <summary>The row, left to right, each column with its tabs most recently shown first.</summary>
-    public IReadOnlyList<WindowColumn> Columns => BuildColumns();
-
-    // The last row built, and the state it was built from: each window in list order with its
-    // column, recency and sequence — everything the grouping and both sorts read. The manager has
-    // no single point every change passes through (a window's fields are written in dozens of
-    // places, some between two reads in one operation), so the cache is not invalidated by the
-    // writers; it is checked on every read against the state it was built from, and rebuilt the
-    // moment any of it differs. Checking is one pass over a handful of windows with no allocation,
-    // where building is a grouping, two sorts and a list per column — and a stale row can never
-    // be served, because the row is a function of exactly what is compared.
-    private List<WindowColumn>? _columns;
-    private (WindowInstance Window, string ColumnId, long Recency, long Sequence)[] _columnsBuiltFrom = [];
-
-    private List<WindowColumn> BuildColumns()
-    {
-        if (_columns is not null && ColumnsStillHold())
-            return _columns;
-
-        _columns = ComposeColumns();
-        _columnsBuiltFrom = _windows.Select(w => (w, w.ColumnId, w.Recency, w.Sequence)).ToArray();
-        return _columns;
-    }
-
-    private bool ColumnsStillHold()
-    {
-        if (_columnsBuiltFrom.Length != _windows.Count)
-            return false;
-
-        for (var i = 0; i < _windows.Count; i++)
-        {
-            var window = _windows[i];
-            var (built, columnId, recency, sequence) = _columnsBuiltFrom[i];
-
-            if (!ReferenceEquals(window, built)
-                || !string.Equals(window.ColumnId, columnId, StringComparison.Ordinal)
-                || window.Recency != recency
-                || window.Sequence != sequence)
-                return false;
-        }
-
-        return true;
-    }
-
-    private List<WindowColumn> ComposeColumns()
-    {
-        var columns = _windows
-            .GroupBy(w => w.ColumnId)
-            .Select(g => (Id: g.Key,
-                          Tabs: g.OrderByDescending(w => w.Recency).ThenBy(w => w.Sequence).ToList(),
-                          Order: g.Min(w => w.Sequence)))
-            .OrderBy(c => c.Order)
-            .ThenBy(c => c.Tabs.Min(w => _windows.IndexOf(w)))
-            .ToList();
-
-        return columns.Select((c, i) => new WindowColumn(c.Id, c.Tabs, i)).ToList();
-    }
+    public IReadOnlyList<WindowColumn> Columns => _row.BuildColumns();
 
     /// <summary>The column a window is in, or null for a window not on the desk.</summary>
-    public WindowColumn? ColumnOf(string id)
-        => Find(id) is { } window ? BuildColumns().First(c => c.Id == window.ColumnId) : null;
+    public WindowColumn? ColumnOf(string id) => _row.ColumnOf(id);
 
     /// <summary>Whether a window is the one its column shows, rather than a tab behind it.</summary>
     public bool IsShowing(WindowInstance window) => ColumnOf(window.Id)?.Showing == window;
@@ -508,123 +316,7 @@ public class WindowManager
     /// The column the next window would join as a tab, or null while a column is free. Said
     /// before the click, as the header's count does, so where a window lands is never a surprise.
     /// </summary>
-    public WindowColumn? NextTabTarget => AtCapacity ? TabTarget(BuildColumns()) : null;
-
-    /// <summary>
-    /// Where a window opened at the limit goes: a tab in the window last selected, so what was
-    /// just asked for lands where the operator is looking (amended 2026-11-23). It used to avoid
-    /// that column and spread tabs across the others, and a window chosen from the menu turned
-    /// up somewhere other than the window the operator had been in. With nothing selected the
-    /// old rule (<see cref="Pick"/>) still chooses.
-    /// </summary>
-    private WindowColumn? TabTarget(IReadOnlyList<WindowColumn> columns)
-        => (FocusedId is { } focused ? columns.FirstOrDefault(c => c.Tabs.Any(t => t.Id == focused)) : null)
-           ?? Pick(columns, avoid: null);
-
-    /// <summary>
-    /// Where a column folds when the limit drops, and where a window opened at the limit goes
-    /// with nothing selected. One rule, read left to right:
-    ///
-    /// <list type="number">
-    /// <item>never the column the operator is working in, while there is another — the window
-    /// they are reading stays in view beside the new one;</item>
-    /// <item>a collapsed column only when every column is — what was set aside stays aside;</item>
-    /// <item>the primary window's column last, so the larger share keeps showing the window it
-    /// was given to;</item>
-    /// <item>then the column with the fewest tabs, the leftmost of those first.</item>
-    /// </list>
-    ///
-    /// The last two make the groups fill left to right and stay balanced: with three columns,
-    /// the fourth window tabs into the first, the fifth into the second, the sixth into the third.
-    /// </summary>
-    private WindowColumn? Pick(IReadOnlyList<WindowColumn> columns, string? avoid)
-    {
-        if (columns.Count == 0)
-            return null;
-
-        var candidates = columns.Where(c => c.Tabs.All(t => t.Id != avoid)).ToList();
-
-        if (candidates.Count == 0)
-            candidates = [.. columns];
-
-        return candidates
-            .OrderBy(c => c.Showing.Minimised)
-            .ThenBy(IsPrimaryColumn)
-            .ThenBy(c => c.Tabs.Count)
-            .ThenBy(c => c.Position)
-            .First();
-    }
-
-    private bool IsPrimaryColumn(WindowColumn column)
-        => Settings.PrimaryWindowKey is { } key && column.Tabs.Any(t => t.Definition.Key == key);
-
-    private string NewColumnId() => $"col-{++_columnSequence}";
-
-    /// <summary>
-    /// Puts <paramref name="window"/> in <paramref name="column"/>, sharing its place and width.
-    /// In front of the tabs already there when it is the one being opened; behind them when a
-    /// column is folding in, so what the column was showing keeps showing.
-    /// </summary>
-    private void Join(WindowInstance window, WindowColumn column, bool inFront)
-    {
-        window.ColumnId = column.Id;
-        window.Sequence = column.Tabs.Min(t => t.Sequence);
-        window.Weight = column.Showing.Weight;
-
-        // Maximised is the column's: a tab joining one that holds the row holds it with the rest,
-        // or the bar of whichever came forward would offer the wrong key.
-        window.Maximised = column.Showing.Maximised;
-
-        if (inFront)
-        {
-            // The window just opened must be seen, so a collapsed column it lands in opens out.
-            foreach (var tab in column.Tabs)
-                tab.Minimised = false;
-
-            window.Minimised = false;
-            window.Recency = ++_recency;
-        }
-        else
-        {
-            window.Minimised = column.Showing.Minimised;
-            window.Recency = column.Tabs.Min(t => t.Recency) - 1;
-        }
-
-        window.Touch();
-        TouchAll(column.Tabs);
-    }
-
-    /// <summary>
-    /// Folds the columns past the limit into tabs, the leftmost extra column first, each into the
-    /// column <see cref="Pick"/> chooses among those that remain. The tabs that move go behind the
-    /// ones there, in the order they had, so every column the operator can see keeps showing what
-    /// it showed. Closes nothing.
-    /// </summary>
-    private void FoldToLimit()
-    {
-        var limit = Math.Max(1, Settings.MaxConcurrentWindows);
-
-        while (true)
-        {
-            var columns = BuildColumns();
-
-            if (columns.Count <= limit)
-                return;
-
-            var extra = columns[limit];
-            var target = Pick(columns.Take(limit).ToList(), avoid: null)!;
-
-            // Most recent first, each landing behind the one moved before it, so the order holds.
-            foreach (var tab in extra.Tabs)
-            {
-                Join(tab, target, inFront: false);
-                target = BuildColumns().First(c => c.Id == target.Id);
-            }
-
-            if (FocusedId is { } focused && extra.Tabs.Any(t => t.Id == focused))
-                FocusedId = target.Showing.Id;
-        }
-    }
+    public WindowColumn? NextTabTarget => AtCapacity ? _row.TabTarget(_row.BuildColumns()) : null;
 
     /// <summary>Whether a free column is waiting for a tab to move into it.</summary>
     public bool CanMoveToOwnColumn(string id)
@@ -643,28 +335,9 @@ public class WindowManager
         // The row changes shape, so it is a step Back takes back: the tab returns to its group,
         // at the group's width.
         Remember();
-        ForgetFold(id);
+        _fit.Forget(id);
 
-        var columns = BuildColumns();
-        var from = columns.First(c => c.Id == window.ColumnId);
-
-        window.ColumnId = NewColumnId();
-        window.Weight = window.Definition.DefaultWeight;
-        window.Minimised = false;
-        window.Maximised = false;
-
-        var order = columns.Select(c => c.Tabs.Where(t => t != window).ToList()).ToList();
-        order.Insert(from.Position + 1, [window]);
-        Renumber(order);
-
-        window.Recency = ++_recency;
-        window.LastFocusedAt = DateTimeOffset.UtcNow;
-        FocusedId = id;
-
-        // The column it left may hold the row; the window the operator is now in must be drawn.
-        GiveRowBackFor(window);
-
-        TouchAll(from.Tabs);
+        _row.MoveToOwnColumn(window);
         Relayout();
         return true;
     }
@@ -688,66 +361,11 @@ public class WindowManager
             return false;
 
         Remember();
-        ForgetFold(id);
+        _fit.Forget(id);
 
-        var window = Find(id)!;
-        var columns = BuildColumns();
-        var from = columns.First(c => c.Id == window.ColumnId);
-        var to = columns.First(c => c.Id == Find(targetId)!.ColumnId);
-
-        Join(window, to, inFront: true);
-        TouchAll(from.Tabs);
-
-        // The row closes up behind a column the move emptied, and keeps every other place.
-        Renumber(BuildColumns().Select(c => c.Tabs));
-
-        window.LastFocusedAt = DateTimeOffset.UtcNow;
-        FocusedId = id;
-        GiveRowBackFor(window);
-
+        _row.MoveIntoColumn(Find(id)!, Find(targetId)!);
         Relayout();
         return true;
-    }
-
-    /// <summary>Gives every column its place in the row, from 0, and moves the version of each window whose place moved.</summary>
-    private static void Renumber(IEnumerable<IEnumerable<WindowInstance>> columns)
-    {
-        var position = 0;
-
-        foreach (var column in columns)
-        {
-            foreach (var window in column.Where(w => w.Sequence != position))
-            {
-                window.Sequence = position;
-                window.Touch();
-            }
-
-            position++;
-        }
-    }
-
-    private static void TouchAll(IEnumerable<WindowInstance> windows)
-    {
-        foreach (var window in windows)
-            window.Touch();
-    }
-
-    /// <summary>
-    /// Restores the row when a column other than <paramref name="window"/>'s holds it. Focus is
-    /// always on a window that is drawn, and while a column is maximised only that column is in
-    /// view: a window reached outside it — from the palette, a follow-up, a tab moved out — would
-    /// otherwise be focused behind it, unseen.
-    /// </summary>
-    private void GiveRowBackFor(WindowInstance window)
-    {
-        if (!_windows.Any(w => w.Maximised && w.ColumnId != window.ColumnId))
-            return;
-
-        foreach (var w in _windows.Where(w => w.Maximised))
-        {
-            w.Maximised = false;
-            w.Touch();
-        }
     }
 
     /// <summary>
@@ -773,7 +391,7 @@ public class WindowManager
 
     /// <summary>
     /// Opens a window: a column of its own while one is free, and a tab in an existing column
-    /// once every column is in use (<see cref="Pick"/>). Nothing closes to make room.
+    /// once every column is in use (<see cref="RowLayout.Pick"/>). Nothing closes to make room.
     ///
     /// <para>
     /// The one refusal is the desk's ceiling, <see cref="DeskSettings.MaxOpenWindows"/>: then
@@ -794,14 +412,14 @@ public class WindowManager
 
         if (definition.Singleton)
         {
-            var existing = _windows.FirstOrDefault(w => w.Definition.Key == definition.Key);
+            var existing = _row.Windows.FirstOrDefault(w => w.Definition.Key == definition.Key);
             if (existing is not null)
             {
                 // Asked for on a subject — runs for one source, one incident — the window already
                 // on the desk is re-aimed at it. Focusing it as it stood showed whatever it was
                 // last opened on, which read as the desk ignoring the click. Re-aiming replaces
                 // what it showed, so it is a step Back can undo.
-                if (Retargets(existing, parameters, titleOverride))
+                if (DeskHistory.Retargets(existing, parameters, titleOverride))
                 {
                     Remember();
                     Aim(existing.Parameters, parameters ?? new Dictionary<string, object>());
@@ -817,7 +435,7 @@ public class WindowManager
             }
         }
 
-        else if (_windows.FirstOrDefault(w => w.Definition.Key == definition.Key && SameSubject(w, parameters)) is { } same)
+        else if (_row.Windows.FirstOrDefault(w => w.Definition.Key == definition.Key && DeskHistory.SameSubject(w, parameters)) is { } same)
         {
             // A window that may be open more than once is open once per subject: asking again
             // for a subject already on the desk brings that window forward,
@@ -830,10 +448,9 @@ public class WindowManager
 
         if (AtCeiling)
         {
-            Notice = $"The desk holds {DeskSettings.MaxOpenWindows} windows, its most. Close one to open {title}.";
-            NoticeTitles = [];
+            SetNotice($"The desk holds {DeskSettings.MaxOpenWindows} windows, its most. Close one to open {title}.");
 
-            var here = (FocusedId is { } focused ? Find(focused) : null) ?? MostRecent() ?? _windows[0];
+            var here = (FocusedId is { } focused ? Find(focused) : null) ?? _row.MostRecent() ?? _row.Windows[0];
             Notify();
             return here;
         }
@@ -842,12 +459,12 @@ public class WindowManager
 
         var instance = new WindowInstance
         {
-            Id = $"{definition.Key}-{++_sequence}",
-            Sequence = _sequence,
+            Id = _row.NextId(definition),
+            Sequence = _row.LastSequence,
             Definition = definition,
             TitleOverride = titleOverride,
             Weight = definition.DefaultWeight,
-            Recency = ++_recency,
+            Recency = _row.NextRecency(),
             LastFocusedAt = DateTimeOffset.UtcNow
         };
 
@@ -858,15 +475,14 @@ public class WindowManager
         }
 
         if (NextTabTarget is { } target)
-            Join(instance, target, inFront: true);
+            _row.Join(instance, target, inFront: true);
         else
-            instance.ColumnId = NewColumnId();
+            instance.ColumnId = _row.NewColumnId();
 
-        _windows.Add(instance);
+        _row.Windows.Add(instance);
         FocusedId = instance.Id;
-        GiveRowBackFor(instance);
-        Notice = null;
-        NoticeTitles = [];
+        _row.GiveRowBackFor(instance);
+        SetNotice(null);
 
         // A new column takes its place at the end of the row and the others give up the space
         // for it; a new tab takes its column's place and width, and the row does not move.
@@ -898,7 +514,7 @@ public class WindowManager
     /// </summary>
     public bool TryCloseAll()
     {
-        if (Row().FirstOrDefault(w => w.HasUnsavedInput) is { } window)
+        if (_row.Row().FirstOrDefault(w => w.HasUnsavedInput) is { } window)
         {
             CloseNeedsConfirmation?.Invoke(window);
             return false;
@@ -924,18 +540,17 @@ public class WindowManager
         var column = ColumnOf(id)!;
         var rest = column.Tabs.Where(t => t != window).ToList();
 
-        _windows.Remove(window);
-        TouchAll(rest);
+        _row.Windows.Remove(window);
+        RowLayout.TouchAll(rest);
 
         // Said as a sentence with a key that names the window, so the way back is a key rather
         // than a header arrow whose direction had to be guessed.
-        Notice = $"Closed {window.Title}.";
-        NoticeTitles = [window.Title];
+        SetNotice($"Closed {window.Title}.", [window.Title]);
 
         // Focus stays in the column the operator was working in: the tab revealed there is
         // where they are now looking.
         if (FocusedId == id)
-            FocusedId = rest.Count > 0 ? rest[0].Id : MostRecent()?.Id;
+            FocusedId = rest.Count > 0 ? rest[0].Id : _row.MostRecent()?.Id;
 
         Relayout();
     }
@@ -943,13 +558,11 @@ public class WindowManager
     /// <summary>Closes every window whatever they hold. See <see cref="TryCloseAll"/>.</summary>
     public void CloseAll()
     {
-        if (_windows.Count > 0)
+        if (_row.Windows.Count > 0)
             Remember();
 
-        _windows.Clear();
-        FocusedId = null;
-        Notice = null;
-        NoticeTitles = [];
+        _row.Clear();
+        SetNotice(null);
         ActiveWorkspace = null;
         Notify();
     }
@@ -964,31 +577,9 @@ public class WindowManager
         if (window is null)
             return;
 
-        var column = ColumnOf(id)!;
-        var index = IndexIn(column, window);
-        var wasCollapsed = column.Showing.Minimised;
-        var heldElsewhere = _windows.Any(w => w.Maximised && w.ColumnId != window.ColumnId);
-
-        foreach (var tab in column.Tabs)
-            tab.Minimised = false;
-
-        GiveRowBackFor(window);
-
-        window.Recency = ++_recency;
-        window.LastFocusedAt = DateTimeOffset.UtcNow;
-        window.Touch();
-
-        // Every tab in the column moves when one comes forward, so every window in the column
-        // draws again: the one revealed, the one it covers, and the order between them.
-        if (index > 0 || wasCollapsed)
-            TouchAll(column.Tabs);
-
-        FocusedId = id;
-
-        // Expanding changes how width is shared, so it must be recomputed, and so does giving
-        // the row back. A plain focus does not — the row keeps its order and sizes, which is
-        // what makes a tiled desk stable to work in.
-        if (wasCollapsed || heldElsewhere)
+        // Expanding a collapsed column, or giving back a row another column held, changes how
+        // width is shared and is laid out again; a plain focus keeps the row's order and sizes.
+        if (_row.BringForward(window))
             Relayout();
         else
             Notify();
@@ -1007,35 +598,8 @@ public class WindowManager
     /// </remarks>
     public void EnsureFocused(string id)
     {
-        if (!IsAlreadyIn(id))
+        if (!_row.IsAlreadyIn(id))
             Focus(id);
-    }
-
-    /// <summary>
-    /// Focused, the tab its column shows, nothing in its column collapsed, no other column holding
-    /// the row, and the last window brought forward by count and by clock — so a focus would move
-    /// neither the tab order, nor what a close falls back to, nor anything drawn.
-    /// </summary>
-    private bool IsAlreadyIn(string id)
-    {
-        if (FocusedId != id || Find(id) is not { } window || ColumnOf(id) is not { } column)
-            return false;
-
-        return column.Showing == window
-               && column.Tabs.All(t => !t.Minimised)
-               && !_windows.Any(w => w.Maximised && w.ColumnId != window.ColumnId)
-               && _windows.All(w => w == window || (w.Recency < window.Recency && w.LastFocusedAt <= window.LastFocusedAt));
-    }
-
-    private static int IndexIn(WindowColumn column, WindowInstance window)
-    {
-        for (var i = 0; i < column.Tabs.Count; i++)
-        {
-            if (column.Tabs[i] == window)
-                return i;
-        }
-
-        return 0;
     }
 
     /// <summary>Collapses a window's column to a title-only stub, or restores one that already is.</summary>
@@ -1053,20 +617,7 @@ public class WindowManager
             return;
         }
 
-        // A column collapses whole: its tabs wait behind the stub as they waited behind the window,
-        // panels and input kept (AppWindow hides the body rather than dropping it). A collapsed
-        // column holds no row, so one that held it gives it back rather than taking it again the
-        // moment it opens out.
-        foreach (var tab in column.Tabs)
-        {
-            tab.Minimised = true;
-            tab.Maximised = false;
-            tab.Touch();
-        }
-
-        if (column.Tabs.Any(t => t.Id == FocusedId))
-            FocusedId = MostRecent()?.Id;
-
+        _row.Collapse(column);
         Relayout();
     }
 
@@ -1081,11 +632,7 @@ public class WindowManager
         var maximise = MaximisedColumn?.Id != window.ColumnId;
 
         // Only one column can hold the row at a time.
-        foreach (var w in _windows.Where(w => w.Maximised))
-        {
-            w.Maximised = false;
-            w.Touch();
-        }
+        _row.GiveRowBack();
 
         // A collapsed window has nothing to maximise into, and a tab behind another is not in
         // view to maximise: both are brought forward first, as pressing them would.
@@ -1101,8 +648,7 @@ public class WindowManager
     }
 
     /// <summary>The column holding the row on its own, if one is maximised.</summary>
-    public WindowColumn? MaximisedColumn
-        => BuildColumns().FirstOrDefault(c => c.Showing.Maximised && !c.Showing.Minimised);
+    public WindowColumn? MaximisedColumn => _row.MaximisedColumn;
 
     /// <summary>
     /// Reassigns the row's order from a dragged column's drop position. Any window of a column
@@ -1111,22 +657,7 @@ public class WindowManager
     /// </summary>
     public void Reorder(IReadOnlyList<string> orderedIds)
     {
-        var columns = BuildColumns();
-        var order = new List<WindowColumn>();
-
-        foreach (var id in orderedIds)
-        {
-            if (Find(id) is { } window
-                && columns.First(c => c.Id == window.ColumnId) is var column
-                && !order.Contains(column))
-            {
-                order.Add(column);
-            }
-        }
-
-        order.AddRange(columns.Where(c => !order.Contains(c)));
-        Renumber(order.Select(c => c.Tabs));
-
+        _row.Reorder(orderedIds);
         Relayout();
     }
 
@@ -1141,52 +672,16 @@ public class WindowManager
         var left = ColumnOf(leftId);
         var right = ColumnOf(rightId);
 
-        if (left is null || right is null || left.Id == right.Id)
+        if (left is null || right is null || !RowLayout.Split(left, right, leftWidthPx, rightWidthPx))
             return;
-
-        var totalWeight = left.Showing.Weight + right.Showing.Weight;
-        var totalPx = leftWidthPx + rightWidthPx;
-
-        if (totalPx <= 0 || totalWeight <= 0)
-            return;
-
-        var leftWeight = totalWeight * (leftWidthPx / totalPx);
-        SetWeight(left, leftWeight);
-        SetWeight(right, totalWeight - leftWeight);
 
         Relayout();
     }
 
-    private static void SetWeight(WindowColumn column, double weight)
-    {
-        foreach (var tab in column.Tabs)
-        {
-            tab.Weight = weight;
-            tab.Touch();
-        }
-    }
-
-    /// <summary>A column's own width when nothing has been dragged: the widest default among its tabs.</summary>
-    private static double DefaultWeightOf(WindowColumn column) => column.Tabs.Max(t => t.Definition.DefaultWeight);
-
-    /// <summary>
-    /// Whether a column still sits at a default width: its weight is the default one of its own
-    /// tabs gives it — the one it opened at, which every tab that joined it took on.
-    /// </summary>
-    private static bool AtDefaultWidth(WindowColumn column)
-        => column.Tabs.Any(t => Math.Abs(column.Showing.Weight - t.Definition.DefaultWeight) <= 0.001);
-
     /// <summary>Returns every column to the width the primary-window setting implies.</summary>
     public void ResetWidths()
     {
-        foreach (var column in BuildColumns())
-        {
-            var weight = DefaultWeightOf(column);
-
-            if (column.Tabs.Any(t => t.Weight != weight))
-                SetWeight(column, weight);
-        }
-
+        RowLayout.ResetWidths(_row.BuildColumns());
         Relayout();
     }
 
@@ -1240,7 +735,7 @@ public class WindowManager
     /// </summary>
     public void Relayout()
     {
-        var columns = BuildColumns();
+        var columns = _row.BuildColumns();
 
         if (columns.Count == 0)
         {
@@ -1250,156 +745,13 @@ public class WindowManager
             return;
         }
 
-        if (columns.Any(c => c.Showing.Maximised && !c.Showing.Minimised))
-        {
-            // Only the maximised column is in view — the others stay mounted, hidden behind it —
-            // so their geometry is irrelevant; keeping it sane avoids a jump when it is restored.
-            foreach (var w in _windows)
-                Place(w, Gap, DeskWidth - Gap * 2);
-
-            Notify();
-            return;
-        }
-
-        var expanded = columns.Where(c => !c.Showing.Minimised).ToList();
-        var collapsedCount = columns.Count - expanded.Count;
-
-        ApplyPrimaryShare(expanded);
-
-        var usable = DeskWidth - Gap * (columns.Count + 1) - collapsedCount * DeskSettings.CollapsedWidth;
-        var totalWeight = expanded.Sum(c => c.Showing.Weight);
-
-        if (totalWeight <= 0)
-            totalWeight = Math.Max(expanded.Count, 1);
-
-        var widths = ColumnWidths(expanded, Math.Max(usable, 0), totalWeight);
-        var offset = Gap;
-
-        foreach (var column in columns)
-        {
-            var width = column.Showing.Minimised ? DeskSettings.CollapsedWidth : widths[column.Id];
-
-            foreach (var tab in column.Tabs)
-                Place(tab, offset, width);
-
-            offset += width + Gap;
-        }
-
+        RowLayout.Lay(columns, _row.Windows, DeskWidth, Settings.PrimaryWindowKey, Settings.PrimaryShare);
         Notify();
     }
 
-    /// <summary>
-    /// Sets a column's place in the row, and moves its version only when the place moved: a
-    /// relayout that leaves a column where it was leaves its chrome undrawn, and one that moves
-    /// it is drawn where it now is.
-    /// </summary>
-    private static void Place(WindowInstance window, double x, double width)
-    {
-        if (window.X == x && window.Width == width)
-            return;
+    public WindowInstance? Find(string id) => _row.Find(id);
 
-        window.X = x;
-        window.Width = width;
-        window.Touch();
-    }
-
-    /// <summary>
-    /// Splits the row's usable width between the expanded columns by weight, and the row
-    /// always sums to that width — it never runs past the desk.
-    ///
-    /// <para>
-    /// A column whose share falls under its minimum is lifted to the minimum and the rest
-    /// divide what is left, so a minimum costs its neighbours rather than the desk's edge.
-    /// When the minimums together do not fit — two columns at 800px, one of them the list's
-    /// 680 — they cannot all be honoured, and every column takes its plain share instead and
-    /// scrolls inside itself. Overflowing the row instead put the last window's right half
-    /// off-screen behind a sideways scroll, which is the arrangement capacity exists to avoid.
-    /// </para>
-    /// </summary>
-    private static Dictionary<string, double> ColumnWidths(
-        List<WindowColumn> expanded, double usable, double totalWeight)
-    {
-        var widths = new Dictionary<string, double>();
-
-        if (expanded.Count == 0)
-            return widths;
-
-        double Share(WindowColumn c, double room, double weight)
-            => weight > 0 ? room * (c.Showing.Weight / weight) : room / expanded.Count;
-
-        if (expanded.Sum(c => c.MinWidth) > usable)
-        {
-            foreach (var c in expanded)
-                widths[c.Id] = Share(c, usable, totalWeight);
-
-            return widths;
-        }
-
-        var free = new List<WindowColumn>(expanded);
-        var room = usable;
-
-        // Lift every column under its minimum, then re-divide among the rest; lifting one can
-        // push another under, so repeat until nothing more is lifted. Terminates: each pass
-        // removes at least one column or stops.
-        while (true)
-        {
-            var weight = free.Sum(c => c.Showing.Weight);
-            var under = free.Where(c => Share(c, room, weight) < c.MinWidth).ToList();
-
-            if (under.Count == 0)
-            {
-                foreach (var c in free)
-                    widths[c.Id] = Share(c, room, weight);
-
-                return widths;
-            }
-
-            foreach (var c in under)
-            {
-                widths[c.Id] = c.MinWidth;
-                room -= c.MinWidth;
-                free.Remove(c);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Every window, column by column left to right, the showing tab first in each. Includes
-    /// collapsed columns and tabs behind — the row is the only list of open windows there is.
-    /// </summary>
-    private List<WindowInstance> Row() => BuildColumns().SelectMany(c => c.Tabs).ToList();
-
-    /// <summary>
-    /// Nudges the primary window's column so it lands on its configured share, unless the
-    /// operator has since dragged a divider — a manual adjustment outranks a default. Only
-    /// affects width: the column's position in the row is whatever the operator put it at, same
-    /// as any other. The primary's column is the one holding the primary window, showing or not.
-    /// </summary>
-    private void ApplyPrimaryShare(List<WindowColumn> expanded)
-    {
-        if (Settings.PrimaryWindowKey is null || expanded.Count < 2)
-            return;
-
-        var primary = expanded.FirstOrDefault(IsPrimaryColumn);
-        if (primary is null)
-            return;
-
-        // Untouched columns all sit at a default weight; if any differ, widths are the
-        // operator's and this leaves them alone.
-        var others = expanded.Where(c => c != primary).ToList();
-        if (others.Any(c => !AtDefaultWidth(c)))
-            return;
-
-        var share = Math.Clamp(Settings.PrimaryShare, 0.2, 0.8);
-        var othersWeight = others.Sum(c => c.Showing.Weight);
-
-        var weight = othersWeight * share / (1 - share);
-
-        if (primary.Tabs.All(t => t.Weight == weight))
-            return;
-
-        SetWeight(primary, weight);
-    }
+    // ------------------------------------------------------- layout and workspaces ----
 
     /// <summary>
     /// Opens a named set of windows, replacing whatever is on the desk — unless a window on it
@@ -1415,85 +767,29 @@ public class WindowManager
     /// </summary>
     public bool ApplyWorkspace(Workspace workspace)
     {
-        if (Row().FirstOrDefault(w => w.HasUnsavedInput) is { } dirty)
+        if (_row.Row().FirstOrDefault(w => w.HasUnsavedInput) is { } dirty)
         {
             Refuse(dirty);
             return false;
         }
 
-        if (_windows.Count > 0)
+        if (_row.Windows.Count > 0)
             Remember();
 
-        _windows.Clear();
-        FocusedId = null;
-        Notice = null;
-        NoticeTitles = [];
+        _row.Clear();
+        SetNotice(null);
 
-        var columns = workspace.Columns is { } named && named.Count == workspace.WindowKeys.Count ? named : null;
-        var placed = new List<(WindowInstance Window, int Column, int Rank)>();
+        _row.Arrange(_store.Windows(workspace, _row.NextId));
 
-        for (var i = 0; i < workspace.WindowKeys.Count && placed.Count < DeskSettings.MaxOpenWindows; i++)
-        {
-            var definition = Catalog.Find(workspace.WindowKeys[i]);
-            if (definition is null)
-                continue;
-
-            var column = columns?[i] ?? i;
-            var instance = new WindowInstance
-            {
-                Id = $"{definition.Key}-{++_sequence}",
-                Sequence = column,
-                Definition = definition,
-                Weight = definition.DefaultWeight,
-                LastFocusedAt = DateTimeOffset.UtcNow
-            };
-
-            placed.Add((instance, column, placed.Count(p => p.Column == column)));
-        }
-
-        Arrange(placed);
-
-        FocusedId = BuildColumns().FirstOrDefault()?.Showing.Id;
+        FocusedId = _row.BuildColumns().FirstOrDefault()?.Showing.Id;
         ActiveWorkspace = workspace;
-        FoldToLimit();
+        _row.FoldToLimit();
         Relayout();
         return true;
     }
 
-    /// <summary>
-    /// Puts windows built from a saved list on the desk: one column per distinct index, in index
-    /// order, and inside each the window ranked 0 showing with the rest behind it in rank order.
-    /// The tabs in one column take the weight of the one showing.
-    /// </summary>
-    private void Arrange(IEnumerable<(WindowInstance Window, int Column, int Rank)> placed)
-    {
-        foreach (var group in placed.GroupBy(p => p.Column).OrderBy(g => g.Key))
-        {
-            var id = NewColumnId();
-            var tabs = group.OrderBy(p => p.Rank).Select(p => p.Window).ToList();
-
-            // Showing last, so it takes the highest count.
-            foreach (var window in Enumerable.Reverse(tabs))
-            {
-                window.ColumnId = id;
-                window.Sequence = group.Key;
-                window.Recency = ++_recency;
-                _windows.Add(window);
-            }
-
-            foreach (var window in tabs.Skip(1))
-                window.Weight = tabs[0].Weight;
-        }
-
-        Renumber(BuildColumns().Select(c => c.Tabs));
-    }
-
-    public WindowInstance? Find(string id) => _windows.FirstOrDefault(w => w.Id == id);
-
-    private readonly List<Workspace> _userWorkspaces = [];
-
     /// <summary>Workspaces the operator saved on this machine, after the application's own.</summary>
-    public IReadOnlyList<Workspace> UserWorkspaces => _userWorkspaces;
+    public IReadOnlyList<Workspace> UserWorkspaces => _store.UserWorkspaces;
 
     /// <summary>
     /// Saves the row as a named workspace, replacing one of the same name: its columns left to
@@ -1503,81 +799,22 @@ public class WindowManager
     /// </summary>
     public Workspace? SaveWorkspace(string name)
     {
-        name = name.Trim();
-
-        var columns = BuildColumns()
-            .Select(c => c.Tabs.Where(w => w.Parameters.Count == 0).ToList())
-            .Where(tabs => tabs.Count > 0)
-            .ToList();
-
-        var keys = columns.SelectMany(tabs => tabs.Select(w => w.Definition.Key)).ToList();
-        var indices = columns.SelectMany((tabs, i) => tabs.Select(_ => i)).ToList();
-
-        if (name.Length == 0 || keys.Count == 0)
+        if (_store.Save(name, _row.BuildColumns()) is not { } workspace)
             return null;
 
-        var workspace = new Workspace(name, Describe(keys.Count, columns.Count), keys,
-            columns.Count < keys.Count ? indices : null);
-
-        _userWorkspaces.RemoveAll(w => string.Equals(w.Name, name, StringComparison.OrdinalIgnoreCase));
-        _userWorkspaces.Add(workspace);
         Notify();
         return workspace;
     }
 
-    /// <summary>"3 windows, saved here", or "5 windows in 3 columns, saved here" when some are tabs.</summary>
-    private static string Describe(int windows, int columns)
-    {
-        var count = $"{windows} {(windows == 1 ? "window" : "windows")}";
-
-        return columns < windows
-            ? $"{count} in {columns} {(columns == 1 ? "column" : "columns")}, saved here"
-            : $"{count}, saved here";
-    }
-
     public void DeleteWorkspace(string name)
     {
-        if (_userWorkspaces.RemoveAll(w => w.Name == name) > 0)
+        if (_store.Delete(name))
             Notify();
     }
 
     /// <summary>The desk as it can be written down. See <see cref="DeskLayout"/>.</summary>
     public DeskLayout Capture()
-    {
-        var columns = BuildColumns();
-        var row = columns
-            .SelectMany(c => c.Tabs.Select((w, rank) => (Window: w, Column: c.Position, Rank: rank)))
-            .ToList();
-        var focused = row.FindIndex(p => p.Window.Id == FocusedId);
-
-        return new DeskLayout
-        {
-            MaxConcurrentWindows = Settings.MaxConcurrentWindows,
-            CeilingChosen = _ceilingChosen,
-            PrimaryWindowKey = Settings.PrimaryWindowKey,
-            PrimaryShare = Settings.PrimaryShare,
-            ResolutionMode = Settings.ResolutionMode,
-            CustomWidth = Settings.CustomWidth,
-            CustomHeight = Settings.CustomHeight,
-            UiScale = Settings.UiScale,
-            TextScale = Settings.TextScale,
-            Windows = row.Select(p => new DeskLayoutWindow(
-                p.Window.Definition.Key,
-                p.Window.TitleOverride,
-                p.Window.Weight,
-                p.Window.Minimised,
-                p.Window.Parameters.Count == 0
-                    ? null
-                    : p.Window.Parameters.ToDictionary(x => x.Key, x => System.Text.Json.JsonSerializer.SerializeToElement(x.Value)),
-                p.Column,
-                p.Rank))
-                .ToList(),
-            Focused = focused >= 0 ? focused : null,
-            Workspaces = _userWorkspaces.Select(w => new DeskLayoutWorkspace(w.Name, w.WindowKeys, w.Columns)).ToList(),
-            ActiveWorkspace = _windows.Count > 0 ? ActiveWorkspace?.Name : null,
-            ActiveWorkspaceSaved = _windows.Count > 0 && ActiveWorkspace is { } active && _userWorkspaces.Any(w => ReferenceEquals(w, active))
-        };
-    }
+        => _store.Capture(_row.BuildColumns(), FocusedId, Settings, _ceilingChosen, _row.Windows.Count, ActiveWorkspace);
 
     /// <summary>
     /// Puts a written-down desk back. Windows the catalogue no longer has are dropped rather than
@@ -1587,172 +824,46 @@ public class WindowManager
     /// </summary>
     public void Restore(DeskLayout layout)
     {
-        _windows.Clear();
-        FocusedId = null;
-        Notice = null;
-        NoticeTitles = [];
-        _back.Clear();
-        _forward.Clear();
-        _forgotten = 0;
+        _row.Clear();
+        SetNotice(null);
+        _history.Clear();
 
         _ceilingChosen = layout.CeilingChosen;
-        Settings.MaxConcurrentWindows = Math.Clamp(layout.MaxConcurrentWindows, 1, 12);
-        Settings.PrimaryWindowKey = layout.PrimaryWindowKey is { } key && Catalog.Find(key) is not null
-            ? key
-            : layout.PrimaryWindowKey is null ? null : Catalog.DefaultPrimary;
-        Settings.PrimaryShare = Math.Clamp(layout.PrimaryShare, 0.2, 0.8);
-        Settings.ResolutionMode = layout.ResolutionMode;
-        Settings.CustomWidth = layout.CustomWidth > 0 ? layout.CustomWidth : Settings.CustomWidth;
-        Settings.CustomHeight = layout.CustomHeight > 0 ? layout.CustomHeight : Settings.CustomHeight;
-        Settings.UiScale = DeskSettings.ClampScale(layout.UiScale, DeskSettings.MinUiScale, DeskSettings.MaxUiScale);
-        Settings.TextScale = DeskSettings.ClampScale(layout.TextScale, DeskSettings.MinTextScale, DeskSettings.MaxTextScale);
+        _store.RestoreSettings(layout, Settings);
 
-        WindowInstance? focused = null;
-        var placed = new List<(WindowInstance Window, int Column, int Rank)>();
-
-        foreach (var (saved, index) in layout.Windows.Select((w, i) => (w, i)))
-        {
-            if (placed.Count >= DeskSettings.MaxOpenWindows)
-                break;
-
-            if (Catalog.Find(saved.Key) is not { } definition)
-                continue;
-
-            var instance = new WindowInstance
-            {
-                Id = $"{definition.Key}-{++_sequence}",
-                Definition = definition,
-                TitleOverride = saved.TitleOverride,
-                Weight = saved.Weight > 0 ? saved.Weight : definition.DefaultWeight,
-                Minimised = saved.Minimised,
-                LastFocusedAt = DateTimeOffset.UtcNow
-            };
-
-            foreach (var (name, value) in saved.Parameters ?? new Dictionary<string, System.Text.Json.JsonElement>())
-            {
-                if (ToParameter(value) is { } parameter)
-                    instance.Parameters[name] = parameter;
-            }
-
-            // Before tabs, each window was its own column, in the order written.
-            var column = saved.Column ?? index;
-            placed.Add((instance, column, saved.Rank ?? placed.Count(p => p.Column == column)));
-
-            if (index == layout.Focused)
-                focused = instance;
-        }
-
-        Arrange(placed);
+        var (placed, focused) = _store.Windows(layout, _row.NextId);
+        _row.Arrange(placed);
 
         // A column collapses whole, and the one it shows says which way.
-        foreach (var column in BuildColumns())
-        {
-            foreach (var tab in column.Tabs)
-                tab.Minimised = column.Showing.Minimised;
-        }
+        _row.CollapseWithShowing();
 
-        FoldToLimit();
+        _row.FoldToLimit();
         Notice = null;
 
-        _userWorkspaces.Clear();
-        _userWorkspaces.AddRange(layout.Workspaces
-            .Where(w => w.WindowKeys.Any(k => Catalog.Find(k) is not null))
-            .Select(Readable));
-
-        // Found again by name, in the kind it was written as first (a saved one, or the
-        // application's): a layout from before the field reads null and restores no workspace, and
-        // one naming a workspace this desk no longer offers — or one a visitor may not open —
-        // restores none rather than a stale label.
-        IEnumerable<Workspace> lookIn = layout.ActiveWorkspaceSaved
-            ? _userWorkspaces.Concat(Catalog.Workspaces)
-            : Catalog.Workspaces.Concat(_userWorkspaces);
-        ActiveWorkspace = layout.ActiveWorkspace is { } activeName
-            ? lookIn.FirstOrDefault(w => w.Name == activeName)
-            : null;
+        _store.RestoreWorkspaces(layout);
+        ActiveWorkspace = _store.ActiveFrom(layout);
 
         FocusedId = focused is not null && IsShowing(focused)
             ? focused.Id
-            : BuildColumns().FirstOrDefault()?.Showing.Id;
+            : _row.BuildColumns().FirstOrDefault()?.Showing.Id;
 
         Relayout();
     }
 
-    /// <summary>A saved workspace with the windows this desk cannot open taken out, and its columns with them.</summary>
-    private Workspace Readable(DeskLayoutWorkspace saved)
-    {
-        var keep = saved.WindowKeys.Select((k, i) => (Key: k, Index: i)).Where(k => Catalog.Find(k.Key) is not null).ToList();
-        var columns = saved.Columns is { } named && named.Count == saved.WindowKeys.Count
-            ? keep.Select(k => named[k.Index]).ToList()
-            : null;
-
-        var count = columns?.Distinct().Count() ?? keep.Count;
-
-        return new Workspace(saved.Name, Describe(keep.Count, count), keep.Select(k => k.Key).ToList(), columns);
-    }
-
-    /// <summary>A stored parameter back to the type a component expects: ids are ints.</summary>
-    private static object? ToParameter(System.Text.Json.JsonElement value) => value.ValueKind switch
-    {
-        System.Text.Json.JsonValueKind.Number when value.TryGetInt32(out var i) => i,
-        System.Text.Json.JsonValueKind.Number when value.TryGetInt64(out var l) => l,
-        System.Text.Json.JsonValueKind.Number => value.GetDouble(),
-        System.Text.Json.JsonValueKind.String => value.GetString(),
-        System.Text.Json.JsonValueKind.True => true,
-        System.Text.Json.JsonValueKind.False => false,
-        _ => null
-    };
-
     // ------------------------------------------------------------------ history ----
-
-    /// <summary>
-    /// How far back the desk remembers. Each step holds references to windows that already
-    /// exist plus a copy of their parameters, so this is a bound on surprise, not on memory.
-    /// </summary>
-    private const int HistoryLimit = 50;
-
-    private readonly List<DeskMoment> _back = [];
-    private readonly List<DeskMoment> _forward = [];
-
-    /// <summary>
-    /// The desk as it stood before one navigation: which windows were in the row, what each
-    /// was showing and the pages it came through, and which had focus. The windows themselves
-    /// are kept, not described, so going back puts the same window — same id, same slot, same
-    /// width — where it was.
-    /// </summary>
-    private sealed record DeskMoment(IReadOnlyList<WindowMoment> Row, string? FocusedId, Workspace? ActiveWorkspace = null);
-
-    private sealed record WindowMoment(
-        WindowInstance Window,
-        WindowDefinition Definition,
-        Dictionary<string, object> Parameters,
-        string? Title,
-        List<WindowPage> BackPages,
-        List<WindowPage> ForwardPages,
-        string ColumnId,
-        long Recency,
-        long Sequence,
-        bool Minimised,
-        bool Maximised,
-        double Weight);
 
     /// <summary>
     /// How many steps Back can take. The host mirrors this into the browser's own history, so
     /// the browser's Back button and the mouse's back key walk the desk rather than leaving it.
     /// </summary>
-    public int HistoryDepth => _forgotten + _back.Count;
+    public int HistoryDepth => _history.Depth;
 
     /// <summary>Counts steps taken, so the host can tell a new step from a walk back and forth.</summary>
-    public long HistoryVersion { get; private set; }
+    public long HistoryVersion => _history.Version;
 
-    /// <summary>
-    /// Steps dropped off the far end. Counted so <see cref="HistoryDepth"/> keeps rising past the
-    /// limit — the browser's entries are numbered by it and would stop matching otherwise.
-    /// </summary>
-    private int _forgotten;
+    public bool CanGoBack => _history.CanGoBack;
 
-    public bool CanGoBack => _back.Count > 0;
-
-    public bool CanGoForward => _forward.Count > 0;
+    public bool CanGoForward => _history.CanGoForward;
 
     /// <summary>
     /// Puts the desk back the way it was before the last open, close or re-aim. A window closed
@@ -1767,42 +878,51 @@ public class WindowManager
     /// </summary>
     public bool Back()
     {
-        if (_back.Count == 0 || Refuses(_back[^1]))
+        if (_history.NextBack is not { } step || Refuses(step))
             return false;
 
-        StepBack();
+        Become(_history.StepBack(Moment()));
         return true;
     }
 
     /// <summary>The road Back came down, under the same rule for unsaved input.</summary>
     public bool Forward()
     {
-        if (_forward.Count == 0 || Refuses(_forward[^1]))
+        if (_history.NextForward is not { } step || Refuses(step))
             return false;
 
-        StepForward();
+        Become(_history.StepForward(Moment()));
         return true;
     }
 
-    private void StepBack()
+    /// <summary>
+    /// Walks to a depth the browser named — one step for Back, several for a long press on it.
+    /// Judged by where the walk ends rather than step by step: a window the walk passes out of
+    /// and back into is the same window when it lands, input and all. When the end would close
+    /// or re-aim a window holding unsaved input, nothing moves, <see cref="CloseNeedsConfirmation"/>
+    /// is raised, and the answer is false.
+    /// </summary>
+    public bool TraverseTo(int depth)
     {
-        _forward.Add(Moment());
-        Become(Pop(_back));
-    }
+        if (_history.At(depth) is { } target && Refuses(target))
+            return false;
 
-    private void StepForward()
-    {
-        _back.Add(Moment());
-        Become(Pop(_forward));
+        while (HistoryDepth > depth && _history.CanGoBack)
+            Become(_history.StepBack(Moment()));
+
+        while (HistoryDepth < depth && _history.CanGoForward)
+            Become(_history.StepForward(Moment()));
+
+        return true;
     }
 
     /// <summary>
     /// Whether becoming <paramref name="moment"/> would cost a window its unsaved input, and if
     /// so, says which by raising <see cref="CloseNeedsConfirmation"/>.
     /// </summary>
-    private bool Refuses(DeskMoment moment)
+    private bool Refuses(DeskHistory.DeskMoment moment)
     {
-        if (Displaced(moment) is not { } window)
+        if (DeskHistory.Displaced(_row.Row(), moment) is not { } window)
             return false;
 
         Refuse(window);
@@ -1817,180 +937,44 @@ public class WindowManager
     /// </summary>
     private void Refuse(WindowInstance window)
     {
-        Notice = $"Nothing changed: {window.Title} holds input that has not been saved. Save or discard it, then try again.";
-        NoticeTitles = [];
+        SetNotice($"Nothing changed: {window.Title} holds input that has not been saved. Save or discard it, then try again.");
         CloseNeedsConfirmation?.Invoke(window);
         Notify();
-    }
-
-    /// <summary>
-    /// The first window, in row order, holding unsaved input that <paramref name="moment"/> would
-    /// close — it is not in that moment — or replace: it is there showing another view, or the
-    /// same view on another subject. A window kept as it is passes, whatever else the step does.
-    /// </summary>
-    private WindowInstance? Displaced(DeskMoment moment)
-    {
-        foreach (var window in Row().Where(w => w.HasUnsavedInput))
-        {
-            var saved = moment.Row.FirstOrDefault(m => ReferenceEquals(m.Window, window));
-
-            if (saved is null
-                || saved.Definition != window.Definition
-                || !SameSubject(window.Parameters, saved.Parameters))
-                return window;
-        }
-
-        return null;
-    }
-
-    /// <summary>Whether two parameter sets name the same subject. A key set to null is a key not named.</summary>
-    private static bool SameSubject(Dictionary<string, object> current, Dictionary<string, object> saved)
-    {
-        var now = current.Where(p => p.Value is not null).ToDictionary();
-        var then = saved.Where(p => p.Value is not null).ToDictionary();
-
-        return now.Count == then.Count
-            && then.All(p => now.TryGetValue(p.Key, out var value) && Equals(value, p.Value));
     }
 
     /// <summary>Called before anything that changes what the desk shows. A new step forgets the road ahead.</summary>
     private void Remember()
     {
-        _back.Add(Moment());
-
-        if (_back.Count > HistoryLimit)
-        {
-            _back.RemoveAt(0);
-            _forgotten++;
-        }
-
-        _forward.Clear();
-        HistoryVersion++;
+        _history.Remember(Moment());
 
         // A notice's Reopen steps Back, and Back now means this step, not the close the notice
         // was about: the sentence goes with it. A close sets its own after remembering.
-        Notice = null;
-        NoticeTitles = [];
+        SetNotice(null);
     }
 
-    /// <summary>
-    /// Walks to a depth the browser named — one step for Back, several for a long press on it.
-    /// Judged by where the walk ends rather than step by step: a window the walk passes out of
-    /// and back into is the same window when it lands, input and all. When the end would close
-    /// or re-aim a window holding unsaved input, nothing moves, <see cref="CloseNeedsConfirmation"/>
-    /// is raised, and the answer is false.
-    /// </summary>
-    public bool TraverseTo(int depth)
+    private DeskHistory.DeskMoment Moment() => DeskHistory.Moment(_row.Windows, FocusedId, ActiveWorkspace);
+
+    private void Become(DeskHistory.DeskMoment moment)
     {
-        var target = depth < HistoryDepth && _back.Count > 0
-            ? _back[Math.Max(0, _back.Count - (HistoryDepth - depth))]
-            : depth > HistoryDepth && _forward.Count > 0
-                ? _forward[Math.Max(0, _forward.Count - (depth - HistoryDepth))]
-                : null;
-
-        if (target is not null && Refuses(target))
-            return false;
-
-        while (HistoryDepth > depth && _back.Count > 0)
-            StepBack();
-
-        while (HistoryDepth < depth && _forward.Count > 0)
-            StepForward();
-
-        return true;
-    }
-
-    private DeskMoment Moment() => new(
-        _windows.Select(w => new WindowMoment(
-            w,
-            w.Definition,
-            new Dictionary<string, object>(w.Parameters),
-            w.TitleOverride,
-            [.. w.BackPages],
-            [.. w.ForwardPages],
-            w.ColumnId,
-            w.Recency,
-            w.Sequence,
-            w.Minimised,
-            w.Maximised,
-            w.Weight)).ToList(),
-        FocusedId,
-        ActiveWorkspace);
-
-    private void Become(DeskMoment moment)
-    {
-        _windows.Clear();
-
-        foreach (var saved in moment.Row)
-        {
-            var window = saved.Window;
-
-            // A window that followed a link since is showing another view, and the parameters of
-            // one view are not the parameters of another — a Customer handed an OrderId refuses it.
-            // So a different view is put back whole; the same view is re-aimed, as a singleton's
-            // subject always was.
-            if (window.Definition != saved.Definition)
-            {
-                window.Definition = saved.Definition;
-                window.Parameters.Clear();
-
-                foreach (var (key, value) in saved.Parameters)
-                    window.Parameters[key] = value;
-
-                window.PageVersion++;
-            }
-            else
-            {
-                Aim(window.Parameters, saved.Parameters);
-            }
-
-            window.TitleOverride = saved.Title;
-            window.BackPages = [.. saved.BackPages];
-            window.ForwardPages = [.. saved.ForwardPages];
-
-            // Its column and its place in it come back too: a tab closed from a group returns to
-            // that group, behind the tab it was behind, at the group's width, collapsed or holding
-            // the row as the group was. Every tab in a column was saved agreeing, so they agree
-            // again. A collapsed window keeps its panel (AppWindow hides the body), so coming
-            // back collapsed costs it nothing it holds.
-            window.ColumnId = saved.ColumnId;
-            window.Recency = saved.Recency;
-            window.Sequence = saved.Sequence;
-            window.Minimised = saved.Minimised;
-            window.Maximised = saved.Maximised;
-            window.Weight = saved.Weight;
-            window.Touch();
-            _windows.Add(window);
-        }
+        DeskHistory.PutBack(moment, _row.Windows);
 
         // The limit may have been lowered since the moment was taken.
-        FoldToLimit();
+        _row.FoldToLimit();
 
         // Focus lands on a window that is drawn: where the moment's focus is outside the column
         // holding the row, the row is given back.
         if (moment.FocusedId is { } held && Find(held) is { } heldWindow)
-            GiveRowBackFor(heldWindow);
+            _row.GiveRowBackFor(heldWindow);
 
         FocusedId = moment.FocusedId is { } id && ColumnOf(id) is { } column
             ? column.Showing.Id
-            : MostRecent()?.Id;
-        Notice = null;
-        NoticeTitles = [];
+            : _row.MostRecent()?.Id;
+        SetNotice(null);
         ActiveWorkspace = moment.ActiveWorkspace;
         Relayout();
     }
 
-    private static T Pop<T>(List<T> stack)
-    {
-        var last = stack[^1];
-        stack.RemoveAt(stack.Count - 1);
-        return last;
-    }
-
     // ------------------------------------------------------------- window pages ----
-
-    /// <summary>How many pages one window remembers behind it.</summary>
-    private const int PageLimit = 30;
 
     /// <summary>
     /// Follows a link from inside a window: a customer named on an order, a person on a list.
@@ -2026,7 +1010,7 @@ public class WindowManager
             return Open(definition, parameters, titleOverride);
         }
 
-        if (from.Definition == definition && !Retargets(from, parameters, titleOverride))
+        if (from.Definition == definition && !DeskHistory.Retargets(from, parameters, titleOverride))
         {
             Focus(from.Id);
             return from;
@@ -2034,8 +1018,8 @@ public class WindowManager
 
         // Another window already shows this subject: go to it rather than turning this one into
         // a second copy of it.
-        if (_windows.FirstOrDefault(w => w != from && w.Definition.Key == definition.Key
-                                         && (definition.Singleton || SameSubject(w, parameters))) is { } open)
+        if (_row.Windows.FirstOrDefault(w => w != from && w.Definition.Key == definition.Key
+                                             && (definition.Singleton || DeskHistory.SameSubject(w, parameters))) is { } open)
         {
             Focus(open.Id);
             return open;
@@ -2043,12 +1027,7 @@ public class WindowManager
 
         Remember();
 
-        from.BackPages.Add(PageOf(from));
-
-        if (from.BackPages.Count > PageLimit)
-            from.BackPages.RemoveAt(0);
-
-        from.ForwardPages.Clear();
+        DeskHistory.Leave(from);
         Show(from, new WindowPage(definition, new Dictionary<string, object>(parameters), titleOverride));
 
         return from;
@@ -2061,8 +1040,7 @@ public class WindowManager
             return false;
 
         Remember();
-        window.ForwardPages.Add(PageOf(window));
-        Show(window, Pop(window.BackPages));
+        Show(window, DeskHistory.PageBack(window));
         return true;
     }
 
@@ -2072,79 +1050,18 @@ public class WindowManager
             return false;
 
         Remember();
-        window.BackPages.Add(PageOf(window));
-        Show(window, Pop(window.ForwardPages));
+        Show(window, DeskHistory.PageForward(window));
         return true;
     }
 
-    /// <summary>What a window is showing, as a page it can come back to. Cleared keys are left out.</summary>
-    private static WindowPage PageOf(WindowInstance window) => new(
-        window.Definition,
-        window.Parameters.Where(p => p.Value is not null).ToDictionary(),
-        window.TitleOverride);
-
-    /// <summary>
-    /// Puts a page in a window. The parameters are replaced rather than re-aimed, because the
-    /// view may have changed, and the page version moves so the host builds the view afresh.
-    /// </summary>
+    /// <summary>Puts a page in a window and shows it: in front of its column, the column open, the operator in it.</summary>
     private void Show(WindowInstance window, WindowPage page)
     {
-        window.Definition = page.Definition;
-        window.Parameters.Clear();
-
-        foreach (var (key, value) in page.Parameters)
-            window.Parameters[key] = value;
-
-        window.TitleOverride = page.TitleOverride;
-        window.PageVersion++;
-
-        // The next page is a new component; whatever the last one held went with it, and a flag
-        // left behind would guard nothing while making every close of it ask a question.
-        window.HasUnsavedInput = false;
-        window.UnsavedInputLabel = null;
-
-        // The page is shown, so the window is: in front of its column, the column open.
-        var column = ColumnOf(window.Id)!;
-
-        foreach (var tab in column.Tabs)
-            tab.Minimised = false;
-
-        if (column.Showing != window)
-        {
-            TouchAll(column.Tabs);
-        }
-
-        window.Recency = ++_recency;
-        window.LastFocusedAt = DateTimeOffset.UtcNow;
-        window.Touch();
-        FocusedId = window.Id;
+        DeskHistory.Turn(window, page);
+        _row.Reveal(window);
 
         // A customer's view is narrower than an order's: the column's minimum is the new view's.
         Relayout();
-    }
-
-    /// <summary>Whether opening <paramref name="window"/> with these arguments would change what it shows.</summary>
-    /// <summary>Whether a window is on exactly the subject <paramref name="parameters"/> name: the same keys, the same values.</summary>
-    private static bool SameSubject(WindowInstance window, Dictionary<string, object>? parameters)
-    {
-        var current = window.Parameters.Where(p => p.Value is not null).ToDictionary();
-        var asked = (parameters ?? []).Where(p => p.Value is not null).ToDictionary();
-
-        return current.Count == asked.Count
-            && asked.All(p => current.TryGetValue(p.Key, out var value) && Equals(value, p.Value));
-    }
-
-    private static bool Retargets(WindowInstance window, Dictionary<string, object>? parameters, string? title)
-    {
-        if (title is not null && title != window.TitleOverride)
-            return true;
-
-        if (parameters is null)
-            return false;
-
-        var current = window.Parameters.Where(p => p.Value is not null).ToDictionary();
-        return current.Count != parameters.Count
-            || parameters.Any(p => !current.TryGetValue(p.Key, out var value) || !Equals(value, p.Value));
     }
 
     /// <summary>
@@ -2160,14 +1077,6 @@ public class WindowManager
         foreach (var (key, value) in with)
             target[key] = value;
     }
-
-    /// <summary>The showing window last shown, in a column that is not collapsed: where focus goes when its window goes.</summary>
-    private WindowInstance? MostRecent()
-        => BuildColumns()
-            .Where(c => !c.Showing.Minimised)
-            .Select(c => c.Showing)
-            .OrderByDescending(w => w.Recency)
-            .FirstOrDefault();
 
     /// <summary>
     /// Says the desk has changed. Whatever this changed inside a window has already moved that
