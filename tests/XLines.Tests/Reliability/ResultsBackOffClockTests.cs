@@ -1,3 +1,4 @@
+using XLines.Tests.Support;
 using XLines.Core.Analytics;
 using XLines.Core.Entities;
 using XLines.Data;
@@ -41,13 +42,10 @@ public class ResultsBackOffClockTests(PostgresFixture fixture)
 
         // A database of its own: every game anywhere that never went final is owed, so a shared one
         // would sweep other tests' days alongside this one.
-        var connection = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
-        {
-            Database = "backoff_" + Guid.NewGuid().ToString("N")[..12]
-        }.ConnectionString;
+        var connection = await TestDatabases.FreshAsync(fixture.ConnectionString, "backoff");
 
         await using var db = new XLinesDbContext(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(connection).Options);
-        await new DatabaseInitializer(db, NullLogger<DatabaseInitializer>.Instance).InitialiseAsync();
+
 
         var suffix = Guid.NewGuid().ToString("N")[..6];
         var sport = new Sport { Key = $"backoff-{suffix}", Name = "TEST" };

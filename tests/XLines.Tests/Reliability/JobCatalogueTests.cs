@@ -24,17 +24,8 @@ namespace XLines.Tests.Reliability;
 [Collection(PostgresCollection.Name)]
 public class JobCatalogueTests(PostgresFixture fixture)
 {
-    private async Task<string> FreshDatabaseAsync()
-    {
-        var connection = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
-        {
-            Database = "catalogue_" + Guid.NewGuid().ToString("N")[..12]
-        }.ConnectionString;
-
-        await using var db = new XLinesDbContext(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(connection).Options);
-        await new DatabaseInitializer(db, NullLogger<DatabaseInitializer>.Instance).InitialiseAsync();
-        return connection;
-    }
+    private Task<string> FreshDatabaseAsync()
+        => TestDatabases.FreshAsync(fixture.ConnectionString, "catalogue");
 
     /// <summary>A host as Program.cs builds one, every provider's client answering an empty list.</summary>
     private static ServiceProvider Host(string connection, bool espn, string? oddsKey, string? sgoKey)
@@ -58,7 +49,7 @@ public class JobCatalogueTests(PostgresFixture fixture)
         services.AddLogging();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(connection));
         services.AddScoped<BudgetCalculator>();
-        services.AddScoped(sp => new DatabaseInitializer(sp.GetRequiredService<XLinesDbContext>(), NullLogger<DatabaseInitializer>.Instance));
+        services.AddScoped(sp => TestDatabases.Initializer(sp.GetRequiredService<XLinesDbContext>()));
         services.AddXLinesIngestion(configuration);
         services.AddRuntimeOddsKey();
 

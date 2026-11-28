@@ -45,17 +45,8 @@ public class UnattendedLineReserveTests(PostgresFixture fixture)
         }
     }
 
-    private async Task<string> FreshDatabaseAsync()
-    {
-        var connection = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
-        {
-            Database = "linereserve_" + Guid.NewGuid().ToString("N")[..12]
-        }.ConnectionString;
-
-        await using var db = Context(connection);
-        await new DatabaseInitializer(db, NullLogger<DatabaseInitializer>.Instance).InitialiseAsync();
-        return connection;
-    }
+    private Task<string> FreshDatabaseAsync()
+        => TestDatabases.FreshAsync(fixture.ConnectionString, "linereserve");
 
     private static XLinesDbContext Context(string connection)
         => new(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(connection).Options);
@@ -76,7 +67,7 @@ public class UnattendedLineReserveTests(PostgresFixture fixture)
         services.AddLogging();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(connection));
         services.AddScoped<BudgetCalculator>();
-        services.AddScoped(sp => new DatabaseInitializer(sp.GetRequiredService<XLinesDbContext>(), NullLogger<DatabaseInitializer>.Instance));
+        services.AddScoped(sp => TestDatabases.Initializer(sp.GetRequiredService<XLinesDbContext>()));
         services.AddXLinesIngestion(configuration);
         services.AddHttpClient<TheOddsApiAdapter>().ConfigurePrimaryHttpMessageHandler(() => wire);
         services.AddHttpClient<TheOddsApiScheduleAdapter>().ConfigurePrimaryHttpMessageHandler(() => wire);

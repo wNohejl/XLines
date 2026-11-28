@@ -1,3 +1,4 @@
+using XLines.Tests.Support;
 using XLines.Core.Entities;
 using XLines.Data;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,7 @@ namespace XLines.Tests.Reliability;
 public class RetiredSourceCleanupTests(PostgresFixture fixture)
 {
     private DatabaseInitializer Create(XLinesDbContext db)
-        => new(db, NullLogger<DatabaseInitializer>.Instance);
+        => TestDatabases.Initializer(db);
 
     private static IngestionRun Run(int sourceId, DateTimeOffset at)
         => new()

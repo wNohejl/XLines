@@ -70,17 +70,8 @@ public class OddsDefaultSourceTests(PostgresFixture fixture)
         : "[]";
 
     /// <summary>A database of this test's own, migrated and seeded as a host's startup does it.</summary>
-    private async Task<string> FreshDatabaseAsync()
-    {
-        var connection = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
-        {
-            Database = "oddsdefault_" + Guid.NewGuid().ToString("N")[..12]
-        }.ConnectionString;
-
-        await using var db = Context(connection);
-        await new DatabaseInitializer(db, NullLogger<DatabaseInitializer>.Instance).InitialiseAsync();
-        return connection;
-    }
+    private Task<string> FreshDatabaseAsync()
+        => TestDatabases.FreshAsync(fixture.ConnectionString, "oddsdefault");
 
     private static XLinesDbContext Context(string connection)
         => new(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(connection).Options);
@@ -109,7 +100,7 @@ public class OddsDefaultSourceTests(PostgresFixture fixture)
         services.AddLogging();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(connection));
         services.AddScoped<BudgetCalculator>();
-        services.AddScoped(sp => new DatabaseInitializer(sp.GetRequiredService<XLinesDbContext>(), NullLogger<DatabaseInitializer>.Instance));
+        services.AddScoped(sp => TestDatabases.Initializer(sp.GetRequiredService<XLinesDbContext>()));
         services.AddXLinesIngestion(configuration);
         if (desk)
             services.AddRuntimeOddsKey();

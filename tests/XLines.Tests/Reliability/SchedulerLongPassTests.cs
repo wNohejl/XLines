@@ -67,17 +67,8 @@ public class SchedulerLongPassTests(PostgresFixture fixture)
         }
     }
 
-    private async Task<string> FreshDatabaseAsync()
-    {
-        var connection = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
-        {
-            Database = "longpass_" + Guid.NewGuid().ToString("N")[..12]
-        }.ConnectionString;
-
-        await using var db = Context(connection);
-        await new DatabaseInitializer(db, NullLogger<DatabaseInitializer>.Instance).InitialiseAsync();
-        return connection;
-    }
+    private Task<string> FreshDatabaseAsync()
+        => TestDatabases.FreshAsync(fixture.ConnectionString, "longpass");
 
     private static XLinesDbContext Context(string connection)
         => new(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(connection).Options);

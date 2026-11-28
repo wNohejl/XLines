@@ -23,17 +23,8 @@ namespace XLines.Tests.Reliability;
 [Collection(PostgresCollection.Name)]
 public class LinesJobSingleReadTests(PostgresFixture fixture)
 {
-    private async Task<string> FreshDatabaseAsync()
-    {
-        var connection = new NpgsqlConnectionStringBuilder(fixture.ConnectionString)
-        {
-            Database = "linesjob_" + Guid.NewGuid().ToString("N")[..12]
-        }.ConnectionString;
-
-        await using var db = Context(connection);
-        await new DatabaseInitializer(db, NullLogger<DatabaseInitializer>.Instance).InitialiseAsync();
-        return connection;
-    }
+    private Task<string> FreshDatabaseAsync()
+        => TestDatabases.FreshAsync(fixture.ConnectionString, "linesjob");
 
     private static XLinesDbContext Context(string connection)
         => new(new DbContextOptionsBuilder<XLinesDbContext>().UseNpgsql(connection).Options);
@@ -59,7 +50,7 @@ public class LinesJobSingleReadTests(PostgresFixture fixture)
         services.AddLogging();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(connection));
         services.AddScoped<BudgetCalculator>();
-        services.AddScoped(sp => new DatabaseInitializer(sp.GetRequiredService<XLinesDbContext>(), NullLogger<DatabaseInitializer>.Instance));
+        services.AddScoped(sp => TestDatabases.Initializer(sp.GetRequiredService<XLinesDbContext>()));
         services.AddXLinesIngestion(configuration);
         services.AddRuntimeOddsKey();
 
@@ -218,7 +209,7 @@ public class LinesJobSingleReadTests(PostgresFixture fixture)
         services.AddLogging();
         services.AddDbContext<XLinesDbContext>(o => o.UseNpgsql(connection));
         services.AddScoped<BudgetCalculator>();
-        services.AddScoped(sp => new DatabaseInitializer(sp.GetRequiredService<XLinesDbContext>(), NullLogger<DatabaseInitializer>.Instance));
+        services.AddScoped(sp => TestDatabases.Initializer(sp.GetRequiredService<XLinesDbContext>()));
         services.AddXLinesIngestion(configuration);
         services.AddRuntimeOddsKey();
         services.AddHttpClient<TheOddsApiAdapter>().ConfigurePrimaryHttpMessageHandler(() => wire);
