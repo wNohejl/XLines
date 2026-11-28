@@ -302,3 +302,55 @@ Not done, and why:
 | Projects whose references a test pins | 4 | 11 |
 | CI format step | exit 2 | exit 0 |
 | New test methods | | 210 |
+
+## Round four: what round three left
+
+Nine commits on `arch-review-3`, written 2026-11-27 and 28.
+
+| Left after round three | Done |
+|---|---|
+| Compose healthchecks (no curl or wget in the image) | `dotnet XLines.Web.dll --health` asks the app's own `/health` on loopback and exits 0 or 1, touching no database and writing nothing. Both compose files use it; Caddy waits for `service_healthy`. `/health`, not `/ready`: a database that drops must not restart the desk or keep Caddy down. Against the hardened image: healthy 13 s after a cold start that migrates, still healthy with Postgres stopped, exit 1 with nothing listening |
+| The season-start rule at startup | `IngestionOptionsValidator` refuses a host that would walk a league's history with no `Ingestion:Backfill:Seasons` entry, naming the league and the key. The leagues asked about are the ones the backfill walks, worked out as it works them out; the switch being off exempts nothing, since the History window's press starts the same walk. 63 tests took the shipped starts from one helper. The Worker refuses `nhl` with no start |
+| The four largest panels | Board 1742, wager 1495, Journal 1494, Odds 1425, Ops 1250, Game 1070 and History 754 lines are now `.razor` files of 378 to 612 lines, with code-behind partials by concern, display text in plain tested classes (`BoardCells`, `JournalDisplay`), and child components (`BoardScoreCell`, `BoardValueCell`, `BoardEmptyState`, `JournalParlays`, `OpsScanningCost`, `GameBetRows`). Rendered markup is unchanged in before/after snapshots, apart from the scope attribute on what moved. Source-reading tests read a panel's whole family through `PanelSource`; two hover-title checks had gone on passing by no longer looking at what moved |
+| CSS `@layer` | Measured, not done. Every sheet put in a layer in its current link order changes 160 computed values on 59 of 2,381 elements in Ops, Incidents, Runs and the Parts bin (a no-change control moved 2): the grid's corners go from 7px to 4px and cell borders reappear. Layering is a redesign against MudBlazor's unlayered sheet, not a refactor, and stays with ADR 0034 step 8 |
+| CI only read, never run | It has never run on GitHub: the API lists no workflow run on any branch, `main` included. Its commands were run verbatim in the Linux SDK container instead, which found three real problems below |
+
+### What running CI's commands on Linux found
+
+- **The Docker desk wrote money as `¤`.** `C0` and `C2` follow the process culture, and a Linux
+  container has none: a stake key read `¤25` and a payout `¤520`. `OddsText.Dollars`,
+  `DollarsAndCents` and `OddsMath.Money` write the dollar format out. Seventeen test assertions
+  built their expected text with `{amount:C0}`, agreeing with the defect wherever it occurred;
+  they expect the text a person reads now.
+- **44 integration tests failed in the container recipe CLAUDE.md gives for Smart App Control.**
+  Testcontainers publishes on `host.docker.internal` there, which ADR 0023's placement rule reads
+  as another machine: a fresh test database was asked for its history before it existed, and the
+  retired-source cleanup tests passed over the steps they test. `TestDatabases` creates a test's
+  database and initialises it with remote migration allowed, as an operator would. On a runner,
+  on localhost, nothing changes.
+- **A junk file set at the main checkout's root.** The Journal split's agent wrote four two-line
+  files into the wrong folder; they were untracked and deleted.
+
+### Checklist, run on the round-four branch
+
+| Check | Result |
+|---|---|
+| `dotnet build XLines.slnx` | 0 errors |
+| `dotnet test XLines.slnx` on Windows | XLines.Tests 1337, XLines.Web.Tests 1553, XLines.Desk.Tests 2827, XLines.Desk.Hosting.Tests 26: 5743 passed |
+| CI's commands verbatim on Linux (SDK container, container recipe) | Restore, Build (0 errors), Verify formatting (exit 0), Unit tests (5235 passed), Integration tests (508 passed), trx and coverage written, pending model changes none |
+| The Worker host | Starts against a throwaway Postgres with its options validated; `--job settle` succeeds; `espn:` off exits 5; a league with no season start refuses with the message naming the key |
+| Docker images | Web and Worker build; the probe exits 1 with nothing listening; the Worker image refuses an `espn:` job with exit 5 |
+| The desk in a browser | From the branch, empty database, scheduler off: Line watch (Board, Journal, Line movement), Ops and History open with no error boundary and no failed panel |
+| Flaky tests | Four, each failing once under a full parallel run and passing alone: the three named in round three, and `WagerWindowBooksTests.Choosing_a_book_reprices_the_window_and_logs_at_that_book`, whose assertion includes "Price captured 40 min ago". All wait on a one-second bUnit assertion |
+| Not run | CI on GitHub itself. The scheduler against live providers. The desk with real games in it |
+
+### What is left
+
+- `GamecastPanel.razor`, 2079 lines, untouched: another session is working in it.
+- `DeskPalette.cs` (1397), `GamecastFeed.cs` (759), `IngestionOptions.cs` (700) are the next
+  largest files; none was in the review's list.
+- 26 `Icons.Material` references in fifteen Desk primitives, pinned by a list that can only
+  shrink, and 2 in the template, which pins the published 0.5.0.
+- `@layer` and scoped CSS, with ADR 0034 step 8, measured above.
+- Two clock reads (`JournalAuditInterceptor`, `DatabaseInitializer`), the shared read cache,
+  bUnit 2, measuring `PassingLinesAsync`, and the four timing-flaky tests.
