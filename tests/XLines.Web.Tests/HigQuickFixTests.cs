@@ -51,7 +51,7 @@ public class HigQuickFixTests
     [Fact]
     public void The_game_window_s_price_door_is_a_button()
     {
-        var source = Web("Panels", "GamePanel.razor");
+        var source = PanelSource.Of("GamePanel");
 
         Assert.Contains("<button type=\"button\" class=\"gamelines__cell gamelines__cell--take\"", source);
         Assert.DoesNotContain("role=\"@(CanTake(offer)", source);

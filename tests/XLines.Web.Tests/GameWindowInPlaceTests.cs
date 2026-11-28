@@ -26,8 +26,8 @@ public class GameWindowInPlaceTests : DeskTestContext
         Services.AddSingleton<IDbContextFactory<XLinesDbContext>>(new JournalParlayTests.NoDatabase());
     }
 
-    private static string GamePanelSource()
-        => File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "GamePanel.razor"));
+    /// <summary>The Game window's markup, its code-behind and the bet rows split out of it.</summary>
+    private static string GamePanelSource() => PanelSource.Of("GamePanel");
 
     private static BookPrice Rung(string book, int price, decimal? line = null)
         => new(book, price, line, OddsMath.ImpliedProbability(price));

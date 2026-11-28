@@ -44,13 +44,14 @@ public class TableMeasureTests
     [Fact]
     public void A_table_among_cards_takes_two_tracks()
     {
-        var ops = Panel("OpsPanel.razor");
+        // Each window's whole source: its markup, its code-behind and the child components split out of it.
+        var ops = PanelSource.Of("OpsPanel");
         Assert.Contains("<FormGroup Title=\"Source health\" Class=\"wsection--pair\">", ops);
         Assert.Contains("<section class=\"wsection wsection--pair\" aria-labelledby=\"@($\"{_uid}-feeds\")\">", ops);
         Assert.Contains("<FormGroup Title=\"Open alerts\" Class=\"@(_alerts.Count == 0 ? null : \"wsection--pair\")\">", ops);
         Assert.DoesNotContain("DeskCardSpan.Row", ops);
 
-        var history = Panel("HistoryPanel.razor");
+        var history = PanelSource.Of("HistoryPanel");
         Assert.Contains("<FormGroup Title=\"Seasons\" Class=\"wsection--pair\">", history);
         Assert.Contains("<FormGroup Title=\"Recent days\" Class=\"hist-recent\">", history);
         Assert.DoesNotContain("DeskCardSpan.Row", history);

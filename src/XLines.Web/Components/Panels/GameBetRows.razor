@@ -1,0 +1,51 @@
+@*
+    The bet rows of the Game window's "Your bets on this game" card, folded behind one row or not:
+    a card row each, divided by inset hairlines. GamePanel holds the bets and the fold.
+*@
+@foreach (var bet in Bets)
+{
+    var clv = PerformanceAnalytics.ComputeClv(bet);
+    <div class="wgroup__row gamebets__row">
+        @if (ResultTag.Of(bet.Result) is { } settled)
+        {
+            <ResultTag Result="@settled">@bet.Result</ResultTag>
+        }
+        else
+        {
+            <Tag State="@BetState(bet.Result)">@bet.Result</Tag>
+        }
+        <span>
+            @(bet.FreeTextMarket ?? bet.Outcome)
+            @if (bet.LineTaken is { } l)
+            {
+                <span class="dim num"> @OddsText.Line(l)</span>
+            }
+        </span>
+        <span class="dim">@XLines.Web.Services.SelectionText.MarketName(bet.Market) · @BookNames.Display(bet.Book)</span>
+        @if (bet.PriceTaken != 0)
+        {
+            <span class="num">@OddsText.Price(bet.PriceTaken)</span>
+        }
+        <span class="dim">@(bet.IsParlayLeg ? $"leg of a {(bet.Parlay is { } legOf ? OddsMath.Money(legOf.Stake) : "")} parlay" : OddsMath.Money(bet.Stake))</span>
+        @if (clv is { } c)
+        {
+            <span class="@(c.BeatClose ? "up" : "down")">
+                @(OddsText.Clv(c) + " CLV")
+            </span>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The operator's bets on this game, as the window read them.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<JournalEntry> Bets { get; set; } = [];
+
+    private static DeskState BetState(EntryResult result) => result switch
+    {
+        EntryResult.Win => DeskState.Positive,
+        EntryResult.Loss => DeskState.Negative,
+        EntryResult.Push => DeskState.Info,
+        EntryResult.Void => DeskState.Neutral,
+        _ => DeskState.Warning
+    };
+}

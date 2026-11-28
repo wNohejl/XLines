@@ -1576,7 +1576,7 @@ public partial class GamecastPanelTests : DeskTestContext
         cut.WaitForAssertion(() => Assert.Contains("Drake Maye", cut.Markup));
         Assert.Equal("Box score", cut.Find(".gameroster__block > .psection__head .panel-h").TextContent.Trim());
         Assert.Equal(2, cut.FindComponents<BoxScoreSide>().Count);
-        var source = File.ReadAllText(Path.Combine(Repo.Root(), "src", "XLines.Web", "Components", "Panels", "GamePanel.razor"));
+        var source = PanelSource.Of("GamePanel");
         Assert.DoesNotContain("RenderBoxSide", source);
     }
 }

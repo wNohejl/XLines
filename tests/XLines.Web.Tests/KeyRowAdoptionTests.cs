@@ -14,8 +14,8 @@ public class KeyRowAdoptionTests
     private static readonly string[] Panels =
         ["OpsPanel", "HistoryPanel", "IncidentsPanel", "PerformancePanel", "PlayersPanel"];
 
-    private static string Source(string panel) => File.ReadAllText(Path.Combine(
-        Repo.Root(), "src", "XLines.Web", "Components", "Panels", panel + ".razor"));
+    /// <summary>The panel's markup, its code-behind and the child components split out of it.</summary>
+    private static string Source(string panel) => PanelSource.Of(panel);
 
     /// <summary>Each DeskButton tag through its close, label included.</summary>
     private static IEnumerable<string> Buttons(string source) =>

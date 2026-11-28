@@ -1,0 +1,156 @@
+@using XLines.Ingestion.Services
+
+@*
+    What scanning costs, in words: Ops' Scanning card's footer when the switch is offered, the Odds
+    feeds card's when it is not. One component for both places it is drawn, so the footer and the
+    footnotes cannot drift apart. Everything it says is handed in by OpsPanel, which holds it.
+*@
+@* The month in one place (ADR 0026): what is left, by whose count, when it resets, and what the
+   settings in force will take from it — lines and scores together — so the arithmetic is on the
+   page before anything is spent. The figure is focusable and its tooltip says how it is counted;
+   the figure itself is always text. *@
+@if (Allowance is { } month)
+{
+    @* A div, not a paragraph: the figure's tooltip is a block, which a paragraph cannot hold. *@
+    <div class="@FootClass">
+        <DeskTooltip Text="@CreditsTip(month)">
+            <span tabindex="0"><span class="num">@month.Remaining.ToString("N0")</span> of <span class="num">@month.Budget.ToString("N0")</span> credits left this month</span>
+        </DeskTooltip>@($", {(month.Reported ? "by The Odds API's own count" : "by this desk's count")}; they reset on {month.ResetsOnText}.")
+        @if (Scores is { } scores && scores.Leagues.Count > 0)
+        {
+            @if (scores.Automatic)
+            {
+                @($" Scores take one call a night per league in play ({string.Join(", ", scores.Leagues.Select(l => l.ToUpperInvariant()))}) at {scores.CreditsPerCall} credits: about {scores.PerDay:N0} a day, {scores.ToMonthEnd:N0} to the month's end, set aside before lines are paced.")
+            }
+            else
+            {
+                @($" Scores cost {scores.CreditsPerCall} credits a league a pull; on Automatic they would take about {scores.PerDay:N0} a day ({string.Join(", ", scores.Leagues.Select(l => l.ToUpperInvariant()))}).")
+            }
+        }
+    </div>
+}
+
+@* Manual is the default, so the usual case is that nothing is scanning. Reporting a cadence
+   here regardless would describe a schedule that is not running — the number would be real
+   arithmetic about an allowance nobody is spending. What is left still matters, because that is
+   what a press of Pull lines draws on. *@
+@if (!Unattended)
+{
+    <p class="@FootClass">
+        Lines are pulled on request only; nothing is fetched unasked.
+        @if (Plan?.ScansRemainingToday is { } available)
+        {
+            <text>
+                @* Credits, not requests. The two are equal on this desk — one sport, two
+                   markets — which is exactly why showing the wrong one would look right until
+                   a market or a sport is added. *@
+                <span class="num">@available.ToString("N0")</span> pulls left in @Plan.WindowLabel allowance, at
+                <span class="num">@Plan.CreditsPerScan.ToString("N0")</span> credits each.
+            </text>
+        }
+        @* A visitor has no Pull data menu (ADR 0018); pointing at it would send them looking. *@
+        @if (CanOperate)
+        {
+            <text>Use <strong>Pull data → Pull lines</strong>.</text>
+        }
+        @Provenance
+    </p>
+
+    @* The price, before anything is spent: what each sport's scan asks for and bills, and how
+       often the scheduler would scan at that price if it were switched on. The planner paces on
+       what is left, so it never overspends — a longer market list shows up here as a slower
+       cadence, which is the real cost of adding one. *@
+    @if (Plan is { } projected && MarketsBySport.Count > 0)
+    {
+        @* One clause per league, parted by semicolons as a sentence parts a list of lists;
+           the leagues used to be strung together with middle dots, which read as a row of
+           tags rather than as what a scan asks for. *@
+        <p class="@FootClass">
+            A scan asks for
+            @foreach (var (sport, index) in MarketsBySport.Select((m, i) => (m, i)))
+            {
+                @(index > 0 ? "; " : "")<span>@sport.Sport.ToUpperInvariant()</span>
+                @* Spelled as one expression: a leading space inside <text> before code was dropped, and
+                   the sport ran into its markets ("MLBmoneyline"). *@
+                @($" {string.Join(", ", sport.Markets.Select(m => XLines.Web.Services.SelectionText.MarketWord(m).ToLowerInvariant()))}")
+                @if (sport.Credits > 0)
+                {
+                    <text> (<span class="num">@sport.Credits.ToString("N0")</span> @(sport.Credits == 1 ? "credit" : "credits"))</text>
+                }
+            }.
+            @if (projected.ScansRemainingToday is { } left && left > 0)
+            {
+                <text>
+                    On automatic that is a scan about every
+                    <span class="num">@Cadence(projected.BudgetInterval)</span> for the rest of
+                    @(projected.Window == BudgetWindow.Month ? "the month" : "the day"), more
+                    often near game time.
+                </text>
+            }
+        </p>
+    }
+}
+else if (Plan is { } plan)
+{
+    <p class="@FootClass">
+        Scanning every <span class="num">@Cadence(plan.Interval)</span> at
+        <span class="num">@plan.CostPerScan.ToString("N0")</span> requests a scan
+        @if (plan.ScansRemainingToday is { } left)
+        {
+            @* "today's" or "this month's" — the provider decides which, and saying the wrong
+               one turns a month's remaining allowance into an apparently generous day. *@
+            <text>— <span class="num">@left.ToString("N0")</span> scans left in @plan.WindowLabel allowance</text>
+            @if (plan.BoundBy is { } bound)
+            {
+                <text>, paced by @FeedName(bound)</text>
+            }
+        }
+        else
+        {
+            <text>— nothing is metered, so this is the politeness floor, not a budget</text>
+        }.
+        @Provenance
+    </p>
+}
+
+@code {
+    /// <summary>The Odds API account's month, where its feed or its scores are in use here.</summary>
+    [Parameter] public AllowanceState? Allowance { get; set; }
+
+    /// <summary>What scores would take from the month, where they are metered here.</summary>
+    [Parameter] public ScoresPlan? Scores { get; set; }
+
+    /// <summary>Whether lines are scanned unasked.</summary>
+    [Parameter] public bool Unattended { get; set; }
+
+    [Parameter] public PollPlan? Plan { get; set; }
+
+    [Parameter] public IReadOnlyList<SportMarkets> MarketsBySport { get; set; } = [];
+
+    /// <summary>Whether the viewer may operate: a visitor has no Pull data menu to be pointed at.</summary>
+    [Parameter] public bool CanOperate { get; set; }
+
+    /// <summary>Where the mode in force came from, said only beside the switch that sets it.</summary>
+    [Parameter] public string? Provenance { get; set; }
+
+    /// <summary>A provider by the name the feeds table gives it; the planner reports its key.</summary>
+    [Parameter, EditorRequired] public Func<string, string> FeedName { get; set; } = default!;
+
+    /// <summary>
+    /// The prose that prices scanning is a card's footer wherever it is drawn: the Scanning card's
+    /// when the switch is offered, the Odds feeds card's when it is not.
+    /// </summary>
+    private const string FootClass = "wgroup__foot";
+
+    private static string CreditsTip(AllowanceState month)
+        => (month.Reported
+               ? "The Odds API reports what is left on the key with every call; this is its latest word this month, so it counts spend from any machine using the key."
+               : "No call this month has reported what is left on the key yet, so this is this desk's own count; another machine using the key would not show here.")
+           + $" {month.Reserve:N0} credits are kept back from automatic scanning for pulls on request. The month resets on {month.ResetsOnText}.";
+
+    /// <summary>A cadence read as minutes until it is long enough to read as hours.</summary>
+    private static string Cadence(TimeSpan interval)
+        => interval.TotalHours >= 1
+            ? $"{interval.TotalHours:0.#}h"
+            : $"{interval.TotalMinutes:0.#}m";
+}

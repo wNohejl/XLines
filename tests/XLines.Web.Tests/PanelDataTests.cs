@@ -18,7 +18,10 @@ public class PanelDataTests
     public void No_razor_file_in_the_web_host_holds_a_db_context()
     {
         var components = Path.Combine(Repo.Root(), "src", "XLines.Web");
+        // A window's code may sit in its code-behind partials beside the .razor (OpsPanel.razor.cs,
+        // BoardPanel.Rows.cs), so every C# file under Components is read with the markup.
         var holders = Directory.EnumerateFiles(components, "*.razor", SearchOption.AllDirectories)
+            .Concat(Directory.EnumerateFiles(Path.Combine(components, "Components"), "*.cs", SearchOption.AllDirectories))
             .Where(f => Regex.IsMatch(File.ReadAllText(f), "IDbContextFactory|XLinesDbContext"))
             .Select(f => Path.GetRelativePath(components, f))
             .ToList();

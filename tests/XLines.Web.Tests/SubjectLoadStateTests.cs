@@ -26,8 +26,8 @@ namespace XLines.Web.Tests;
 /// </summary>
 public class SubjectLoadStateTests
 {
-    private static string Panel(string name) => File.ReadAllText(Path.Combine(
-        Repo.Root(), "src", "XLines.Web", "Components", "Panels", name + ".razor"));
+    /// <summary>The panel's markup, its code-behind and the child components split out of it.</summary>
+    private static string Panel(string name) => PanelSource.Of(name);
 
     /// <summary>The failure block, and whether an <c>else</c> hangs off it.</summary>
     private static readonly Regex FailureThenElse = new(
