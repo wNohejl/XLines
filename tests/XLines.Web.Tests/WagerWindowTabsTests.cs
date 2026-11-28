@@ -82,7 +82,7 @@ public class WagerWindowTabsTests : WagerTestContext
         var bet = Squash(Step(cut, "Bet").QuerySelector(".wstep__summary")!.TextContent);
         var review = Squash(cut.Find(".wreview").TextContent);
         Assert.StartsWith("ML · Bills", bet);
-        Assert.Contains($"{50m:C0} on ML · Bills", review);
+        Assert.Contains($"{OddsText.Dollars(50m)} on ML · Bills", review);
 
         cut.FindAll("button").First(b => b.TextContent.Trim().StartsWith("Add to slip", StringComparison.Ordinal)).Click();
         cut.FindAll("[role=tab]")[1].Click();

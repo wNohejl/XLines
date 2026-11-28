@@ -185,6 +185,6 @@ public class GameWindowInPlaceTests : DeskTestContext
     {
         var bets = new[] { Bet(EntryResult.Pending, 110), Bet(EntryResult.Pending, 125), Bet(EntryResult.Pending, 100), Bet(EntryResult.Win, 50) };
 
-        Assert.Equal($"3 pending · {335m:C0} at risk · 1 won", GamePanel.BetsSummary(bets));
+        Assert.Equal($"3 pending · {OddsText.Dollars(335m)} at risk · 1 won", GamePanel.BetsSummary(bets));
     }
 }

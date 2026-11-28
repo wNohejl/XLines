@@ -29,7 +29,7 @@ public class WagerKeyTests : DeskTestContext
         using var dollars = new UsDollars();
 
         Assert.Equal("Log wager", Text(Key(WagerKind.Log)));
-        Assert.Equal($"Log {25m:C0}", Text(Key(WagerKind.Log, p => p.Add(x => x.Stake, 25m))));
+        Assert.Equal($"Log {OddsText.Dollars(25m)}", Text(Key(WagerKind.Log, p => p.Add(x => x.Stake, 25m))));
     }
 
     [Fact]

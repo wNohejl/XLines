@@ -116,7 +116,7 @@ public class WagerPrefillTests : WagerTestContext
 
         var cut = RenderComponent<BoardWager>(parameters.Select(p => ComponentParameter.CreateParameter(p.Key, p.Value)).ToArray());
 
-        Assert.Contains($"You are logging {110m:C0}", cut.Find(".wreview").TextContent);
+        Assert.Contains($"You are logging {OddsText.Dollars(110m)}", cut.Find(".wreview").TextContent);
         Assert.Contains("-2.5", Step(cut, "Bet").QuerySelector(".wstep__summary")!.TextContent);
     }
 
@@ -134,7 +134,7 @@ public class WagerPrefillTests : WagerTestContext
             ComponentParameter.CreateParameter("Line", -2.5d),
             ComponentParameter.CreateParameter("Stake", 110d));
 
-        Assert.Contains($"You are logging {110m:C0}", cut.Find(".wreview").TextContent);
+        Assert.Contains($"You are logging {OddsText.Dollars(110m)}", cut.Find(".wreview").TextContent);
         Assert.Contains("-2.5", Step(cut, "Bet").QuerySelector(".wstep__summary")!.TextContent);
     }
 
@@ -150,7 +150,7 @@ public class WagerPrefillTests : WagerTestContext
             .Add(x => x.Note, "fade"));
 
         Assert.Equal("FanDuel", cut.Find(".wager-offer__book").TextContent.Trim());
-        Assert.Contains($"You are logging {40m:C0}", cut.Find(".wreview").TextContent);
+        Assert.Contains($"You are logging {OddsText.Dollars(40m)}", cut.Find(".wreview").TextContent);
         Assert.False(cut.Find("button.desk-btn--filled").HasAttribute("disabled"));
         Assert.Equal("fade", cut.Find("input[aria-label='Note']").GetAttribute("value"));
     }
@@ -186,7 +186,7 @@ public class WagerPrefillTests : WagerTestContext
 
         Assert.Equal("Steelers to win the AFC North", cut.Find("input[aria-label='The bet']").GetAttribute("value"));
         Assert.Equal("250", cut.Find("input[placeholder='-110']").GetAttribute("value"));
-        Assert.Contains($"You are logging {25m:C0}", cut.Find(".wreview").TextContent);
+        Assert.Contains($"You are logging {OddsText.Dollars(25m)}", cut.Find(".wreview").TextContent);
     }
 
     [Fact]

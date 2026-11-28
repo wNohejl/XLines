@@ -92,10 +92,10 @@ public class WagerRecipeTests : WagerTestContext
         Assert.Empty(cut.FindAll(".wstake__win"));
 
         cut.Find("input[placeholder='Stake']").Input("100");
-        Assert.Contains($"To win {OddsMath.ProfitOnWin(-128, 100m):C0}", Text(cut.Find(".wstake__win")));
+        Assert.Contains($"To win {OddsText.Dollars(OddsMath.ProfitOnWin(-128, 100m))}", Text(cut.Find(".wstake__win")));
 
         cut.Find("input[placeholder='Stake']").Input("40");
-        Assert.Contains($"To win {OddsMath.ProfitOnWin(-128, 40m):C0}", Text(cut.Find(".wstake__win")));
+        Assert.Contains($"To win {OddsText.Dollars(OddsMath.ProfitOnWin(-128, 40m))}", Text(cut.Find(".wstake__win")));
 
         // The footer sits under the group, outside it; the row no longer carries Returns.
         Assert.Contains("wgroup__foot", cut.Find(".wstake__win").ClassList);

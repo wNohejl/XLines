@@ -61,7 +61,7 @@ public class WagerSurfacesTests : WagerTestContext
         Assert.All(keys, k => Assert.NotNull(k.GetAttribute("data-wager-key")));
         Assert.Equal("log", keys[^1].GetAttribute("data-wager-key"));
         Assert.Contains("desk-btn--filled", keys[^1].ClassName);
-        Assert.Equal($"Log {25m:C0}", keys[^1].TextContent.Trim());
+        Assert.Equal($"Log {OddsText.Dollars(25m)}", keys[^1].TextContent.Trim());
         Assert.Single(cut.FindAll(".waction .desk-btn--filled"));
         Assert.Contains(keys, k => k.GetAttribute("data-wager-key") == "slip");
     }

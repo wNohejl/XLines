@@ -283,7 +283,7 @@ public class SlipPanelTests : WagerTestContext
         cut.Find("input[aria-label='Stake on this wager']").Input("0");
 
         Assert.Equal(50m, Slip.Items.Single().Stake);
-        Assert.Contains($"Needs a stake above zero. The slip keeps {50m:C0} until you type one.", cut.Find(".slip-card__zero").TextContent);
+        Assert.Contains($"Needs a stake above zero. The slip keeps {OddsText.Dollars(50m)} until you type one.", cut.Find(".slip-card__zero").TextContent);
 
         cut.Find("input[aria-label='Stake on this wager']").Input("75");
 

@@ -137,7 +137,7 @@ public class BoardWagerTests : WagerTestContext
         // What was logged is one line above the steps, which have started the next bet.
         var receipt = cut.Find(".wlogged");
         Assert.Equal("Logged", receipt.QuerySelector(".tag")!.TextContent.Trim());
-        Assert.Equal($"{50m:C0} on ML · Chiefs at -128 · DraftKings", Squash(receipt.QuerySelector(".wreceipt__bet")!.TextContent));
+        Assert.Equal($"{OddsText.Dollars(50m)} on ML · Chiefs at -128 · DraftKings", Squash(receipt.QuerySelector(".wreceipt__bet")!.TextContent));
         Assert.NotEmpty(cut.FindAll(".wsteps"));
 
         // Same bet again puts the side back and asks for the stake again, so no lit key can log
@@ -196,7 +196,7 @@ public class BoardWagerTests : WagerTestContext
         Log(cut).Click();
 
         Assert.Equal([(BoardRows.Home, 50m), (BoardRows.Away, 25m)], Data.Straights.Select(b => (b.Outcome, b.Stake)));
-        Assert.StartsWith($"{25m:C0} on ML · Bills", Squash(cut.Find(".wlogged .wreceipt__bet").TextContent));
+        Assert.StartsWith($"{OddsText.Dollars(25m)} on ML · Bills", Squash(cut.Find(".wlogged .wreceipt__bet").TextContent));
     }
 
     private static string Squash(string text) => string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
@@ -315,7 +315,7 @@ public class BoardWagerTests : WagerTestContext
         Key(cut, OddsText.Dollars(25m)).Click();
 
         var warning = cut.Find(".check--warning").TextContent;
-        Assert.Contains($"Already in the journal: {50m:C0} on ML · Chiefs at -130 (DraftKings)", warning);
+        Assert.Contains($"Already in the journal: {OddsText.Dollars(50m)} on ML · Chiefs at -130 (DraftKings)", warning);
         Assert.Contains("Logging again records a second bet.", warning);
         Assert.False(Log(cut).HasAttribute("disabled"));
     }
@@ -379,7 +379,7 @@ public class BoardWagerTests : WagerTestContext
         Assert.Equal("1", SlipCount(cut));
         Assert.Equal(50m, Slip.Items.Single().Stake);
         // Said as an addition: a green toast with a key to the slip.
-        Assert.Equal($"Added {50m:C0} on ML · Chiefs at -128 to the slip.", LastToast.Message);
+        Assert.Equal($"Added {OddsText.Dollars(50m)} on ML · Chiefs at -128 to the slip.", LastToast.Message);
         Assert.Equal(DeskState.Positive, LastToast.State);
         Assert.Equal("View slip", LastToast.ActionLabel);
         Assert.False(Log(cut).HasAttribute("disabled"));   // the stake stays
@@ -461,7 +461,7 @@ public class BoardWagerTests : WagerTestContext
         Key(cut, OddsText.Dollars(25m)).Click();
         Key(cut, "Add to slip").Click();
 
-        Assert.StartsWith($"{50m:C0} at -130 (DraftKings)", Slip.Items.Single().InJournal);
+        Assert.StartsWith($"{OddsText.Dollars(50m)} at -130 (DraftKings)", Slip.Items.Single().InJournal);
     }
 
     [Fact]
