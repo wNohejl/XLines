@@ -70,9 +70,14 @@ public class JournalDisplayTests
     {
         var entry = new JournalEntry
         {
-            Outcome = "Buffalo Bills", Market = Markets.Spread, Book = "draftkings",
-            LineTaken = -1.5m, PriceTaken = -110m,
-            ClosingPoints = -2.5m, ClosingPrice = -120, ClosingBook = "fanduel",
+            Outcome = "Buffalo Bills",
+            Market = Markets.Spread,
+            Book = "draftkings",
+            LineTaken = -1.5m,
+            PriceTaken = -110m,
+            ClosingPoints = -2.5m,
+            ClosingPrice = -120,
+            ClosingBook = "fanduel",
         };
 
         Assert.StartsWith("Took -1.5 -110; closed -2.5 -120 at fanduel (no close for draftkings)", JournalDisplay.ClvTitle(entry));
@@ -83,8 +88,12 @@ public class JournalDisplayTests
     {
         var entry = new JournalEntry
         {
-            Outcome = "Buffalo Bills", Market = Markets.Moneyline, Book = "draftkings",
-            PriceTaken = 150m, ClosingPrice = 140, ClosingBook = "DraftKings",
+            Outcome = "Buffalo Bills",
+            Market = Markets.Moneyline,
+            Book = "draftkings",
+            PriceTaken = 150m,
+            ClosingPrice = 140,
+            ClosingBook = "DraftKings",
         };
 
         Assert.StartsWith("Took +150; closed +140", JournalDisplay.ClvTitle(entry));
