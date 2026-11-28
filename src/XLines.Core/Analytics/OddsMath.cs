@@ -223,13 +223,14 @@ public static class OddsMath
 
     /// <summary>
     /// Money to the cent, with the cents only when it has them: "$520", "$521.75", "$1,021.75".
-    /// In the machine's currency format, as the desk's other "C0" money is. "C0" alone rounded
-    /// $521.75 to "$522": a payout the book pays to the cent was shown to the dollar.
+    /// In dollars on any host: "C0" follows the process culture, and a Linux container has none,
+    /// so the Docker desk wrote "¤520". "C0" alone also rounded $521.75 to "$522": a payout the
+    /// book pays to the cent was shown to the dollar.
     /// </summary>
     public static string Money(decimal amount)
     {
         var cents = Math.Round(amount, 2, MidpointRounding.AwayFromZero);
-        return cents.ToString(cents == decimal.Truncate(cents) ? "C0" : "C2", CultureInfo.CurrentCulture);
+        return cents.ToString(cents == decimal.Truncate(cents) ? "$#,0" : "$#,0.00", CultureInfo.InvariantCulture);
     }
 
     /// <summary>

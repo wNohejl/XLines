@@ -55,8 +55,8 @@ public class AdvisoryChecksTests
     {
         var value = Checks.Value(Offer(), 50m);
 
-        Assert.EndsWith($" expected on {50m:C0}.", value.Text);
-        Assert.Contains($"+{1.35m:C2}", value.Text);
+        Assert.EndsWith(" expected on $50.", value.Text);
+        Assert.Contains("+$1.35", value.Text);
     }
 
     [Fact]
